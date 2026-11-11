@@ -273,7 +273,7 @@ describe('murs et plafonds pendant l’éjection', () => {
   }
 
   it('rebondit contre un mur', () => {
-    const sim = flying(68, -12, -2, 0.3);
+    const sim = flying(68, -22, -2, 0.3);
     hold2(sim, NEUTRAL, NEUTRAL, 4);
     expect(sim.state.velX[0]).toBeGreaterThan(fx(1));
     expect(sim.state.action[0]).toBe(A_HITSTUN);
@@ -281,7 +281,7 @@ describe('murs et plafonds pendant l’éjection', () => {
   });
 
   it('s’arrête net contre un mur si bouclier a été pressé à temps', () => {
-    const sim = flying(68, -12, -2, 0.3);
+    const sim = flying(68, -22, -2, 0.3);
     hold2(sim, SHIELD, NEUTRAL, 1);
     hold2(sim, NEUTRAL, NEUTRAL, 3);
     expect(sim.state.velX[0]).toBe(0);

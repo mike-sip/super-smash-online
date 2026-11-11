@@ -11,6 +11,16 @@ export const MAX_EVENTS = 64;
 export const EV_KO = 1;
 /** Un coup a porté. `a` = attaquant, `b` = victime. */
 export const EV_HIT = 2;
+/** Un coup a été bloqué par un bouclier. `a` = attaquant, `b` = défenseur. */
+export const EV_SHIELD = 3;
+/** Un coup a été paré. `a` = attaquant, `b` = défenseur. */
+export const EV_PARRY = 4;
+/** Un bouclier s'est brisé. `a` = joueur. */
+export const EV_SHIELD_BREAK = 5;
+/** Une saisie a réussi. `a` = celui qui saisit, `b` = la victime. */
+export const EV_GRAB = 6;
+/** Un joueur s'est accroché à un rebord. `a` = joueur, `b` = index du rebord. */
+export const EV_LEDGE = 7;
 
 export interface EventQueue {
   count: number;

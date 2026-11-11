@@ -7,15 +7,19 @@
  */
 import {
   A_AIR,
+  A_AIRDODGE,
   A_ATTACK,
   A_DASH,
   A_DEAD,
   A_DOWN,
+  A_GRABBED,
   A_HITSTUN,
   A_IDLE,
   A_JUMPSQUAT,
   A_LAND,
+  A_LEDGE,
   A_RUN,
+  A_SHIELD_BREAK,
   A_TECH,
   A_TUMBLE,
   setAction,
@@ -37,6 +41,13 @@ const WALL_RESTITUTION = fx(0.8);
 
 /** Géométrie du stage aplatie en tableaux, pour que `step` n'accède à aucun objet. */
 export interface StageGeo {
+  /** Rebords : les deux coins supérieurs de chaque bloc plein. */
+  readonly ledgeCount: number;
+  readonly ledgeX: Int32Array;
+  readonly ledgeY: Int32Array;
+  /** -1 pour un rebord gauche (on s'y suspend à gauche du bloc), 1 pour un rebord droit. */
+  readonly ledgeSide: Int32Array;
+
   /** Surfaces où l'on peut se tenir : dessus des blocs pleins, puis plateformes. */
   readonly surfCount: number;
   readonly surfX1: Int32Array;
@@ -57,6 +68,10 @@ export function compileStage(stage: StageDef): StageGeo {
   const platforms = stage.platforms;
   const surfCount = solids.length + platforms.length;
   const geo: StageGeo = {
+    ledgeCount: solids.length * 2,
+    ledgeX: new Int32Array(solids.length * 2),
+    ledgeY: new Int32Array(solids.length * 2),
+    ledgeSide: new Int32Array(solids.length * 2),
     surfCount,
     surfX1: new Int32Array(surfCount),
     surfX2: new Int32Array(surfCount),
@@ -76,6 +91,12 @@ export function compileStage(stage: StageDef): StageGeo {
     geo.surfX1[k] = b.x1;
     geo.surfX2[k] = b.x2;
     geo.surfY[k] = b.y2;
+    geo.ledgeX[k * 2] = b.x1;
+    geo.ledgeY[k * 2] = b.y2;
+    geo.ledgeSide[k * 2] = -1;
+    geo.ledgeX[k * 2 + 1] = b.x2;
+    geo.ledgeY[k * 2 + 1] = b.y2;
+    geo.ledgeSide[k * 2 + 1] = 1;
   });
   platforms.forEach((p, n) => {
     const k = solids.length + n;
@@ -105,6 +126,7 @@ function hitWall(s: SimState, i: number): void {
   }
   if (s.techWindow[i]! > 0) {
     s.techWindow[i] = 0;
+    s.bufShield[i] = 0;
     s.velX[i] = 0;
     s.velY[i] = 0;
     s.stun[i] = 0;
@@ -178,12 +200,16 @@ function land(sim: Sim, i: number, k: number, knocked: boolean): void {
   s.grounded[i] = 1;
   s.surface[i] = k + 1;
   s.fastFall[i] = 0;
+  s.airDodged[i] = 0;
+  s.floatFrames[i] = 0;
+  s.ledgeGrabs[i] = 0;
 
   if (knocked) {
     s.stun[i] = 0;
     s.tumble[i] = 0;
     if (s.techWindow[i]! > 0) {
       s.techWindow[i] = 0;
+      s.bufShield[i] = 0;
       s.velX[i] = 0;
       setAction(s, i, A_TECH);
     } else {
@@ -191,6 +217,12 @@ function land(sim: Sim, i: number, k: number, knocked: boolean): void {
     }
   } else if (action === A_HITSTUN) {
     // Coup faible : il glisse au sol jusqu'à la fin du hitstun.
+  } else if (action === A_SHIELD_BREAK) {
+    // Bouclier brisé : l'étourdissement se poursuit au sol.
+  } else if (action === A_AIRDODGE) {
+    s.intangible[i] = 0;
+    s.landLag[i] = def.airDodgeLandingLag;
+    setAction(s, i, A_LAND);
   } else {
     const move = action === A_ATTACK ? def.moves[s.move[i]!] : undefined;
     s.landLag[i] = move?.landingLag ?? def.landFrames;
@@ -205,7 +237,11 @@ function integrateAirborne(sim: Sim, i: number): void {
   const height = def.height;
 
   let vy: number;
-  if (s.fastFall[i] === 1) {
+  if (s.floatFrames[i]! > 0) {
+    // Esquive aérienne directionnelle : la gravité est suspendue quelques frames.
+    s.floatFrames[i] = s.floatFrames[i]! - 1;
+    vy = s.velY[i]!;
+  } else if (s.fastFall[i] === 1) {
     vy = -def.fastFallSpeed;
   } else {
     vy = s.velY[i]! - def.gravity;
@@ -264,7 +300,10 @@ function integrateAirborne(sim: Sim, i: number): void {
 
 export function integrate(sim: Sim, i: number): void {
   const s = sim.state;
-  if (s.action[i] === A_DEAD) return;
+  const action = s.action[i]!;
+  // Un combattant tenu ne bouge pas de lui-même : sa position est imposée par celui qui le tient.
+  // Un combattant suspendu à un rebord non plus.
+  if (action === A_DEAD || action === A_GRABBED || action >= A_LEDGE) return;
   if (s.grounded[i] === 1) integrateGrounded(sim, i);
   else integrateAirborne(sim, i);
 }

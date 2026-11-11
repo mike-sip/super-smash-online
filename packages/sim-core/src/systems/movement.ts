@@ -15,6 +15,7 @@ import {
   A_JUMPSQUAT,
   A_LAND,
   A_RUN,
+  A_SHIELD,
   A_TECH,
   A_TUMBLE,
   A_TURN,
@@ -57,6 +58,9 @@ import type { SimState } from '../state.ts';
 import type { Sim } from '../step.ts';
 import { C_DOWN, C_LEFT, C_UP } from './buffer.ts';
 import { STICK_HOLD_DOWN } from './collision.ts';
+import { tryAirDodge, tryGroundDefense, updateDefense } from './defense.ts';
+import { spawnEntity } from './entities.ts';
+import { approach } from './util.ts';
 
 /** En dessous, le stick est considéré au neutre. */
 const STICK_DEADZONE = 20;
@@ -84,12 +88,6 @@ const FROM_CSTICK = 3;
 let wantSlot = -1;
 let wantFacing = 0;
 let wantFrom = 0;
-
-/** Rapproche `v` de `target` d'au plus `delta`, sans le dépasser. */
-function approach(v: number, target: number, delta: number): number {
-  if (v < target) return v + delta > target ? target : v + delta;
-  return v - delta < target ? target : v - delta;
-}
 
 /** Compte les frames consécutives d'inclinaison du même côté, signées par la direction. */
 function trackTilt(before: number, value: number): number {
@@ -184,6 +182,13 @@ function startMove(s: SimState, i: number, slot: number): void {
   setAction(s, i, A_ATTACK);
 }
 
+/** Lance une attaque sans passer par un input (attaque de remontée depuis un rebord). */
+export function forceMove(s: SimState, i: number, slot: number): void {
+  wantFrom = 0;
+  wantFacing = 0;
+  startMove(s, i, slot);
+}
+
 /** Lance l'attaque demandée si le combattant en possède une. Renvoie vrai si elle est partie. */
 function tryAttack(
   s: SimState,
@@ -244,6 +249,11 @@ export function updateMovement(sim: Sim, i: number): void {
   const grounded = s.grounded[i] === 1;
 
   if (action === A_DEAD) return;
+  if (action >= A_SHIELD) {
+    // Bouclier, esquives, saisies, rebords : chacun a son propre système.
+    updateDefense(sim, i);
+    return;
+  }
 
   const tilt = s.tilt[i]!;
   const flickX = absX >= STICK_SMASH && tilt * dir <= FLICK_WINDOW;
@@ -300,6 +310,20 @@ export function updateMovement(sim: Sim, i: number): void {
       }
     }
 
+    const spawn = move.spawn;
+    if (spawn !== undefined && moveFrame === spawn.frame) {
+      const facing = s.facing[i]!;
+      spawnEntity(
+        sim,
+        spawn.kind,
+        i,
+        s.posX[i]! + facing * spawn.x,
+        s.posY[i]! + spawn.y,
+        facing * spawn.velX,
+        spawn.velY,
+      );
+    }
+
     const charge = move.charge;
     if (
       charge !== undefined &&
@@ -327,6 +351,10 @@ export function updateMovement(sim: Sim, i: number): void {
       if (action === A_TUMBLE) setAction(s, i, A_AIR);
     } else if (tryAttack(s, def, i, false, false, stickX, stickY)) {
       // L'attaque aérienne démarre : le contrôle aérien reste actif ci-dessous.
+    } else if (action === A_AIR && tryAirDodge(sim, i, stickX, stickY)) {
+      // En chute désordonnée, le bouton bouclier est réservé au rétablissement : il faut d'abord
+      // en sortir (saut, attaque, coup de stick) pour pouvoir esquiver.
+      return;
     } else if (action === A_TUMBLE && flickX) {
       // Un coup de stick latéral suffit à sortir de la chute désordonnée.
       setAction(s, i, A_AIR);
@@ -362,6 +390,7 @@ export function updateMovement(sim: Sim, i: number): void {
   if (tryAttack(s, def, i, true, action === A_DASH || action === A_RUN, stickX, stickY)) {
     return;
   }
+  if (tryGroundDefense(sim, i)) return;
 
   switch (action) {
     case A_IDLE:

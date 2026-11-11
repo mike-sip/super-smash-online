@@ -8,12 +8,18 @@ export type {
   CancelDef,
   CapsuleDef,
   ChargeDef,
+  DodgeDef,
+  EntityDef,
+  EntityHitDef,
   FighterDef,
+  GrabDef,
   HitDef,
   MoveDef,
   PlatformDef,
   SolidDef,
+  SpawnDef,
   StageDef,
+  ThrowDef,
   Vec2,
 } from './defs.ts';
 export * from './moves.ts';
@@ -34,8 +40,33 @@ export {
   A_TUMBLE,
   A_TECH,
   A_DOWN,
+  A_SHIELD,
+  A_SHIELDSTUN,
+  A_SHIELD_DROP,
+  A_SHIELD_BREAK,
+  A_SPOTDODGE,
+  A_ROLL,
+  A_AIRDODGE,
+  A_GRAB,
+  A_GRABBING,
+  A_GRABBED,
+  A_THROW,
+  A_GRAB_RELEASE,
+  A_LEDGE,
+  A_LEDGE_GETUP,
+  A_LEDGE_ROLL,
 } from './actions.ts';
-export { EV_HIT, EV_KO, MAX_EVENTS, type EventQueue } from './events.ts';
+export {
+  EV_GRAB,
+  EV_HIT,
+  EV_KO,
+  EV_LEDGE,
+  EV_PARRY,
+  EV_SHIELD,
+  EV_SHIELD_BREAK,
+  MAX_EVENTS,
+  type EventQueue,
+} from './events.ts';
 export {
   BTN_ATTACK,
   BTN_SPECIAL,
@@ -58,6 +89,13 @@ export {
 export { MAX_PLAYERS, MAX_ENTITIES, STATE_BYTES } from './state.ts';
 export { createSim, respawn, step, type Sim, type SimConfig } from './step.ts';
 export { readFighter, type FighterView } from './view.ts';
+export {
+  ENTITY_BOUNCE,
+  ENTITY_DESTROY,
+  ENTITY_PASS,
+  destroyEntity,
+  spawnEntity,
+} from './systems/entities.ts';
 
 function checkSize(buf: Uint8Array): void {
   if (buf.length < STATE_BYTES) {

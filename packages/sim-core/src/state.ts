@@ -63,6 +63,34 @@ export const FIGHTER_FIELDS = [
   'launchPending',
   'launchSpeed',
   'launchAngle',
+  /** Résistance restante du bouclier. */
+  'shield',
+  'bufShield',
+  'bufGrab',
+  /** Frames avant qu'un nouvel appui sur bouclier puisse rouvrir la fenêtre de rétablissement. */
+  'techLock',
+  /** Frames d'intangibilité restantes : aucun coup ni saisie ne touche. */
+  'intangible',
+  /** Esquive en cours : durée totale et frames d'intangibilité, usure comprise. */
+  'dodgeTotal',
+  'dodgeInv',
+  'dodgeDir',
+  /** Usure des esquives : chaque esquive rapprochée rallonge la suivante et réduit son intangibilité. */
+  'dodgeStale',
+  'dodgeTimer',
+  'airDodged',
+  /** Frames sans gravité restantes (esquive aérienne directionnelle). */
+  'floatFrames',
+  /** Saisie : victime tenue (index + 1), combattant qui nous tient (index + 1), durée restante. */
+  'grabTarget',
+  'grabbedBy',
+  'grabTimer',
+  'pummelCd',
+  /** Rebord tenu (index + 1), délai avant nouvelle accroche, accroches depuis le dernier contact au sol. */
+  'ledge',
+  'ledgeCooldown',
+  'ledgeGrabs',
+  'ledgeTimer',
 ] as const;
 
 /** Un Int32 par entité (projectile, objet). `eKind` à 0 signifie emplacement libre. */
@@ -74,6 +102,8 @@ export const ENTITY_FIELDS = [
   'eVelX',
   'eVelY',
   'eLife',
+  /** Joueurs déjà touchés par cette entité, un bit par joueur. */
+  'eHitMask',
 ] as const;
 
 export type FighterField = (typeof FIGHTER_FIELDS)[number];

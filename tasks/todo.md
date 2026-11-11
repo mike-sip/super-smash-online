@@ -73,27 +73,27 @@
 
 ## Phase D — Défense et options
 
-- [ ] **T12 : Bouclier**
+- [x] **T12 : Bouclier**
   - Acceptation : usure à l'usage et aux coups, régénération, bris et étourdissement, shieldstun et recul, parade parfaite au relâchement.
   - Vérification : scénarios, dont bris après N coups connus.
   - Fichiers : `src/systems/shield.ts`, `test/scenarios/shield.test.ts`
 
-- [ ] **T13 : Esquives et invincibilité**
+- [x] **T13 : Esquives et invincibilité**
   - Acceptation : esquive sur place, roulades avant et arrière, esquive aérienne neutre et directionnelle, frames d'invincibilité, pénalité en cas d'esquives répétées.
   - Vérification : scénarios où un coup traverse pendant les frames d'invincibilité et touche en dehors.
   - Fichiers : `src/systems/dodge.ts`, `test/scenarios/dodge.test.ts`
 
-- [ ] **T14 : Saisies et projections**
+- [x] **T14 : Saisies et projections**
   - Acceptation : saisie (ignore le bouclier), coups pendant la saisie, 4 projections, dégagement selon le pourcentage, saisie simultanée résolue de façon déterministe.
   - Vérification : scénarios pour chaque issue.
   - Fichiers : `src/systems/grab.ts`, `test/scenarios/grab.test.ts`
 
-- [ ] **T15 : Rebords**
+- [x] **T15 : Rebords**
   - Acceptation : accroche, un seul occupant par rebord, invincibilité décroissante aux accroches répétées, 5 options de remontée (montée, roulade, attaque, saut, lâcher).
   - Vérification : scénarios pour chaque option.
   - Fichiers : `src/systems/ledge.ts`, `test/scenarios/ledge.test.ts`
 
-- [ ] **T16 : Entités (projectiles et objets)**
+- [x] **T16 : Entités (projectiles et objets)**
   - Acceptation : création et destruction sans allocation (réserve fixe de 32), mouvement, gravité optionnelle, hitbox, durée de vie, propriétaire, collision avec le décor ; un projectile de test.
   - Vérification : scénarios, dont réserve pleine (la création échoue proprement, sans erreur).
   - Fichiers : `src/systems/entities.ts`, `src/testing/fixtures.ts`, `test/scenarios/entities.test.ts`

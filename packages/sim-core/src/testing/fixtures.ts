@@ -3,7 +3,8 @@
  * `stages-items`. Les valeurs sont choisies pour rendre les scénarios lisibles, pas pour
  * l'équilibrage.
  */
-import type { CancelDef, FighterDef, HitDef, MoveDef, StageDef } from '../defs.ts';
+import type { CancelDef, EntityDef, FighterDef, HitDef, MoveDef, StageDef } from '../defs.ts';
+import { ENTITY_BOUNCE, ENTITY_DESTROY } from '../systems/entities.ts';
 import { fx } from '../fixed.ts';
 import {
   MOVE_SLOTS,
@@ -18,7 +19,9 @@ import {
   M_JAB,
   M_JAB2,
   M_JAB3,
+  M_LEDGE_ATTACK,
   M_NAIR,
+  M_NSPECIAL,
   M_UAIR,
   M_USMASH,
   M_UTILT,
@@ -59,7 +62,9 @@ function move(
   name: string,
   totalFrames: number,
   hits: HitSpec[],
-  extra: Partial<Pick<MoveDef, 'charge' | 'landingLag'>> & { cancels?: CancelDef[] } = {},
+  extra: Partial<Pick<MoveDef, 'charge' | 'landingLag' | 'spawn'>> & {
+    cancels?: CancelDef[];
+  } = {},
 ): MoveDef {
   return { name, totalFrames, hits: hits.map(hit), cancels: [], ...extra };
 }
@@ -72,7 +77,45 @@ function moveset(entries: [slot: number, def: MoveDef][]): (MoveDef | undefined)
 
 const SMASH_CHARGE = { frame: 5, maxFrames: 60, maxScale: fx(1.4) };
 
+/** Type 1 : tir rectiligne, détruit au premier contact. */
+export const E_SHOT = 1;
+/** Type 2 : balle pesante qui rebondit et traverse les combattants en les frappant une fois. */
+export const E_BALL = 2;
+
+export const TEST_ENTITIES: EntityDef[] = [
+  {
+    name: 'shot',
+    radius: fx(1.5),
+    gravity: fx(0),
+    lifetime: 60,
+    stageCollision: ENTITY_DESTROY,
+    hit: { damage: fx(5), angle: 30, baseKnockback: fx(10), knockbackGrowth: fx(0.3) },
+    destroyOnHit: true,
+  },
+  {
+    name: 'ball',
+    radius: fx(2),
+    gravity: fx(0.09),
+    lifetime: 300,
+    stageCollision: ENTITY_BOUNCE,
+    hit: { damage: fx(8), angle: 60, baseKnockback: fx(20), knockbackGrowth: fx(0.8) },
+    destroyOnHit: false,
+  },
+];
+
 const TEST_MOVES = moveset([
+  [
+    M_NSPECIAL,
+    move('shot', 40, [], {
+      spawn: { frame: 12, kind: E_SHOT, x: fx(6), y: fx(7), velX: fx(2.5), velY: fx(0) },
+    }),
+  ],
+  [
+    M_LEDGE_ATTACK,
+    move('ledge attack', 40, [
+      { frames: [20, 23], shape: [5, 5, 4], damage: 9, angle: 45, base: 40, growth: 0.5 },
+    ]),
+  ],
   [
     M_JAB,
     move(
@@ -274,6 +317,57 @@ export const TEST_FIGHTER: FighterDef = {
   moves: TEST_MOVES,
   techFrames: 20,
   downFrames: 30,
+  shieldMax: fx(50),
+  spotDodge: { totalFrames: 26, invStart: 3, invEnd: 17, speed: fx(0) },
+  roll: { totalFrames: 30, invStart: 4, invEnd: 15, speed: fx(1.6) },
+  airDodge: { totalFrames: 40, invStart: 3, invEnd: 29, speed: fx(2.2) },
+  airDodgeLandingLag: 10,
+  ledgeGetupFrames: 30,
+  ledgeRollFrames: 40,
+  ledgeRollDistance: fx(20),
+  grab: {
+    totalFrames: 34,
+    start: 6,
+    end: 8,
+    box: { x1: fx(3), y1: fx(7), x2: fx(9), y2: fx(7), radius: fx(2.5) },
+    holdX: fx(6),
+    pummelDamage: fx(1.3),
+    pummelFrames: 18,
+  },
+  throws: [
+    {
+      totalFrames: 30,
+      releaseFrame: 12,
+      damage: fx(8),
+      angle: 45,
+      baseKnockback: fx(45),
+      knockbackGrowth: fx(0.6),
+    },
+    {
+      totalFrames: 34,
+      releaseFrame: 16,
+      damage: fx(10),
+      angle: 135,
+      baseKnockback: fx(50),
+      knockbackGrowth: fx(0.7),
+    },
+    {
+      totalFrames: 30,
+      releaseFrame: 10,
+      damage: fx(7),
+      angle: 90,
+      baseKnockback: fx(50),
+      knockbackGrowth: fx(0.6),
+    },
+    {
+      totalFrames: 32,
+      releaseFrame: 14,
+      damage: fx(6),
+      angle: 75,
+      baseKnockback: fx(35),
+      knockbackGrowth: fx(0.4),
+    },
+  ],
   halfWidth: fx(3),
   height: fx(12),
   walkSpeed: fx(1.1),
@@ -370,6 +464,7 @@ export function testConfig(players: number, seed = 1): SimConfig {
   return {
     stage: TEST_STAGE,
     fighters: Array.from({ length: players }, () => TEST_FIGHTER),
+    entities: TEST_ENTITIES,
     seed,
   };
 }

@@ -1,5 +1,5 @@
 /** Séquences rejouées à l'identique dans Node et dans les navigateurs. */
-import { TEST_FIGHTER, TEST_HEAVY, TEST_STAGE } from '../../src/testing/fixtures.ts';
+import { TEST_ENTITIES, TEST_FIGHTER, TEST_HEAVY, TEST_STAGE } from '../../src/testing/fixtures.ts';
 import type { SimConfig } from '../../src/index.ts';
 import { play, type PlayStats } from './harness.ts';
 
@@ -24,6 +24,7 @@ export function caseConfig(c: DeterminismCase): SimConfig {
     fighters: Array.from({ length: c.players }, (_, i) =>
       i % 2 === 1 ? TEST_HEAVY : TEST_FIGHTER,
     ),
+    entities: TEST_ENTITIES,
     seed: c.seed,
   };
 }

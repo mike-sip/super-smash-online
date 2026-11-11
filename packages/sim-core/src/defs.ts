@@ -66,6 +66,42 @@ export interface ChargeDef {
   readonly maxScale: Fx;
 }
 
+/** Entité créée par une attaque (projectile). Position et vitesse relatives au combattant. */
+export interface SpawnDef {
+  /** Frame de l'attaque où l'entité apparaît. Ne doit pas être la frame de charge. */
+  readonly frame: number;
+  /** Type d'entité : index dans `SimConfig.entities`, plus 1. */
+  readonly kind: number;
+  readonly x: Fx;
+  readonly y: Fx;
+  readonly velX: Fx;
+  readonly velY: Fx;
+}
+
+/** Coup porté par une entité. L'angle est relatif à son sens de déplacement. */
+export interface EntityHitDef {
+  readonly damage: Fx;
+  readonly angle: number;
+  readonly baseKnockback: Fx;
+  readonly knockbackGrowth: Fx;
+}
+
+/** Type d'entité : projectile ou objet. */
+export interface EntityDef {
+  readonly name: string;
+  readonly radius: Fx;
+  /** 0 pour une trajectoire rectiligne. */
+  readonly gravity: Fx;
+  /** Durée de vie en frames. */
+  readonly lifetime: number;
+  /** `ENTITY_PASS`, `ENTITY_DESTROY` ou `ENTITY_BOUNCE` au contact d'un bloc plein. */
+  readonly stageCollision: number;
+  /** Absent : l'entité ne blesse personne. */
+  readonly hit?: EntityHitDef;
+  /** Si vrai, l'entité disparaît au premier combattant touché ; sinon elle touche chacun une fois. */
+  readonly destroyOnHit: boolean;
+}
+
 export interface MoveDef {
   readonly name: string;
   /** Durée totale. Le combattant redevient libre à la frame `totalFrames + 1`. */
@@ -74,12 +110,62 @@ export interface MoveDef {
   readonly hits: readonly HitDef[];
   readonly cancels: readonly CancelDef[];
   readonly charge?: ChargeDef;
+  readonly spawn?: SpawnDef;
   /** Lag d'atterrissage si le combattant touche le sol pendant cette attaque aérienne. */
   readonly landingLag?: number;
 }
 
+export interface GrabDef {
+  readonly totalFrames: number;
+  /** Première et dernière frame où la saisie peut prendre, incluses. */
+  readonly start: number;
+  readonly end: number;
+  readonly box: CapsuleDef;
+  /** Distance à laquelle la victime est tenue devant le combattant. */
+  readonly holdX: Fx;
+  /** Dégâts d'un coup porté pendant la prise, et délai entre deux coups. */
+  readonly pummelDamage: Fx;
+  readonly pummelFrames: number;
+}
+
+export interface ThrowDef {
+  readonly totalFrames: number;
+  /** Frame où la victime est lâchée et éjectée. */
+  readonly releaseFrame: number;
+  readonly damage: Fx;
+  /** Angle d'éjection : 0 vers l'avant, 90 vers le haut, 180 vers l'arrière. */
+  readonly angle: number;
+  readonly baseKnockback: Fx;
+  readonly knockbackGrowth: Fx;
+}
+
+/** Esquive : durée totale et frames d'intangibilité, première et dernière incluses. */
+export interface DodgeDef {
+  readonly totalFrames: number;
+  readonly invStart: number;
+  readonly invEnd: number;
+  /** Vitesse de déplacement (roulade, esquive aérienne directionnelle). 0 pour l'esquive sur place. */
+  readonly speed: Fx;
+}
+
 export interface FighterDef {
   readonly name: string;
+
+  /** Résistance du bouclier plein, en points de dégâts. */
+  readonly shieldMax: Fx;
+  readonly spotDodge: DodgeDef;
+  readonly roll: DodgeDef;
+  readonly airDodge: DodgeDef;
+  /** Lag d'atterrissage si le combattant touche le sol pendant une esquive aérienne. */
+  readonly airDodgeLandingLag: number;
+  /** Durée de la remontée simple et de la remontée en roulade depuis un rebord. */
+  readonly ledgeGetupFrames: number;
+  readonly ledgeRollFrames: number;
+  /** Distance parcourue sur le stage par la remontée en roulade. */
+  readonly ledgeRollDistance: Fx;
+  readonly grab: GrabDef;
+  /** Projections avant, arrière, haut, bas, dans cet ordre. */
+  readonly throws: readonly [ThrowDef, ThrowDef, ThrowDef, ThrowDef];
 
   /** 100 = poids moyen. Plus lourd, moins éjecté. */
   readonly weight: Fx;

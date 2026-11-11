@@ -96,6 +96,11 @@ export interface SimConfig {
 
 export function createSim(config: SimConfig): Sim;
 
+/** Ajoutés pendant l'implémentation : */
+export function respawn(sim: Sim, player: number): void;
+export function spawnEntity(sim: Sim, kind: number, owner: number, x: number, y: number, velX: number, velY: number): number;
+export function frame(sim: Sim): number;
+
 /** Avance d'une frame. `inputs[i]` est l'input du joueur i. N'alloue aucune mémoire. */
 export function step(sim: Sim, inputs: Uint32Array): void;
 
@@ -183,7 +188,14 @@ Mis à jour à chaque phase. Chaque point est soit une simplification assumée, 
 | Hurtbox | Définies par combattant (`FighterDef.hurtboxes`), fixes pendant toutes les actions. La spec disait « par frame ». | À rendre variables par action si un personnage réel en a besoin (module `fighters`). |
 | Priorité entre hitbox | Ordre de la liste dans `MoveDef.hits`. Deux attaques qui se croisent ne s'annulent pas (pas de « clank »). | À décider avec le ressenti manette en main. |
 | Influence directionnelle | Déviation en degrés entiers, 15° au maximum. | Résolution à affiner si le ressenti est trop saccadé. |
-| Rétablissement | Fenêtre de 20 frames après l'appui sur bouclier, sans pénalité en cas d'appuis répétés. | Pénalité à ajouter avec le bouclier (T12). |
+| Rétablissement | Fenêtre de 20 frames après l'appui sur bouclier ; elle ne peut pas être rouverte avant 40 frames. En chute désordonnée, le bouton bouclier est réservé au rétablissement : il faut en sortir pour esquiver. | — |
+| Bouclier | Protège tout le corps tant qu'il lui reste de la résistance : il ne rétrécit pas, donc pas de coups qui passent sur les bords. | À décider avec le ressenti manette en main. |
+| Parade parfaite | Coup reçu dans les 5 premières frames de l'abaissement du bouclier. | — |
+| Esquives | Usure commune aux trois esquives : +3 frames de lag et −2 frames d'intangibilité par niveau, un niveau récupéré toutes les 90 frames. | Valeurs à régler. |
+| Saisies | Deux saisies mutuelles s'annulent. Deux joueurs sur la même victime : le plus proche gagne, puis le plus petit index à distance égale. | — |
+| Rebords | Un seul occupant ; si deux joueurs l'atteignent à la même frame, le plus petit index l'obtient. Pas de vol de rebord. Les remontées téléportent le combattant à la fin de l'action : le mouvement intermédiaire est laissé au rendu. | Vol de rebord à décider. |
+| Entités | Seuls les blocs pleins les arrêtent, pas les plateformes. Elles ne peuvent être ni ramassées ni renvoyées. | Ramassage et lancer : module `stages-items`. |
+| Spéciaux | Un spécial est une attaque comme une autre, plus la création éventuelle d'une entité. Pas encore d'élan propre (spécial de retour au stage). | À ajouter avec le module `fighters`. |
 | Limite haute | Ne tue qu'un combattant en hitstun ou en chute désordonnée. | — |
 | Réapparition | Instantanée sur le point d'apparition, sans invincibilité. | Module `match-rules`. |
 | Corps des combattants | Ils se traversent : pas de poussée entre deux combattants au sol. | Hors périmètre, à décider. |

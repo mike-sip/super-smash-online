@@ -22,4 +22,6 @@ export const M_NSPECIAL = 15;
 export const M_SSPECIAL = 16;
 export const M_USPECIAL = 17;
 export const M_DSPECIAL = 18;
-export const MOVE_SLOTS = 19;
+/** Attaque de remontée depuis un rebord. */
+export const M_LEDGE_ATTACK = 19;
+export const MOVE_SLOTS = 20;

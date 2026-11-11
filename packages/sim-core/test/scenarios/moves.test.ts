@@ -50,7 +50,8 @@ describe('déroulement d’une attaque', () => {
 
   it('ne fait rien si le combattant n’a pas d’attaque à cet emplacement', () => {
     const sim = newSim();
-    hold(sim, press(BTN_SPECIAL), 3);
+    // Le combattant de test n'a pas de spécial haut.
+    hold(sim, stick(0, 127, BTN_SPECIAL), 3);
     expect(sim.state.action[0]).toBe(A_IDLE);
   });
 

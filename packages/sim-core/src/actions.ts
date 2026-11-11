@@ -29,6 +29,33 @@ export const A_TECH = 14;
 /** À terre après un rétablissement manqué. */
 export const A_DOWN = 15;
 
+// À partir d'ici, les actions sont gérées par `systems/defense.ts` et les systèmes qu'il appelle.
+export const A_SHIELD = 16;
+/** Vient de bloquer un coup : bouclier maintenu de force. */
+export const A_SHIELDSTUN = 17;
+/** Abaisse le bouclier. Un coup reçu pendant les premières frames est paré. */
+export const A_SHIELD_DROP = 18;
+/** Bouclier brisé : projeté en l'air, puis étourdi au sol. */
+export const A_SHIELD_BREAK = 19;
+export const A_SPOTDODGE = 20;
+export const A_ROLL = 21;
+export const A_AIRDODGE = 22;
+/** Tentative de saisie. */
+export const A_GRAB = 23;
+/** Tient un adversaire. */
+export const A_GRABBING = 24;
+/** Tenu par un adversaire. */
+export const A_GRABBED = 25;
+export const A_THROW = 26;
+/** Séparation après une saisie rompue, sans dégâts. */
+export const A_GRAB_RELEASE = 27;
+/** Suspendu à un rebord. */
+export const A_LEDGE = 28;
+/** Remontée simple depuis le rebord. */
+export const A_LEDGE_GETUP = 29;
+/** Remontée en roulade, plus loin sur le stage. */
+export const A_LEDGE_ROLL = 30;
+
 /**
  * Change d'action. `actionFrame` compte les frames passées dans l'action, frame du changement
  * incluse : il vaut 1 à la fin de la frame où l'action a commencé.

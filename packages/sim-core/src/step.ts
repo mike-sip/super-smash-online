@@ -1,5 +1,5 @@
-import { A_AIR, A_IDLE, setAction } from './actions.ts';
-import type { FighterDef, StageDef } from './defs.ts';
+import { A_AIR, A_IDLE, A_SHIELD, A_SHIELD_BREAK, setAction } from './actions.ts';
+import type { EntityDef, FighterDef, StageDef } from './defs.ts';
 import { createEventQueue, type EventQueue } from './events.ts';
 import { rngSeed } from './rng.ts';
 import {
@@ -13,14 +13,20 @@ import {
 import { checkBlast } from './systems/blast.ts';
 import { updateBuffers } from './systems/buffer.ts';
 import { compileStage, findSurface, integrate, type StageGeo } from './systems/collision.ts';
+import { SHIELD_REGEN, tickDodgeStale } from './systems/defense.ts';
+import { updateEntities } from './systems/entities.ts';
+import { resolveGrabs } from './systems/grab.ts';
 import { createHitScratch, resolveHits, type HitScratch } from './systems/hit.ts';
 import { launch } from './systems/knockback.ts';
+import { resolveLedges } from './systems/ledge.ts';
 import { trackStick, updateMovement } from './systems/movement.ts';
 
 export interface SimConfig {
   readonly stage: StageDef;
   /** Un combattant par joueur, de 2 à 8. */
   readonly fighters: readonly FighterDef[];
+  /** Types d'entités (projectiles, objets) utilisables pendant le combat. */
+  readonly entities?: readonly EntityDef[];
   readonly seed: number;
 }
 
@@ -28,6 +34,8 @@ export interface Sim {
   readonly config: SimConfig;
   /** Tout ce qui évolue pendant le combat. Seule partie sauvegardée par un snapshot. */
   readonly state: SimState;
+  /** Types d'entités, toujours défini (liste vide par défaut). */
+  readonly entityDefs: readonly EntityDef[];
   /** Géométrie du stage, figée à la création. */
   readonly geo: StageGeo;
   /** Événements de la dernière frame. Hors snapshot : reconstruits à chaque `step`. */
@@ -54,6 +62,7 @@ function placeAtSpawn(sim: Sim, i: number): void {
   s.grounded[i] = surface === 0 ? 0 : 1;
   s.surface[i] = surface;
   s.jumpsLeft[i] = sim.config.fighters[i]!.airJumps;
+  s.shield[i] = sim.config.fighters[i]!.shieldMax;
   setAction(s, i, surface === 0 ? A_AIR : A_IDLE);
 }
 
@@ -70,6 +79,7 @@ export function createSim(config: SimConfig): Sim {
   const sim: Sim = {
     config,
     state: createState(),
+    entityDefs: config.entities ?? [],
     geo: compileStage(config.stage),
     events: createEventQueue(),
     scratch: createHitScratch(),
@@ -126,15 +136,28 @@ export function step(sim: Sim, inputs: Uint32Array): void {
     if (frozen[i] === 0) integrate(sim, i);
   }
 
+  resolveLedges(sim);
+  updateEntities(sim);
+
   // 4. Coups, sur les positions à jour.
   resolveHits(sim);
+  resolveGrabs(sim);
 
   // 5. Zones limites.
   for (let i = 0; i < players; i++) checkBlast(sim, i);
 
-  // 6. Avance des actions. Une attaque en cours de charge reste sur sa frame.
+  // 6. Compteurs et avance des actions. Une attaque en cours de charge reste sur sa frame.
   for (let i = 0; i < players; i++) {
     if (frozen[i] === 1) continue;
+    tickDodgeStale(sim, i);
+    if (s.intangible[i]! > 0) s.intangible[i] = s.intangible[i]! - 1;
+    if (s.ledgeCooldown[i]! > 0) s.ledgeCooldown[i] = s.ledgeCooldown[i]! - 1;
+    const action = s.action[i]!;
+    if (action < A_SHIELD || action > A_SHIELD_BREAK) {
+      const shield = s.shield[i]! + SHIELD_REGEN;
+      const max = sim.config.fighters[i]!.shieldMax;
+      s.shield[i] = shield > max ? max : shield;
+    }
     if (s.chargeHold[i] === 1) s.chargeHold[i] = 0;
     else s.actionFrame[i] = s.actionFrame[i]! + 1;
   }
