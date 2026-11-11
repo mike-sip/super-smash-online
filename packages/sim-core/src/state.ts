@@ -36,6 +36,33 @@ export const FIGHTER_FIELDS = [
   'damage',
   'input',
   'prevInput',
+  /** Comme `tilt`, pour l'axe vertical. */
+  'tiltY',
+  /** Tampons d'inputs : frames restantes pendant lesquelles l'appui reste valable. */
+  'bufJump',
+  'bufAttack',
+  'bufSpecial',
+  /** Stick droit : frames restantes dans les 8 bits bas, direction (1 à 4) au-dessus. */
+  'bufC',
+  /** Frames restantes pendant lesquelles un contact avec le sol ou un mur est un rétablissement. */
+  'techWindow',
+  /** Attaque en cours : emplacement, frames de charge, cibles déjà touchées par groupe. */
+  'move',
+  'charge',
+  'chargeHold',
+  'hitMask',
+  'connected',
+  'landLag',
+  /** Frames de gel restantes après un coup porté ou reçu. */
+  'hitlag',
+  /** Frames de hitstun restantes. */
+  'stun',
+  'tumble',
+  'bounced',
+  /** Éjection en attente, appliquée à la fin du hitlag pour laisser le temps à la DI. */
+  'launchPending',
+  'launchSpeed',
+  'launchAngle',
 ] as const;
 
 /** Un Int32 par entité (projectile, objet). `eKind` à 0 signifie emplacement libre. */

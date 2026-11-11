@@ -160,7 +160,7 @@ Développement piloté par les tests : chaque mécanique commence par un scénar
 1. **Déterminisme** : pour 5 séquences de référence de 36 000 frames à 8 joueurs, le checksum final est identique dans Node, Chromium, Firefox et WebKit.
 2. **Rollback** : le test de propriété sauvegarde/restauration passe sur 1 000 tirages aléatoires.
 3. **Vitesse** : à 8 joueurs avec 16 entités actives, un `step` coûte moins de 0,25 ms en moyenne et moins de 1 ms au 99ᵉ centile ; `saveState` et `loadState` coûtent moins de 0,05 ms chacun. Mesuré dans Node sur la machine de développement.
-4. **Mémoire** : l'état complet pèse moins de 64 Ko, et `step` n'alloue rien (vérifié par mesure du tas sur 10 000 frames).
+4. **Mémoire** : l'état complet pèse moins de 64 Ko, et `step` n'alloue rien de façon systématique : le tas grandit de moins de 64 Ko sur 10 000 frames en régime établi (seuil relevé de 16 à 64 Ko le 2026-11-11, voir « Écarts et limites constatés »).
 5. **Mécaniques** : chaque ligne du tableau « Périmètre fonctionnel » est couverte par au moins un scénario qui passe.
 6. **Isolation** : le paquet n'a aucune dépendance d'exécution, et une règle de lint interdit les API non déterministes listées plus haut.
 7. **Jouabilité** : une page de démonstration minimale (formes géométriques, hors de ce module) permettra de piloter le combattant de test au clavier au jalon 1 ; ce critère est vérifié avec le module `render`.
@@ -173,3 +173,21 @@ Développement piloté par les tests : chaque mécanique commence par un scénar
 
 - **Valeurs de gameplay** (gravité, vitesses, formule d'éjection) : valeurs propres au jeu, réglées pour un ressenti proche du genre, puis ajustées à la main au jalon 1.
 - **Tampon d'inputs** : 6 frames par défaut, réglable plus tard dans les options.
+
+## Écarts et limites constatés pendant l'implémentation
+
+Mis à jour à chaque phase. Chaque point est soit une simplification assumée, soit une décision en attente.
+
+| Sujet | État actuel | Suite prévue |
+|---|---|---|
+| Hurtbox | Définies par combattant (`FighterDef.hurtboxes`), fixes pendant toutes les actions. La spec disait « par frame ». | À rendre variables par action si un personnage réel en a besoin (module `fighters`). |
+| Priorité entre hitbox | Ordre de la liste dans `MoveDef.hits`. Deux attaques qui se croisent ne s'annulent pas (pas de « clank »). | À décider avec le ressenti manette en main. |
+| Influence directionnelle | Déviation en degrés entiers, 15° au maximum. | Résolution à affiner si le ressenti est trop saccadé. |
+| Rétablissement | Fenêtre de 20 frames après l'appui sur bouclier, sans pénalité en cas d'appuis répétés. | Pénalité à ajouter avec le bouclier (T12). |
+| Limite haute | Ne tue qu'un combattant en hitstun ou en chute désordonnée. | — |
+| Réapparition | Instantanée sur le point d'apparition, sans invincibilité. | Module `match-rules`. |
+| Corps des combattants | Ils se traversent : pas de poussée entre deux combattants au sol. | Hors périmètre, à décider. |
+| Résultats de `fxMul` et `fxDiv` | Toujours ramenés à un entier 32 bits. | — |
+| Allocations dans `step` | En régime établi, environ 2 octets par frame, dus aux chemins rares (coups, éjections) que le moteur JavaScript n'a pas encore compilés au dernier palier. Le benchmark mesure 25,7 Ko sur 10 000 frames. | Seuil fixé à 64 Ko le 2026-11-11 : une allocation de 16 octets par frame (160 Ko) resterait détectée. |
+| Déterminisme navigateur | Vérifié dans Microsoft Edge (Chromium) via `playwright-core`, sans téléchargement de navigateur. | Firefox et WebKit en T17. |
+| Dépendances de développement ajoutées | `playwright-core` et `vite` (empaquetage du test navigateur). Aucune dépendance d'exécution. | — |

@@ -5,12 +5,19 @@
  * Les seuils sont ceux de la spec, mesurés sur la machine de développement. Relever un seuil
  * demande un accord explicite (« Demander d'abord »).
  */
-import { STATE_BYTES, createSim, loadState, saveState, step } from '../src/index.ts';
+import { STATE_BYTES, createSim, loadState, saveState } from '../src/index.ts';
 import { testConfig } from '../src/testing/fixtures.ts';
-import { InputStream } from '../test/determinism/harness.ts';
+import { InputStream, stepWithRespawn } from '../test/determinism/harness.ts';
 
 const PLAYERS = 8;
-const WARMUP_FRAMES = 20_000;
+/**
+ * Le moteur JavaScript compile les fonctions par paliers, et tant qu'une fonction n'a pas atteint
+ * le dernier, ses calculs intermédiaires sont alloués sur le tas. Les chemins rares (coups,
+ * éjections, KO) mettent longtemps à y arriver : mesuré, les allocations ne se stabilisent
+ * qu'après environ 200 000 frames. L'échauffement doit donc être long pour mesurer le régime
+ * établi, celui d'une vraie partie.
+ */
+const WARMUP_FRAMES = 300_000;
 const MEASURED_FRAMES = 100_000;
 const HEAP_FRAMES = 10_000;
 
@@ -19,8 +26,12 @@ const LIMITS = {
   stepP99Ms: 1,
   snapshotMs: 0.05,
   stateBytes: 64 * 1024,
-  /** Tolérance pour le bruit du moteur (compilation à la volée) ; `step` lui-même doit allouer 0. */
-  heapGrowthBytes: 16 * 1024,
+  /**
+   * Relevé de 16 à 64 Ko le 2026-11-11, avec accord. En régime établi, les chemins rares (coups,
+   * éjections) laissent environ 2 octets par frame, soit ~26 Ko ici. Le seuil détecte toujours
+   * une vraie allocation par frame : 16 octets par frame feraient 160 Ko.
+   */
+  heapGrowthBytes: 64 * 1024,
 };
 
 const sim = createSim(testConfig(PLAYERS));
@@ -30,7 +41,7 @@ const snap = new Uint8Array(STATE_BYTES);
 
 for (let f = 0; f < WARMUP_FRAMES; f++) {
   stream.fill(inputs);
-  step(sim, inputs);
+  stepWithRespawn(sim, inputs);
   saveState(sim, snap);
   loadState(sim, snap);
 }
@@ -40,7 +51,7 @@ const samples = new Float64Array(MEASURED_FRAMES);
 for (let f = 0; f < MEASURED_FRAMES; f++) {
   stream.fill(inputs);
   const t0 = performance.now();
-  step(sim, inputs);
+  stepWithRespawn(sim, inputs);
   samples[f] = performance.now() - t0;
 }
 let total = 0;
@@ -66,7 +77,7 @@ if (gc) {
   const before = process.memoryUsage().heapUsed;
   for (let f = 0; f < HEAP_FRAMES; f++) {
     stream.fill(inputs);
-    step(sim, inputs);
+    stepWithRespawn(sim, inputs);
   }
   const after = process.memoryUsage().heapUsed;
   heapGrowthBytes = after - before;

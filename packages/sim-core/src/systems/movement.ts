@@ -1,42 +1,203 @@
 /**
- * Décisions de déplacement : lit l'input du joueur, change d'action et fixe les vitesses.
+ * Décisions du combattant : lit l'input du joueur, change d'action et fixe les vitesses.
  * Le déplacement lui-même et les collisions sont appliqués ensuite par `collision.ts`.
  */
 import {
   A_AIR,
+  A_ATTACK,
   A_BRAKE,
   A_CROUCH,
   A_DASH,
   A_DEAD,
+  A_DOWN,
+  A_HITSTUN,
   A_IDLE,
   A_JUMPSQUAT,
   A_LAND,
   A_RUN,
+  A_TECH,
+  A_TUMBLE,
   A_TURN,
   A_WALK,
   setAction,
 } from '../actions.ts';
 import type { FighterDef } from '../defs.ts';
-import { BTN_JUMP, STICK_MAX, inputPressed, inputStickX, inputStickY } from '../input.ts';
+import { fx } from '../fixed.ts';
+import {
+  BTN_ATTACK,
+  BTN_CSTICK_DOWN,
+  BTN_CSTICK_LEFT,
+  BTN_CSTICK_RIGHT,
+  BTN_CSTICK_UP,
+  BTN_JUMP,
+  STICK_MAX,
+  inputStickX,
+  inputStickY,
+} from '../input.ts';
+import {
+  M_BAIR,
+  M_DAIR,
+  M_DASH_ATTACK,
+  M_DSMASH,
+  M_DSPECIAL,
+  M_DTILT,
+  M_FAIR,
+  M_FSMASH,
+  M_FTILT,
+  M_JAB,
+  M_NAIR,
+  M_NSPECIAL,
+  M_SSPECIAL,
+  M_UAIR,
+  M_USMASH,
+  M_USPECIAL,
+  M_UTILT,
+} from '../moves.ts';
 import type { SimState } from '../state.ts';
 import type { Sim } from '../step.ts';
+import { C_DOWN, C_LEFT, C_UP } from './buffer.ts';
 import { STICK_HOLD_DOWN } from './collision.ts';
 
-/** En dessous, le stick horizontal est considéré au neutre. */
+/** En dessous, le stick est considéré au neutre. */
 const STICK_DEADZONE = 20;
-/** Inclinaison à atteindre pour déclencher un dash. */
-const STICK_DASH = 96;
-/** Le dash ne part que si cette inclinaison est atteinte en si peu de frames (coup de stick). */
-const DASH_WINDOW = 3;
+/** Inclinaison minimale pour qu'une attaque soit dirigée plutôt que neutre. */
+const STICK_TILT = 40;
+/** Inclinaison à atteindre pour un dash ou une attaque smash. */
+const STICK_SMASH = 96;
+/** Un coup de stick : l'inclinaison smash est atteinte en si peu de frames. */
+const FLICK_WINDOW = 3;
 /** Inclinaison minimale pour entretenir la course. */
 const STICK_RUN = 64;
 /** Coup de stick vers le bas : chute rapide en l'air, descente à travers une plateforme. */
 const STICK_FLICK_DOWN = -100;
+/** Décélération horizontale pendant le hitstun en l'air. */
+const KNOCKBACK_DECAY = fx(0.03);
+
+const CHARGE_BUTTONS =
+  BTN_ATTACK | BTN_CSTICK_UP | BTN_CSTICK_DOWN | BTN_CSTICK_LEFT | BTN_CSTICK_RIGHT;
+
+const FROM_ATTACK = 1;
+const FROM_SPECIAL = 2;
+const FROM_CSTICK = 3;
+
+// Résultat de la dernière sélection d'attaque. Variables de travail, écrasées à chaque appel.
+let wantSlot = -1;
+let wantFacing = 0;
+let wantFrom = 0;
 
 /** Rapproche `v` de `target` d'au plus `delta`, sans le dépasser. */
 function approach(v: number, target: number, delta: number): number {
   if (v < target) return v + delta > target ? target : v + delta;
   return v - delta < target ? target : v - delta;
+}
+
+/** Compte les frames consécutives d'inclinaison du même côté, signées par la direction. */
+function trackTilt(before: number, value: number): number {
+  if (value >= STICK_DEADZONE) return before > 0 ? before + 1 : 1;
+  if (value <= -STICK_DEADZONE) return before < 0 ? before - 1 : -1;
+  return 0;
+}
+
+/**
+ * Détermine l'attaque que l'input en tampon désigne, sans la lancer.
+ * `running` : le combattant est en dash ou en course (attaque de dash).
+ */
+function selectMove(
+  s: SimState,
+  i: number,
+  grounded: boolean,
+  running: boolean,
+  stickX: number,
+  stickY: number,
+): void {
+  wantSlot = -1;
+  wantFacing = 0;
+  wantFrom = 0;
+  const facing = s.facing[i]!;
+  const absX = stickX < 0 ? -stickX : stickX;
+  const absY = stickY < 0 ? -stickY : stickY;
+  const dirX = stickX > 0 ? 1 : -1;
+  const vertical = absY > absX && absY >= STICK_TILT;
+  const horizontal = !vertical && absX >= STICK_TILT;
+
+  const c = s.bufC[i]!;
+  if (c !== 0) {
+    const cDir = c >> 8;
+    wantFrom = FROM_CSTICK;
+    if (grounded) {
+      if (cDir === C_UP) wantSlot = M_USMASH;
+      else if (cDir === C_DOWN) wantSlot = M_DSMASH;
+      else {
+        wantSlot = M_FSMASH;
+        wantFacing = cDir === C_LEFT ? -1 : 1;
+      }
+    } else if (cDir === C_UP) wantSlot = M_UAIR;
+    else if (cDir === C_DOWN) wantSlot = M_DAIR;
+    else wantSlot = (cDir === C_LEFT ? -1 : 1) === facing ? M_FAIR : M_BAIR;
+    return;
+  }
+
+  if (s.bufAttack[i]! > 0) {
+    wantFrom = FROM_ATTACK;
+    if (!grounded) {
+      if (vertical) wantSlot = stickY > 0 ? M_UAIR : M_DAIR;
+      else if (horizontal) wantSlot = dirX === facing ? M_FAIR : M_BAIR;
+      else wantSlot = M_NAIR;
+    } else if (running) {
+      wantSlot = M_DASH_ATTACK;
+    } else if (vertical) {
+      const tiltY = s.tiltY[i]!;
+      const flick = absY >= STICK_SMASH && (tiltY < 0 ? -tiltY : tiltY) <= FLICK_WINDOW;
+      if (stickY > 0) wantSlot = flick ? M_USMASH : M_UTILT;
+      else wantSlot = flick ? M_DSMASH : M_DTILT;
+    } else if (horizontal) {
+      const tilt = s.tilt[i]!;
+      const flick = absX >= STICK_SMASH && (tilt < 0 ? -tilt : tilt) <= FLICK_WINDOW;
+      wantSlot = flick ? M_FSMASH : M_FTILT;
+      wantFacing = dirX;
+    } else {
+      wantSlot = M_JAB;
+    }
+    return;
+  }
+
+  if (s.bufSpecial[i]! > 0) {
+    wantFrom = FROM_SPECIAL;
+    if (vertical) wantSlot = stickY > 0 ? M_USPECIAL : M_DSPECIAL;
+    else if (horizontal) {
+      wantSlot = M_SSPECIAL;
+      wantFacing = dirX;
+    } else wantSlot = M_NSPECIAL;
+  }
+}
+
+/** Lance l'emplacement `slot` et consomme l'input qui l'a demandé. */
+function startMove(s: SimState, i: number, slot: number): void {
+  if (wantFrom === FROM_ATTACK) s.bufAttack[i] = 0;
+  else if (wantFrom === FROM_SPECIAL) s.bufSpecial[i] = 0;
+  else if (wantFrom === FROM_CSTICK) s.bufC[i] = 0;
+  if (wantFacing !== 0) s.facing[i] = wantFacing;
+  s.move[i] = slot;
+  s.charge[i] = 0;
+  s.hitMask[i] = 0;
+  s.connected[i] = 0;
+  setAction(s, i, A_ATTACK);
+}
+
+/** Lance l'attaque demandée si le combattant en possède une. Renvoie vrai si elle est partie. */
+function tryAttack(
+  s: SimState,
+  def: FighterDef,
+  i: number,
+  grounded: boolean,
+  running: boolean,
+  stickX: number,
+  stickY: number,
+): boolean {
+  selectMove(s, i, grounded, running, stickX, stickY);
+  if (wantSlot < 0 || def.moves[wantSlot] === undefined) return false;
+  startMove(s, i, wantSlot);
+  return true;
 }
 
 function startDash(s: SimState, def: FighterDef, i: number, dir: number): void {
@@ -52,54 +213,125 @@ function leaveGround(s: SimState, def: FighterDef, i: number): void {
   setAction(s, i, A_AIR);
 }
 
+/** Dérive horizontale et chute rapide, communes à la chute libre et aux attaques aériennes. */
+function airControl(
+  s: SimState,
+  def: FighterDef,
+  i: number,
+  stickX: number,
+  dir: number,
+  flickDown: boolean,
+): void {
+  if (flickDown && s.velY[i]! < 0) s.fastFall[i] = 1;
+  if (dir !== 0) {
+    const target = Math.trunc((def.airSpeed * stickX) / STICK_MAX);
+    s.velX[i] = approach(s.velX[i]!, target, def.airAccel);
+  } else {
+    s.velX[i] = approach(s.velX[i]!, 0, def.airFriction);
+  }
+}
+
 export function updateMovement(sim: Sim, i: number): void {
   const s = sim.state;
   const def = sim.config.fighters[i]!;
   const input = s.input[i]!;
-  const prev = s.prevInput[i]!;
   const stickX = inputStickX(input);
   const stickY = inputStickY(input);
   const absX = stickX < 0 ? -stickX : stickX;
   const dir = absX < STICK_DEADZONE ? 0 : stickX > 0 ? 1 : -1;
-
-  // Depuis combien de frames le stick est incliné de ce côté : distingue coup de stick et inclinaison lente.
-  const tiltBefore = s.tilt[i]!;
-  const tilt =
-    dir === 0
-      ? 0
-      : dir > 0
-        ? tiltBefore > 0
-          ? tiltBefore + 1
-          : 1
-        : tiltBefore < 0
-          ? tiltBefore - 1
-          : -1;
-  s.tilt[i] = tilt;
-
-  const dashInput = absX >= STICK_DASH && tilt * dir <= DASH_WINDOW;
-  const jumpPressed = inputPressed(input, prev, BTN_JUMP);
-  const flickDown = stickY <= STICK_FLICK_DOWN && inputStickY(prev) > STICK_FLICK_DOWN;
   const action = s.action[i]!;
   const frames = s.actionFrame[i]!;
+  const grounded = s.grounded[i] === 1;
 
   if (action === A_DEAD) return;
 
-  if (action === A_AIR) {
-    if (jumpPressed && s.jumpsLeft[i]! > 0) {
+  const tilt = s.tilt[i]!;
+  const flickX = absX >= STICK_SMASH && tilt * dir <= FLICK_WINDOW;
+  const flickDown = stickY <= STICK_FLICK_DOWN && inputStickY(s.prevInput[i]!) > STICK_FLICK_DOWN;
+
+  if (action === A_HITSTUN) {
+    const left = s.stun[i]! - 1;
+    s.stun[i] = left;
+    s.velX[i] = approach(s.velX[i]!, 0, grounded ? def.friction : KNOCKBACK_DECAY);
+    if (left <= 0) {
+      if (grounded) setAction(s, i, A_IDLE);
+      else setAction(s, i, s.tumble[i] === 1 ? A_TUMBLE : A_AIR);
+    }
+    return;
+  }
+
+  if (action === A_TECH) {
+    s.velX[i] = 0;
+    if (frames >= def.techFrames) {
+      setAction(s, i, A_IDLE);
+      updateMovement(sim, i);
+    }
+    return;
+  }
+
+  if (action === A_DOWN) {
+    s.velX[i] = approach(s.velX[i]!, 0, def.friction);
+    if (frames >= def.downFrames) {
+      setAction(s, i, A_IDLE);
+      updateMovement(sim, i);
+    }
+    return;
+  }
+
+  if (action === A_ATTACK) {
+    const move = def.moves[s.move[i]!]!;
+    if (frames >= move.totalFrames) {
+      // Fin de l'attaque : le combattant est libre dès cette frame.
+      setAction(s, i, grounded ? A_IDLE : A_AIR);
+      updateMovement(sim, i);
+      return;
+    }
+    const moveFrame = frames + 1;
+
+    const cancels = move.cancels;
+    for (let c = 0; c < cancels.length; c++) {
+      const cancel = cancels[c]!;
+      if (moveFrame < cancel.start || moveFrame > cancel.end) continue;
+      if (cancel.requiresHit && s.connected[i] === 0) continue;
+      selectMove(s, i, grounded, false, stickX, stickY);
+      if (wantSlot === cancel.on && def.moves[cancel.to] !== undefined) {
+        startMove(s, i, cancel.to);
+        return;
+      }
+    }
+
+    const charge = move.charge;
+    if (
+      charge !== undefined &&
+      moveFrame === charge.frame &&
+      s.charge[i]! < charge.maxFrames &&
+      ((input >>> 16) & CHARGE_BUTTONS) !== 0
+    ) {
+      s.charge[i] = s.charge[i]! + 1;
+      s.chargeHold[i] = 1;
+    }
+
+    if (grounded) s.velX[i] = approach(s.velX[i]!, 0, def.friction);
+    else airControl(s, def, i, stickX, dir, flickDown);
+    return;
+  }
+
+  if (action === A_AIR || action === A_TUMBLE) {
+    if (s.bufJump[i]! > 0 && s.jumpsLeft[i]! > 0) {
+      s.bufJump[i] = 0;
       s.jumpsLeft[i] = s.jumpsLeft[i]! - 1;
       s.velY[i] = def.doubleJumpVelocity;
       s.fastFall[i] = 0;
       // Le double saut permet de repartir franchement dans la direction du stick.
       if (dir !== 0) s.velX[i] = Math.trunc((def.airSpeed * stickX) / STICK_MAX);
-    } else if (flickDown && s.velY[i]! < 0) {
-      s.fastFall[i] = 1;
+      if (action === A_TUMBLE) setAction(s, i, A_AIR);
+    } else if (tryAttack(s, def, i, false, false, stickX, stickY)) {
+      // L'attaque aérienne démarre : le contrôle aérien reste actif ci-dessous.
+    } else if (action === A_TUMBLE && flickX) {
+      // Un coup de stick latéral suffit à sortir de la chute désordonnée.
+      setAction(s, i, A_AIR);
     }
-    if (dir !== 0) {
-      const target = Math.trunc((def.airSpeed * stickX) / STICK_MAX);
-      s.velX[i] = approach(s.velX[i]!, target, def.airAccel);
-    } else {
-      s.velX[i] = approach(s.velX[i]!, 0, def.airFriction);
-    }
+    airControl(s, def, i, stickX, dir, flickDown);
     return;
   }
 
@@ -114,13 +346,20 @@ export function updateMovement(sim: Sim, i: number): void {
 
   if (action === A_LAND) {
     s.velX[i] = approach(s.velX[i]!, 0, def.friction);
-    if (frames >= def.landFrames) setAction(s, i, A_IDLE);
+    if (frames >= s.landLag[i]!) {
+      setAction(s, i, A_IDLE);
+      updateMovement(sim, i);
+    }
     return;
   }
 
-  // Toutes les actions au sol restantes peuvent être annulées par un saut.
-  if (jumpPressed) {
+  // Toutes les actions au sol restantes peuvent être annulées par un saut ou une attaque.
+  if (s.bufJump[i]! > 0) {
+    s.bufJump[i] = 0;
     setAction(s, i, A_JUMPSQUAT);
+    return;
+  }
+  if (tryAttack(s, def, i, true, action === A_DASH || action === A_RUN, stickX, stickY)) {
     return;
   }
 
@@ -138,7 +377,7 @@ export function updateMovement(sim: Sim, i: number): void {
         s.velX[i] = approach(s.velX[i]!, 0, def.friction);
         return;
       }
-      if (dashInput) {
+      if (flickX) {
         startDash(s, def, i, dir);
         return;
       }
@@ -156,7 +395,7 @@ export function updateMovement(sim: Sim, i: number): void {
 
     case A_DASH: {
       const facing = s.facing[i]!;
-      if (dashInput && dir === -facing) {
+      if (flickX && dir === -facing) {
         startDash(s, def, i, dir);
         return;
       }
@@ -183,7 +422,7 @@ export function updateMovement(sim: Sim, i: number): void {
     }
 
     case A_BRAKE: {
-      if (dashInput) {
+      if (flickX) {
         startDash(s, def, i, dir);
         return;
       }
@@ -202,4 +441,12 @@ export function updateMovement(sim: Sim, i: number): void {
       return;
     }
   }
+}
+
+/** Met à jour les compteurs d'inclinaison du stick. À appeler à chaque frame, même en hitlag. */
+export function trackStick(sim: Sim, i: number): void {
+  const s = sim.state;
+  const input = s.input[i]!;
+  s.tilt[i] = trackTilt(s.tilt[i]!, inputStickX(input));
+  s.tiltY[i] = trackTilt(s.tiltY[i]!, inputStickY(input));
 }

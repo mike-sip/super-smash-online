@@ -54,17 +54,17 @@
 
 ## Phase C — Combat
 
-- [ ] **T9 : Machine à états et attaques pilotées par données**
+- [x] **T9 : Machine à états et attaques pilotées par données**
   - Acceptation : états et transitions décrits dans `FighterDef` ; attaque = démarrage, frames actives, récupération ; annulations autorisées par fenêtres ; tampon d'inputs de 6 frames ; attaques au sol, aériennes (avec lag d'atterrissage) et chargées ; un second combattant de test lourd et lent.
   - Vérification : scénarios vérifiant durées exactes, tampon et annulations.
   - Fichiers : `src/systems/fsm.ts`, `src/defs.ts`, `src/testing/fixtures.ts`, `test/scenarios/moves.test.ts`
 
-- [ ] **T10 : Hitbox, hurtbox et hitlag**
+- [x] **T10 : Hitbox, hurtbox et hitlag**
   - Acceptation : cercles et capsules par frame ; priorité entre hitbox ; un coup ne touche qu'une fois par cible sauf coups multiples déclarés ; hitlag pour l'attaquant et la cible ; résultat indépendant de l'ordre des joueurs en cas d'échange simultané.
   - Vérification : scénarios, dont échange simultané à 2 joueurs rejoué en inversant les index.
   - Fichiers : `src/systems/hit.ts`, `src/geometry.ts`, `test/scenarios/hit.test.ts`, `test/geometry.test.ts`
 
-- [ ] **T11 : Dégâts, éjection, hitstun, DI, tech**
+- [x] **T11 : Dégâts, éjection, hitstun, DI, tech**
   - Acceptation : pourcentage ; formule d'éjection (dégâts, poids, base, croissance, angle) ; hitstun proportionnel ; DI ; chute libre désordonnée ; tech au sol et au mur ; rebond ; premier test Playwright de déterminisme sur Chromium.
   - Vérification : test unitaire de la formule sur une table de valeurs ; scénarios DI et tech ; KO obtenu à fort pourcentage.
   - Fichiers : `src/systems/knockback.ts`, `test/knockback.test.ts`, `test/scenarios/knockback.test.ts`, `test/determinism/browser.spec.ts`, `playwright.config.ts`

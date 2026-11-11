@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { A_DEAD, A_IDLE } from '../../src/actions.ts';
+import { A_AIR, A_DEAD, A_HITSTUN, A_IDLE } from '../../src/actions.ts';
 import { fx } from '../../src/fixed.ts';
 import {
   EV_KO,
@@ -35,7 +35,6 @@ describe('zones limites', () => {
   it.each([
     ['gauche', -149, 0, -2, 0],
     ['droite', 149, 0, 2, 0],
-    ['haut', 0, 119, 0, 3],
     ['bas', 100, -79, 0, -2],
   ])('tue par la limite %s', (_name, x, y, vx, vy) => {
     const sim = newSim();
@@ -122,5 +121,28 @@ describe('réapparition', () => {
     teleportAir(sim, 0, 0, -79);
     holdUntil(sim, NEUTRAL, () => events(sim).count > 0);
     expect(sim.state.action[0]).toBe(A_DEAD);
+  });
+});
+
+describe('limite haute', () => {
+  it('tue un joueur éjecté', () => {
+    const sim = newSim();
+    teleportAir(sim, 0, 0, 119);
+    sim.state.action[0] = A_HITSTUN;
+    sim.state.stun[0] = 30;
+    sim.state.velY[0] = fx(3);
+    hold(sim, NEUTRAL, 1);
+    expect(sim.state.action[0]).toBe(A_DEAD);
+    expect(events(sim).type[0]).toBe(EV_KO);
+  });
+
+  it('laisse passer un joueur qui saute simplement très haut', () => {
+    const sim = newSim();
+    teleportAir(sim, 0, 0, 119);
+    sim.state.velY[0] = fx(3);
+    hold(sim, NEUTRAL, 5);
+    expect(sim.state.posY[0]).toBeGreaterThan(fx(120));
+    expect(sim.state.action[0]).toBe(A_AIR);
+    expect(events(sim).count).toBe(0);
   });
 });

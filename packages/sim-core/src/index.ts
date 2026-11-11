@@ -4,7 +4,19 @@ import type { EventQueue } from './events.ts';
 import type { Sim } from './step.ts';
 
 export { fx, fxToFloat, FX_ONE, type Fx } from './fixed.ts';
-export type { FighterDef, PlatformDef, SolidDef, StageDef, Vec2 } from './defs.ts';
+export type {
+  CancelDef,
+  CapsuleDef,
+  ChargeDef,
+  FighterDef,
+  HitDef,
+  MoveDef,
+  PlatformDef,
+  SolidDef,
+  StageDef,
+  Vec2,
+} from './defs.ts';
+export * from './moves.ts';
 export {
   A_IDLE,
   A_WALK,
@@ -17,8 +29,13 @@ export {
   A_AIR,
   A_LAND,
   A_DEAD,
+  A_ATTACK,
+  A_HITSTUN,
+  A_TUMBLE,
+  A_TECH,
+  A_DOWN,
 } from './actions.ts';
-export { EV_KO, MAX_EVENTS, type EventQueue } from './events.ts';
+export { EV_HIT, EV_KO, MAX_EVENTS, type EventQueue } from './events.ts';
 export {
   BTN_ATTACK,
   BTN_SPECIAL,

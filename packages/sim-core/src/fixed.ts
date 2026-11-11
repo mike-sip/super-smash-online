@@ -4,9 +4,10 @@
  * Pourquoi : `+ - * /` et `Math.trunc` sur des doubles sont spécifiés par IEEE 754 et donc
  * identiques dans tous les moteurs JavaScript, contrairement à `Math.sin` et consorts.
  *
- * Bornes : l'état est stocké en Int32, soit ±524 288 unités. `fxMul` et `fxDiv` sont exacts
- * tant que les opérandes restent dans ±2^26 (±16 384 unités) ; au-delà le résultat est
- * arrondi, mais reste identique d'une machine à l'autre.
+ * Bornes : un Fx est un entier 32 bits, soit ±524 288 unités, comme les cases de l'état.
+ * `fxMul` et `fxDiv` sont exacts tant que le produit intermédiaire reste sous 2^53 et que le
+ * résultat tient sur 32 bits ; au-delà le résultat est tronqué ou replié, mais reste identique
+ * d'une machine à l'autre.
  */
 import { SIN_TABLE } from './trig-table.ts';
 
@@ -19,17 +20,19 @@ export const FX_SHIFT = 12;
 export const FX_ONE = 4096 as Fx;
 
 /** Convertit un littéral (données, tests). À ne pas appeler dans `step`. */
-export const fx = (n: number): Fx => (Math.round(n * FX_ONE) + 0) as Fx;
+export const fx = (n: number): Fx => (Math.round(n * FX_ONE) | 0) as Fx;
 
 /** Pour le rendu uniquement : le résultat ne doit jamais revenir dans la simulation. */
 export const fxToFloat = (a: number): number => a / FX_ONE;
 
-// Le `+ 0` final transforme un éventuel -0 en 0, pour que les checksums ne dépendent pas du signe du zéro.
+// Le `| 0` final ramène le résultat à un entier 32 bits. Deux raisons : il transforme un éventuel
+// -0 en 0, et il évite au moteur d'allouer un nombre flottant sur le tas à chaque appel, ce qui
+// violerait la règle « aucune allocation dans `step` » (mesuré par le benchmark).
 
-export const fxMul = (a: number, b: number): Fx => (Math.trunc((a * b) / FX_ONE) + 0) as Fx;
+export const fxMul = (a: number, b: number): Fx => (Math.trunc((a * b) / FX_ONE) | 0) as Fx;
 
 export const fxDiv = (a: number, b: number): Fx =>
-  (b === 0 ? 0 : Math.trunc((a * FX_ONE) / b) + 0) as Fx;
+  (b === 0 ? 0 : Math.trunc((a * FX_ONE) / b) | 0) as Fx;
 
 /** Racine carrée arrondie par défaut. `Math.sqrt` ne sert que d'estimation, corrigée en entiers. */
 export function fxSqrt(a: number): Fx {
@@ -38,7 +41,7 @@ export function fxSqrt(a: number): Fx {
   let r = Math.floor(Math.sqrt(n));
   while (r * r > n) r--;
   while ((r + 1) * (r + 1) <= n) r++;
-  return r as Fx;
+  return (r | 0) as Fx;
 }
 
 /** Sinus d'un angle en degrés entiers, quel que soit son signe ou sa taille. */

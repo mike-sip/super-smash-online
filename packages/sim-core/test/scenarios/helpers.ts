@@ -47,3 +47,31 @@ export function teleportAir(sim: Sim, player: number, x: number, y: number): voi
   s.actionFrame[player] = 0;
   s.jumpsLeft[player] = sim.config.fighters[player]!.airJumps;
 }
+
+/** Joue `frames` frames en pilotant les joueurs 0 et 1. */
+export function hold2(sim: Sim, input0: number, input1: number, frames: number): void {
+  const inputs = new Uint32Array(sim.config.fighters.length);
+  inputs[0] = input0;
+  inputs[1] = input1;
+  for (let f = 0; f < frames; f++) step(sim, inputs);
+}
+
+/** Déplace un joueur au sol sur le bloc principal, tourné du côté voulu. */
+export function place(sim: Sim, player: number, x: number, facing: 1 | -1): void {
+  sim.state.posX[player] = fx(x);
+  sim.state.facing[player] = facing;
+}
+
+/** Nombre d'événements d'un type donné émis pendant la dernière frame. */
+export function countEvents(sim: Sim, type: number): number {
+  let n = 0;
+  for (let e = 0; e < sim.events.count; e++) if (sim.events.type[e] === type) n++;
+  return n;
+}
+
+/** Joue `frames` frames avec un input par joueur. */
+export function holdAll(sim: Sim, inputs: readonly number[], frames: number): void {
+  const buf = new Uint32Array(sim.config.fighters.length);
+  buf.set(inputs);
+  for (let f = 0; f < frames; f++) step(sim, buf);
+}

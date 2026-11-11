@@ -5,13 +5,35 @@
  * mi-hauteur (murs) et la tête (plafonds). Un combattant dont les pieds dépassent du bord tombe
  * donc le long du flanc au lieu de rester accroché par un coin.
  */
-import { A_AIR, A_DASH, A_DEAD, A_JUMPSQUAT, A_LAND, A_RUN, setAction } from '../actions.ts';
+import {
+  A_AIR,
+  A_ATTACK,
+  A_DASH,
+  A_DEAD,
+  A_DOWN,
+  A_HITSTUN,
+  A_IDLE,
+  A_JUMPSQUAT,
+  A_LAND,
+  A_RUN,
+  A_TECH,
+  A_TUMBLE,
+  setAction,
+} from '../actions.ts';
 import type { StageDef } from '../defs.ts';
+import { fx, fxMul } from '../fixed.ts';
 import { inputStickY } from '../input.ts';
+import type { SimState } from '../state.ts';
 import type { Sim } from '../step.ts';
 
 /** En dessous de cette valeur de stick Y, le joueur « tient bas » : il traverse les plateformes. */
 export const STICK_HOLD_DOWN = -60;
+/** Vitesse d'impact à partir de laquelle un combattant éjecté rebondit au sol au lieu de s'y étaler. */
+const BOUNCE_MIN_SPEED = fx(1.5);
+/** Part de la vitesse conservée après un rebond au sol. */
+const GROUND_RESTITUTION = fx(0.5);
+/** Part de la vitesse conservée après un rebond contre un mur ou un plafond. */
+const WALL_RESTITUTION = fx(0.8);
 
 /** Géométrie du stage aplatie en tableaux, pour que `step` n'accède à aucun objet. */
 export interface StageGeo {
@@ -73,6 +95,26 @@ export function findSurface(geo: StageGeo, x: number, y: number): number {
   return 0;
 }
 
+const isKnockedBack = (action: number): boolean => action === A_HITSTUN || action === A_TUMBLE;
+
+/** Le combattant heurte un mur : arrêt net, ou rebond et rétablissement s'il est éjecté. */
+function hitWall(s: SimState, i: number): void {
+  if (!isKnockedBack(s.action[i]!)) {
+    s.velX[i] = 0;
+    return;
+  }
+  if (s.techWindow[i]! > 0) {
+    s.techWindow[i] = 0;
+    s.velX[i] = 0;
+    s.velY[i] = 0;
+    s.stun[i] = 0;
+    s.tumble[i] = 0;
+    setAction(s, i, s.grounded[i] === 1 ? A_IDLE : A_AIR);
+    return;
+  }
+  s.velX[i] = -fxMul(s.velX[i]!, WALL_RESTITUTION);
+}
+
 /** Repousse le combattant hors des blocs pleins que ses flancs pénètrent. */
 function pushOutOfWalls(sim: Sim, i: number, halfWidth: number, height: number): void {
   const s = sim.state;
@@ -86,10 +128,10 @@ function pushOutOfWalls(sim: Sim, i: number, halfWidth: number, height: number):
     if (x + halfWidth <= x1 || x - halfWidth >= x2) continue;
     if (x * 2 < x1 + x2) {
       s.posX[i] = x1 - halfWidth;
-      if (s.velX[i]! > 0) s.velX[i] = 0;
+      if (s.velX[i]! > 0) hitWall(s, i);
     } else {
       s.posX[i] = x2 + halfWidth;
-      if (s.velX[i]! < 0) s.velX[i] = 0;
+      if (s.velX[i]! < 0) hitWall(s, i);
     }
   }
 }
@@ -105,7 +147,12 @@ function integrateGrounded(sim: Sim, i: number): void {
 
   if (x < x1 || x > x2) {
     const action = s.action[i]!;
-    if (action === A_DASH || action === A_RUN || action === A_JUMPSQUAT) {
+    if (action === A_HITSTUN) {
+      // Poussé hors de la surface par un coup : il tombe sans reprendre le contrôle.
+      s.grounded[i] = 0;
+      s.surface[i] = 0;
+      s.jumpsLeft[i] = def.airJumps;
+    } else if (action === A_DASH || action === A_RUN || action === A_JUMPSQUAT) {
       // Élan suffisant : le combattant quitte la surface et garde ses sauts aériens.
       s.grounded[i] = 0;
       s.surface[i] = 0;
@@ -119,6 +166,36 @@ function integrateGrounded(sim: Sim, i: number): void {
   }
   s.posX[i] = x;
   pushOutOfWalls(sim, i, def.halfWidth, def.height);
+}
+
+/** Pose le combattant sur la surface `k` et choisit l'action d'atterrissage. */
+function land(sim: Sim, i: number, k: number, knocked: boolean): void {
+  const s = sim.state;
+  const def = sim.config.fighters[i]!;
+  const action = s.action[i]!;
+  s.posY[i] = sim.geo.surfY[k]!;
+  s.velY[i] = 0;
+  s.grounded[i] = 1;
+  s.surface[i] = k + 1;
+  s.fastFall[i] = 0;
+
+  if (knocked) {
+    s.stun[i] = 0;
+    s.tumble[i] = 0;
+    if (s.techWindow[i]! > 0) {
+      s.techWindow[i] = 0;
+      s.velX[i] = 0;
+      setAction(s, i, A_TECH);
+    } else {
+      setAction(s, i, A_DOWN);
+    }
+  } else if (action === A_HITSTUN) {
+    // Coup faible : il glisse au sol jusqu'à la fin du hitstun.
+  } else {
+    const move = action === A_ATTACK ? def.moves[s.move[i]!] : undefined;
+    s.landLag[i] = move?.landingLag ?? def.landFrames;
+    setAction(s, i, A_LAND);
+  }
 }
 
 function integrateAirborne(sim: Sim, i: number): void {
@@ -153,7 +230,7 @@ function integrateAirborne(sim: Sim, i: number): void {
         y + height > bottom
       ) {
         y = bottom - height;
-        vy = 0;
+        vy = isKnockedBack(s.action[i]!) ? -fxMul(vy, WALL_RESTITUTION) : 0;
       }
     }
   } else {
@@ -168,12 +245,16 @@ function integrateAirborne(sim: Sim, i: number): void {
       if (landed < 0 || top > geo.surfY[landed]!) landed = k;
     }
     if (landed >= 0) {
-      s.posY[i] = geo.surfY[landed]!;
-      s.velY[i] = 0;
-      s.grounded[i] = 1;
-      s.surface[i] = landed + 1;
-      s.fastFall[i] = 0;
-      setAction(s, i, A_LAND);
+      const action = s.action[i]!;
+      const knocked = action === A_TUMBLE || (action === A_HITSTUN && s.tumble[i] === 1);
+      if (knocked && s.techWindow[i] === 0 && s.bounced[i] === 0 && -vy >= BOUNCE_MIN_SPEED) {
+        // Rétablissement manqué à grande vitesse : un rebond, une seule fois.
+        s.posY[i] = geo.surfY[landed]!;
+        s.velY[i] = fxMul(-vy, GROUND_RESTITUTION);
+        s.bounced[i] = 1;
+        return;
+      }
+      land(sim, i, landed, knocked);
       return;
     }
   }

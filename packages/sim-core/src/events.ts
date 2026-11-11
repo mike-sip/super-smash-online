@@ -9,6 +9,8 @@ export const MAX_EVENTS = 64;
 
 /** Un joueur a franchi une zone limite. `a` = index du joueur. */
 export const EV_KO = 1;
+/** Un coup a porté. `a` = attaquant, `b` = victime. */
+export const EV_HIT = 2;
 
 export interface EventQueue {
   count: number;

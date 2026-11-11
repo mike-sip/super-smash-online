@@ -2,10 +2,20 @@ import { A_AIR, A_IDLE, setAction } from './actions.ts';
 import type { FighterDef, StageDef } from './defs.ts';
 import { createEventQueue, type EventQueue } from './events.ts';
 import { rngSeed } from './rng.ts';
-import { G_FRAME, G_PLAYERS, MAX_PLAYERS, createState, type SimState } from './state.ts';
+import {
+  FIGHTER_FIELDS,
+  G_FRAME,
+  G_PLAYERS,
+  MAX_PLAYERS,
+  createState,
+  type SimState,
+} from './state.ts';
 import { checkBlast } from './systems/blast.ts';
+import { updateBuffers } from './systems/buffer.ts';
 import { compileStage, findSurface, integrate, type StageGeo } from './systems/collision.ts';
-import { updateMovement } from './systems/movement.ts';
+import { createHitScratch, resolveHits, type HitScratch } from './systems/hit.ts';
+import { launch } from './systems/knockback.ts';
+import { trackStick, updateMovement } from './systems/movement.ts';
 
 export interface SimConfig {
   readonly stage: StageDef;
@@ -22,24 +32,28 @@ export interface Sim {
   readonly geo: StageGeo;
   /** Événements de la dernière frame. Hors snapshot : reconstruits à chaque `step`. */
   readonly events: EventQueue;
+  /** Tableaux de travail internes à une frame. Hors snapshot. */
+  readonly scratch: HitScratch;
 }
 
-/** Pose le joueur sur son point d'apparition, immobile, dégâts à zéro. */
+/** Pose le joueur sur son point d'apparition, dans un état neuf. */
 function placeAtSpawn(sim: Sim, i: number): void {
   const s = sim.state;
+  // L'input est conservé : sinon un bouton tenu pendant la réapparition compterait comme un appui.
+  const input = s.input[i]!;
+  const prevInput = s.prevInput[i]!;
+  for (let f = 0; f < FIGHTER_FIELDS.length; f++) s[FIGHTER_FIELDS[f]!][i] = 0;
+  s.input[i] = input;
+  s.prevInput[i] = prevInput;
+
   const spawn = sim.config.stage.spawns[i]!;
   const surface = findSurface(sim.geo, spawn.x, spawn.y);
   s.posX[i] = spawn.x;
   s.posY[i] = spawn.y;
-  s.velX[i] = 0;
-  s.velY[i] = 0;
   s.facing[i] = spawn.x > 0 ? -1 : 1;
   s.grounded[i] = surface === 0 ? 0 : 1;
   s.surface[i] = surface;
   s.jumpsLeft[i] = sim.config.fighters[i]!.airJumps;
-  s.tilt[i] = 0;
-  s.fastFall[i] = 0;
-  s.damage[i] = 0;
   setAction(s, i, surface === 0 ? A_AIR : A_IDLE);
 }
 
@@ -58,6 +72,7 @@ export function createSim(config: SimConfig): Sim {
     state: createState(),
     geo: compileStage(config.stage),
     events: createEventQueue(),
+    scratch: createHitScratch(),
   };
   sim.state.g[G_PLAYERS] = players;
   rngSeed(sim.state, config.seed);
@@ -81,18 +96,47 @@ export function respawn(sim: Sim, player: number): void {
  */
 export function step(sim: Sim, inputs: Uint32Array): void {
   const s = sim.state;
+  const frozen = sim.scratch.frozen;
   const players = s.g[G_PLAYERS]!;
   sim.events.count = 0;
 
+  // 1. Inputs : mémorisés et mis en tampon pour tous, même gelés par le hitlag.
   for (let i = 0; i < players; i++) {
     s.prevInput[i] = s.input[i]!;
     s.input[i] = inputs[i]!;
+    updateBuffers(sim, i);
+    trackStick(sim, i);
   }
 
-  for (let i = 0; i < players; i++) updateMovement(sim, i);
-  for (let i = 0; i < players; i++) integrate(sim, i);
+  // 2. Décisions. Un combattant en hitlag est gelé ; une victime est éjectée quand il se termine.
+  for (let i = 0; i < players; i++) {
+    const hitlag = s.hitlag[i]!;
+    if (hitlag > 0) {
+      frozen[i] = 1;
+      s.hitlag[i] = hitlag - 1;
+      if (hitlag === 1 && s.launchPending[i] === 1) launch(sim, i);
+    } else {
+      frozen[i] = 0;
+      updateMovement(sim, i);
+    }
+  }
+
+  // 3. Déplacement et collisions avec le décor.
+  for (let i = 0; i < players; i++) {
+    if (frozen[i] === 0) integrate(sim, i);
+  }
+
+  // 4. Coups, sur les positions à jour.
+  resolveHits(sim);
+
+  // 5. Zones limites.
   for (let i = 0; i < players; i++) checkBlast(sim, i);
 
-  for (let i = 0; i < players; i++) s.actionFrame[i] = s.actionFrame[i]! + 1;
+  // 6. Avance des actions. Une attaque en cours de charge reste sur sa frame.
+  for (let i = 0; i < players; i++) {
+    if (frozen[i] === 1) continue;
+    if (s.chargeHold[i] === 1) s.chargeHold[i] = 0;
+    else s.actionFrame[i] = s.actionFrame[i]! + 1;
+  }
   s.g[G_FRAME] = s.g[G_FRAME]! + 1;
 }

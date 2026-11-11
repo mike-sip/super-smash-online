@@ -15,8 +15,82 @@ export interface Vec2 {
   readonly y: Fx;
 }
 
+/**
+ * Capsule : segment de (x1, y1) à (x2, y2) épaissi de `radius`. Un cercle est une capsule dont
+ * les deux extrémités coïncident. Coordonnées relatives aux pieds du combattant ; l'axe x est
+ * inversé quand il regarde à gauche.
+ */
+export interface CapsuleDef {
+  readonly x1: Fx;
+  readonly y1: Fx;
+  readonly x2: Fx;
+  readonly y2: Fx;
+  readonly radius: Fx;
+}
+
+export interface HitDef extends CapsuleDef {
+  /** Première et dernière frame actives, incluses. La frame 1 est celle où l'attaque démarre. */
+  readonly start: number;
+  readonly end: number;
+  /**
+   * Groupe de 0 à 3. Une cible n'est touchée qu'une fois par groupe : donner des groupes
+   * différents à des fenêtres successives produit un coup multiple.
+   */
+  readonly group: number;
+  /** Dégâts en pourcentage. */
+  readonly damage: Fx;
+  /** Angle d'éjection en degrés : 0 vers l'avant, 90 vers le haut. */
+  readonly angle: number;
+  readonly baseKnockback: Fx;
+  /** Part de l'éjection qui croît avec les dégâts de la cible ; fx(1) = 100 %. */
+  readonly knockbackGrowth: Fx;
+}
+
+/** Autorise à enchaîner sur une autre attaque avant la fin de celle-ci. */
+export interface CancelDef {
+  readonly start: number;
+  readonly end: number;
+  /** Emplacement que l'input du joueur désignerait normalement (ex. M_JAB). */
+  readonly on: number;
+  /** Emplacement réellement lancé (ex. M_JAB2). */
+  readonly to: number;
+  /** Si vrai, l'annulation n'est possible que si l'attaque a touché. */
+  readonly requiresHit: boolean;
+}
+
+/** Attaque chargeable : tant que le bouton est tenu, l'attaque reste sur `frame`. */
+export interface ChargeDef {
+  readonly frame: number;
+  readonly maxFrames: number;
+  /** Multiplicateur de dégâts à pleine charge ; fx(1.4) = +40 %. */
+  readonly maxScale: Fx;
+}
+
+export interface MoveDef {
+  readonly name: string;
+  /** Durée totale. Le combattant redevient libre à la frame `totalFrames + 1`. */
+  readonly totalFrames: number;
+  /** Dans l'ordre de priorité : si plusieurs touchent la même cible, la première l'emporte. */
+  readonly hits: readonly HitDef[];
+  readonly cancels: readonly CancelDef[];
+  readonly charge?: ChargeDef;
+  /** Lag d'atterrissage si le combattant touche le sol pendant cette attaque aérienne. */
+  readonly landingLag?: number;
+}
+
 export interface FighterDef {
   readonly name: string;
+
+  /** 100 = poids moyen. Plus lourd, moins éjecté. */
+  readonly weight: Fx;
+  /** Zones vulnérables du corps. */
+  readonly hurtboxes: readonly CapsuleDef[];
+  /** Attaques, indexées par emplacement (`M_*`). Un emplacement vide n'a pas d'attaque. */
+  readonly moves: readonly (MoveDef | undefined)[];
+  /** Durée du rétablissement au sol. */
+  readonly techFrames: number;
+  /** Durée à terre après un rétablissement manqué. */
+  readonly downFrames: number;
 
   /** Demi-largeur du corps, pour les collisions avec les murs. */
   readonly halfWidth: Fx;

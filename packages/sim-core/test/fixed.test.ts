@@ -32,9 +32,16 @@ describe('fxMul', () => {
     expect(Object.is(fxMul(-1, 1), 0)).toBe(true);
   });
 
-  it('reste exact à la borne documentée (±2^26)', () => {
+  it('reste exact tant que le résultat tient sur 32 bits', () => {
     const big = 2 ** 26 - 1;
-    expect(fxMul(big, big)).toBe(Number((BigInt(big) * BigInt(big)) / 4096n));
+    const other = 100_000;
+    expect(fxMul(big, other)).toBe(Number((BigInt(big) * BigInt(other)) / 4096n));
+    expect(fxMul(-big, other)).toBe(-Number((BigInt(big) * BigInt(other)) / 4096n));
+  });
+
+  it('renvoie toujours un entier 32 bits', () => {
+    const r = fxMul(2 ** 30, 2 ** 30);
+    expect(r).toBe(r | 0);
   });
 });
 

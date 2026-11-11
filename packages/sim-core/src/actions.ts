@@ -18,6 +18,16 @@ export const A_AIR = 8;
 export const A_LAND = 9;
 /** Éjecté hors des zones limites, en attente de réapparition. */
 export const A_DEAD = 10;
+/** Attaque en cours ; l'emplacement est dans `state.move`. */
+export const A_ATTACK = 11;
+/** Vient d'être frappé : aucun contrôle jusqu'à la fin du hitstun. */
+export const A_HITSTUN = 12;
+/** Chute désordonnée après une forte éjection : contrôlable, mais atterrir fait tomber au sol. */
+export const A_TUMBLE = 13;
+/** Rétablissement réussi au contact du sol. */
+export const A_TECH = 14;
+/** À terre après un rétablissement manqué. */
+export const A_DOWN = 15;
 
 /**
  * Change d'action. `actionFrame` compte les frames passées dans l'action, frame du changement

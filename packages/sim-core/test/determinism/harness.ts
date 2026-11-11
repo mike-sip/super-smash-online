@@ -2,7 +2,17 @@
  * Outils communs aux tests de déterminisme, de rollback et au benchmark.
  * Les inputs sont tirés par un générateur propre au harnais, distinct de celui de la simulation.
  */
-import { checksum, createSim, step, type Sim, type SimConfig } from '../../src/index.ts';
+import {
+  EV_HIT,
+  EV_KO,
+  checksum,
+  createSim,
+  events,
+  respawn,
+  step,
+  type Sim,
+  type SimConfig,
+} from '../../src/index.ts';
 
 export class InputStream {
   private x: number;
@@ -37,17 +47,43 @@ export class InputStream {
   }
 }
 
-/** Joue `frames` frames d'inputs tirés de `inputSeed` et renvoie la simulation obtenue. */
-export function play(config: SimConfig, inputSeed: number, frames: number): Sim {
+export interface PlayStats {
+  checksum: number;
+  hits: number;
+  kos: number;
+}
+
+/**
+ * Avance d'une frame et fait réapparaître aussitôt les joueurs KO, comme le feront les règles
+ * de match. Sans cela, une longue séquence finirait avec tous les joueurs morts et ne
+ * vérifierait plus rien.
+ */
+export function stepWithRespawn(sim: Sim, inputs: Uint32Array, stats?: PlayStats): void {
+  step(sim, inputs);
+  const q = events(sim);
+  for (let e = 0; e < q.count; e++) {
+    if (q.type[e] === EV_KO) {
+      respawn(sim, q.a[e]!);
+      if (stats) stats.kos++;
+    } else if (q.type[e] === EV_HIT && stats) {
+      stats.hits++;
+    }
+  }
+}
+
+/** Joue `frames` frames d'inputs tirés de `inputSeed`. */
+export function play(config: SimConfig, inputSeed: number, frames: number): PlayStats {
   const sim = createSim(config);
   const stream = new InputStream(inputSeed);
   const inputs = new Uint32Array(config.fighters.length);
+  const stats: PlayStats = { checksum: 0, hits: 0, kos: 0 };
   for (let f = 0; f < frames; f++) {
     stream.fill(inputs);
-    step(sim, inputs);
+    stepWithRespawn(sim, inputs, stats);
   }
-  return sim;
+  stats.checksum = checksum(sim);
+  return stats;
 }
 
 export const playChecksum = (config: SimConfig, inputSeed: number, frames: number): number =>
-  checksum(play(config, inputSeed, frames));
+  play(config, inputSeed, frames).checksum;
