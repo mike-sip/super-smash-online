@@ -88,7 +88,14 @@ export {
 } from './input.ts';
 export { MAX_PLAYERS, MAX_ENTITIES, STATE_BYTES } from './state.ts';
 export { createSim, respawn, step, type Sim, type SimConfig } from './step.ts';
-export { readFighter, type FighterView } from './view.ts';
+export {
+  createEntityView,
+  createFighterView,
+  readEntity,
+  readFighter,
+  type EntityView,
+  type FighterView,
+} from './view.ts';
 export {
   ENTITY_BOUNCE,
   ENTITY_DESTROY,

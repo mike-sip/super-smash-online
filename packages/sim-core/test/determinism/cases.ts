@@ -10,11 +10,23 @@ export interface DeterminismCase {
   frames: number;
 }
 
-export const CASES: DeterminismCase[] = [
+/**
+ * Séquences de référence : cinq parties de 10 minutes à 8 joueurs (critère de succès n° 1).
+ * Leurs checksums attendus sont versionnés dans `golden.json`.
+ */
+export const REFERENCE_CASES: DeterminismCase[] = [
+  { players: 8, seed: 101, inputSeed: 1001, frames: 36_000 },
+  { players: 8, seed: 202, inputSeed: 2002, frames: 36_000 },
+  { players: 8, seed: 303, inputSeed: 3003, frames: 36_000 },
+  { players: 8, seed: 404, inputSeed: 4004, frames: 36_000 },
+  { players: 8, seed: 505, inputSeed: 5005, frames: 36_000 },
+];
+
+/** Séquences courtes, à 2, 4 et 8 joueurs, pour les vérifications rapides par double exécution. */
+export const QUICK_CASES: DeterminismCase[] = [
   { players: 2, seed: 1, inputSeed: 11, frames: 3600 },
   { players: 4, seed: 2, inputSeed: 22, frames: 3600 },
   { players: 8, seed: 3, inputSeed: 33, frames: 3600 },
-  { players: 8, seed: 4, inputSeed: 44, frames: 7200 },
 ];
 
 /** Un combattant sur deux est le lourd, pour mêler les deux jeux de données. */

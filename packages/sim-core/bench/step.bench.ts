@@ -5,17 +5,26 @@
  * Les seuils sont ceux de la spec, mesurés sur la machine de développement. Relever un seuil
  * demande un accord explicite (« Demander d'abord »).
  */
-import { STATE_BYTES, createSim, loadState, saveState } from '../src/index.ts';
-import { testConfig } from '../src/testing/fixtures.ts';
+import {
+  MAX_ENTITIES,
+  STATE_BYTES,
+  createSim,
+  fx,
+  loadState,
+  saveState,
+  spawnEntity,
+  type Sim,
+} from '../src/index.ts';
+import { E_BALL, testConfig } from '../src/testing/fixtures.ts';
 import { InputStream, stepWithRespawn } from '../test/determinism/harness.ts';
 
 const PLAYERS = 8;
+/** Le critère de succès n° 3 se mesure avec 16 entités actives. */
+const ENTITIES = 16;
 /**
  * Le moteur JavaScript compile les fonctions par paliers, et tant qu'une fonction n'a pas atteint
- * le dernier, ses calculs intermédiaires sont alloués sur le tas. Les chemins rares (coups,
- * éjections, KO) mettent longtemps à y arriver : mesuré, les allocations ne se stabilisent
- * qu'après environ 200 000 frames. L'échauffement doit donc être long pour mesurer le régime
- * établi, celui d'une vraie partie.
+ * le dernier, ses calculs intermédiaires sont alloués sur le tas. L'échauffement est long pour
+ * mesurer le régime établi, celui d'une vraie partie, et non cette phase de démarrage.
  */
 const WARMUP_FRAMES = 300_000;
 const MEASURED_FRAMES = 100_000;
@@ -27,12 +36,26 @@ const LIMITS = {
   snapshotMs: 0.05,
   stateBytes: 64 * 1024,
   /**
-   * Relevé de 16 à 64 Ko le 2026-11-11, avec accord. En régime établi, les chemins rares (coups,
-   * éjections) laissent environ 2 octets par frame, soit ~26 Ko ici. Le seuil détecte toujours
-   * une vraie allocation par frame : 16 octets par frame feraient 160 Ko.
+   * Historique : 16 Ko, relevé à 64 Ko le 2026-11-11 avec accord, puis resserré à 32 Ko le même
+   * jour une fois la vraie cause trouvée (une fonction de bornage dans geometry.ts renvoyait un
+   * nombre non entier, alloué à chaque appel). La mesure est d'environ 15 Ko : le harnais
+   * lui-même (réapparitions, création d'entités) en représente l'essentiel. Une seule allocation
+   * de 16 octets par frame ferait 160 Ko.
    */
-  heapGrowthBytes: 64 * 1024,
+  heapGrowthBytes: 32 * 1024,
 };
+
+/** Maintient `ENTITIES` entités en vie : des balles qui tombent et rebondissent sur le stage. */
+function topUpEntities(sim: Sim, frame: number): void {
+  let alive = 0;
+  for (let e = 0; e < MAX_ENTITIES; e++) if (sim.state.eKind[e] !== 0) alive++;
+  for (let k = alive; k < ENTITIES; k++) {
+    const x = ((frame * 7 + k * 13) % 100) - 50;
+    spawnEntity(sim, E_BALL, -1, x * 4096, FALL_HEIGHT, k % 2 === 0 ? DRIFT : -DRIFT, 0);
+  }
+}
+const FALL_HEIGHT = fx(50);
+const DRIFT = fx(0.3);
 
 const sim = createSim(testConfig(PLAYERS));
 const stream = new InputStream(1);
@@ -41,6 +64,7 @@ const snap = new Uint8Array(STATE_BYTES);
 
 for (let f = 0; f < WARMUP_FRAMES; f++) {
   stream.fill(inputs);
+  topUpEntities(sim, f);
   stepWithRespawn(sim, inputs);
   saveState(sim, snap);
   loadState(sim, snap);
@@ -50,6 +74,7 @@ for (let f = 0; f < WARMUP_FRAMES; f++) {
 const samples = new Float64Array(MEASURED_FRAMES);
 for (let f = 0; f < MEASURED_FRAMES; f++) {
   stream.fill(inputs);
+  topUpEntities(sim, f);
   const t0 = performance.now();
   stepWithRespawn(sim, inputs);
   samples[f] = performance.now() - t0;
@@ -77,6 +102,7 @@ if (gc) {
   const before = process.memoryUsage().heapUsed;
   for (let f = 0; f < HEAP_FRAMES; f++) {
     stream.fill(inputs);
+    topUpEntities(sim, f);
     stepWithRespawn(sim, inputs);
   }
   const after = process.memoryUsage().heapUsed;

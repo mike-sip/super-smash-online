@@ -1,6 +1,6 @@
 # Spec : `sim-core` — simulation déterministe du combat
 
-> Statut : **APPROUVÉE le 2026-11-11**. Plan : [tasks/plan.md](tasks/plan.md), tâches : [tasks/todo.md](tasks/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : rien.
+> Statut : **APPROUVÉE le 2026-11-11, implémentée** (bilan en fin de document ; un critère reste partiellement vérifié). Plan : [tasks/plan.md](tasks/plan.md), tâches : [tasks/todo.md](tasks/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : rien.
 
 ## Hypothèses
 
@@ -165,7 +165,7 @@ Développement piloté par les tests : chaque mécanique commence par un scénar
 1. **Déterminisme** : pour 5 séquences de référence de 36 000 frames à 8 joueurs, le checksum final est identique dans Node, Chromium, Firefox et WebKit.
 2. **Rollback** : le test de propriété sauvegarde/restauration passe sur 1 000 tirages aléatoires.
 3. **Vitesse** : à 8 joueurs avec 16 entités actives, un `step` coûte moins de 0,25 ms en moyenne et moins de 1 ms au 99ᵉ centile ; `saveState` et `loadState` coûtent moins de 0,05 ms chacun. Mesuré dans Node sur la machine de développement.
-4. **Mémoire** : l'état complet pèse moins de 64 Ko, et `step` n'alloue rien de façon systématique : le tas grandit de moins de 64 Ko sur 10 000 frames en régime établi (seuil relevé de 16 à 64 Ko le 2026-11-11, voir « Écarts et limites constatés »).
+4. **Mémoire** : l'état complet pèse moins de 64 Ko, et `step` n'alloue rien de façon systématique : le tas grandit de moins de 32 Ko sur 10 000 frames en régime établi, harnais de mesure compris (voir « Écarts et limites constatés »).
 5. **Mécaniques** : chaque ligne du tableau « Périmètre fonctionnel » est couverte par au moins un scénario qui passe.
 6. **Isolation** : le paquet n'a aucune dépendance d'exécution, et une règle de lint interdit les API non déterministes listées plus haut.
 7. **Jouabilité** : une page de démonstration minimale (formes géométriques, hors de ce module) permettra de piloter le combattant de test au clavier au jalon 1 ; ce critère est vérifié avec le module `render`.
@@ -200,6 +200,27 @@ Mis à jour à chaque phase. Chaque point est soit une simplification assumée, 
 | Réapparition | Instantanée sur le point d'apparition, sans invincibilité. | Module `match-rules`. |
 | Corps des combattants | Ils se traversent : pas de poussée entre deux combattants au sol. | Hors périmètre, à décider. |
 | Résultats de `fxMul` et `fxDiv` | Toujours ramenés à un entier 32 bits. | — |
-| Allocations dans `step` | En régime établi, environ 2 octets par frame, dus aux chemins rares (coups, éjections) que le moteur JavaScript n'a pas encore compilés au dernier palier. Le benchmark mesure 25,7 Ko sur 10 000 frames. | Seuil fixé à 64 Ko le 2026-11-11 : une allocation de 16 octets par frame (160 Ko) resterait détectée. |
-| Déterminisme navigateur | Vérifié dans Microsoft Edge (Chromium) via `playwright-core`, sans téléchargement de navigateur. | Firefox et WebKit en T17. |
+| Allocations dans `step` | Aucune en régime établi. Le benchmark mesure environ 15 Ko sur 10 000 frames, dus pour l'essentiel à son propre harnais. Historique : le seuil a été relevé de 16 à 64 Ko en phase C sur une explication erronée (chemins rares non compilés) ; la vraie cause, une fonction de bornage qui renvoyait un nombre non entier, a été trouvée et supprimée en phase E. | Seuil resserré à 32 Ko. Règle d'écriture consignée en tête de `geometry.ts` : aucun nombre non entier ne traverse un appel de fonction. |
+| Déterminisme navigateur | Cinq séquences de référence de 36 000 frames à 8 joueurs, checksums versionnés dans `test/determinism/golden.json`. Vérifié dans Node et Edge (moteur V8) et dans WebKit (JavaScriptCore). **Firefox (SpiderMonkey) non vérifié** : la version fournie par Playwright ne démarre pas sur la machine de développement (erreur Windows « configuration côte-à-côte », bibliothèque `mozglue` refusée). | À vérifier sur une autre machine ou en intégration continue. `SIM_BROWSERS=chromium,webkit` restreint la liste ; le test Firefox apparaît alors comme ignoré. |
 | Dépendances de développement ajoutées | `playwright-core` et `vite` (empaquetage du test navigateur). Aucune dépendance d'exécution. | — |
+
+## Bilan des critères de succès (2026-11-11)
+
+| N° | Critère | État | Mesure |
+|---|---|---|---|
+| 1 | Déterminisme sur 5 séquences de 36 000 frames à 8 joueurs | **Partiel** | Checksums identiques dans Node, Chromium (Edge) et WebKit. Firefox non vérifié : il ne démarre pas sur la machine de développement. |
+| 2 | Propriété de rollback sur 1 000 tirages | Atteint | `test/rollback.test.ts` |
+| 3 | Vitesse à 8 joueurs et 16 entités | Atteint | `step` : 0,005 ms en moyenne, 0,008 ms au 99ᵉ centile ; snapshot : 0,00003 ms |
+| 4 | Mémoire | Atteint | État de 2 764 octets ; tas +15 Ko sur 10 000 frames, harnais compris (seuil 32 Ko) |
+| 5 | Un scénario par mécanique du périmètre | Atteint | 311 tests, 99,6 % des lignes couvertes |
+| 6 | Aucune dépendance d'exécution, lint anti-non-déterminisme | Atteint | `dependencies` vide ; règle ESLint vérifiée par fichier témoin |
+| 7 | Jouabilité manette en main | Non vérifiable ici | Dépend du module `render` |
+
+Commandes ajoutées pendant l'implémentation :
+
+```
+Couverture :          pnpm --filter @game/sim-core coverage
+Checksums de réf. :   pnpm --filter @game/sim-core golden:update
+Navigateurs :         pnpm --filter @game/sim-core exec playwright-core install firefox webkit
+Sans Firefox :        SIM_BROWSERS=chromium,webkit pnpm --filter @game/sim-core test
+```

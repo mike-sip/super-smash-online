@@ -102,12 +102,12 @@
 
 ## Phase E — Durcissement
 
-- [ ] **T17 : Déterminisme inter-navigateurs**
+- [ ] **T17 : Déterminisme inter-navigateurs** — fait pour Node, Chromium (Edge) et WebKit ; **Firefox reste à vérifier** (il ne démarre pas sur la machine de développement)
   - Acceptation : 5 séquences de référence de 36 000 frames à 8 joueurs, checksums versionnés ; identiques dans Node, Chromium, Firefox et WebKit.
   - Vérification : `pnpm --filter @game/sim-core test:determinism` passe sur les 4 environnements.
   - Fichiers : `test/determinism/golden.json`, `test/determinism/browser.spec.ts`, `test/determinism/replay.test.ts`
 
-- [ ] **T18 : Performance, API de lecture et build**
+- [x] **T18 : Performance, API de lecture et build**
   - Acceptation : seuils de la spec tenus (0,25 ms en moyenne, 1 ms au 99ᵉ centile, snapshot sous 0,05 ms, état sous 64 Ko, aucune allocation) ; `readFighter` et `events` finalisés pour `render` ; build ESM avec déclarations de types ; couverture ≥ 90 %.
   - Vérification : `pnpm --filter @game/sim-core bench`, `pnpm --filter @game/sim-core build`, `pnpm --filter @game/sim-core test -- --coverage`.
   - Fichiers : `src/view.ts`, `src/index.ts`, `bench/step.bench.ts`, `package.json`

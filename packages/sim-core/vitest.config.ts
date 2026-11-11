@@ -6,6 +6,8 @@ export default defineConfig({
     coverage: {
       include: ['src/**/*.ts'],
       exclude: ['src/testing/**'],
+      // Critère de la spec : 90 % des lignes de src/, hors données de test.
+      thresholds: { lines: 90 },
     },
   },
 });

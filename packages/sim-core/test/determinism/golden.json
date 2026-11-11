@@ -1,0 +1,47 @@
+[
+  {
+    "players": 8,
+    "seed": 101,
+    "inputSeed": 1001,
+    "frames": 36000,
+    "checksum": 3700751678,
+    "hits": 1057,
+    "kos": 312
+  },
+  {
+    "players": 8,
+    "seed": 202,
+    "inputSeed": 2002,
+    "frames": 36000,
+    "checksum": 3713636546,
+    "hits": 986,
+    "kos": 321
+  },
+  {
+    "players": 8,
+    "seed": 303,
+    "inputSeed": 3003,
+    "frames": 36000,
+    "checksum": 4150029548,
+    "hits": 986,
+    "kos": 351
+  },
+  {
+    "players": 8,
+    "seed": 404,
+    "inputSeed": 4004,
+    "frames": 36000,
+    "checksum": 215917021,
+    "hits": 978,
+    "kos": 326
+  },
+  {
+    "players": 8,
+    "seed": 505,
+    "inputSeed": 5005,
+    "frames": 36000,
+    "checksum": 3787568380,
+    "hits": 968,
+    "kos": 316
+  }
+]

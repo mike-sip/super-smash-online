@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/fixtures.d.ts",
+      "default": "./dist/testing/fixtures.js"
     }
   },
   "scripts": {
@@ -15,7 +19,9 @@
     "test:determinism": "vitest run test/determinism test/rollback.test.ts",
     "bench": "node --expose-gc bench/step.bench.ts",
     "typecheck": "tsc --noEmit",
-    "build": "tsc -p tsconfig.build.json"
+    "build": "tsc -p tsconfig.build.json",
+    "golden:update": "node test/determinism/update-golden.ts",
+    "coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

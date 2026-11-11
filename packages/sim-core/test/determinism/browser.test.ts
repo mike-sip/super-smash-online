@@ -1,15 +1,16 @@
 /**
- * Déterminisme entre Node et un vrai navigateur : la simulation est empaquetée, exécutée dans
- * la page, et ses checksums comparés à ceux calculés ici.
+ * Déterminisme entre moteurs JavaScript (critère de succès n° 1) : la simulation est empaquetée,
+ * exécutée dans chaque navigateur, et ses checksums comparés à la référence versionnée.
  *
- * Phase C : Microsoft Edge (moteur Chromium), déjà présent sur Windows, donc sans téléchargement.
- * La matrice complète Chromium, Firefox et WebKit arrive en phase E (T17).
+ * Trois moteurs : V8 (Microsoft Edge, déjà présent sur Windows), SpiderMonkey (Firefox) et
+ * JavaScriptCore (WebKit). Firefox et WebKit s'installent avec :
+ *   pnpm --filter @game/sim-core exec playwright-core install firefox webkit
  */
 import { fileURLToPath } from 'node:url';
-import { chromium, type Browser } from 'playwright-core';
+import { chromium, firefox, webkit, type Browser } from 'playwright-core';
 import { build } from 'vite';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { CASES, runCase } from './cases.ts';
+import { beforeAll, describe, expect, it } from 'vitest';
+import golden from './golden.json' with { type: 'json' };
 
 async function bundle(): Promise<string> {
   const result = await build({
@@ -35,32 +36,53 @@ async function bundle(): Promise<string> {
   throw new Error('Vite n’a produit aucun script.');
 }
 
-describe('déterminisme Node / navigateur', () => {
-  let browser: Browser;
+const ENGINES: [name: string, launch: () => Promise<Browser>][] = [
+  ['Chromium (Microsoft Edge)', () => chromium.launch({ channel: 'msedge' })],
+  ['Firefox', () => firefox.launch()],
+  ['WebKit', () => webkit.launch()],
+];
+
+/**
+ * Par défaut les trois moteurs sont exigés. Sur une machine où l'un d'eux ne peut pas démarrer,
+ * `SIM_BROWSERS=chromium,webkit` restreint la liste : le test manquant est alors signalé comme
+ * ignoré dans le rapport, jamais passé sous silence.
+ */
+const wanted = (process.env.SIM_BROWSERS ?? 'chromium,firefox,webkit').toLowerCase();
+const enabled = (name: string): boolean => wanted.includes(name.split(' ')[0]!.toLowerCase());
+
+describe('déterminisme entre navigateurs', () => {
+  let script: string;
 
   beforeAll(async () => {
-    try {
-      browser = await chromium.launch({ channel: 'msedge' });
-    } catch (cause) {
-      throw new Error(
-        'Impossible de lancer Microsoft Edge. Ce test exige un navigateur Chromium installé.',
-        { cause },
-      );
-    }
+    script = await bundle();
   }, 60_000);
 
-  afterAll(async () => {
-    await browser?.close();
-  });
-
-  it('obtient les mêmes checksums dans Edge que dans Node', async () => {
-    const page = await browser.newPage();
-    await page.addScriptTag({ content: await bundle() });
-    const inBrowser = await page.evaluate(() =>
-      (globalThis as unknown as { __runDeterminismCases: () => number[] }).__runDeterminismCases(),
+  for (const [name, launch] of ENGINES) {
+    it.skipIf(!enabled(name))(
+      `obtient les checksums de référence dans ${name}`,
+      async () => {
+        let browser: Browser;
+        try {
+          browser = await launch();
+        } catch (cause) {
+          throw new Error(`Impossible de lancer ${name}. Voir l'en-tête de ce fichier.`, {
+            cause,
+          });
+        }
+        try {
+          const page = await browser.newPage();
+          await page.addScriptTag({ content: script });
+          const checksums = await page.evaluate(() =>
+            (
+              globalThis as unknown as { __runReferenceCases: () => number[] }
+            ).__runReferenceCases(),
+          );
+          expect(checksums).toEqual(golden.map((g) => g.checksum));
+        } finally {
+          await browser.close();
+        }
+      },
+      180_000,
     );
-    const inNode = CASES.map((c) => runCase(c).checksum);
-    expect(inBrowser).toEqual(inNode);
-    expect(inBrowser).toHaveLength(CASES.length);
-  }, 120_000);
+  }
 });

@@ -2,7 +2,7 @@
 
 > Statut : **APPROUVÉE le 2026-11-11**. Les specs de module sont nommées `SPEC-<id du module>.md` à la racine.
 >
-> Specs existantes : [`sim-core`](SPEC-sim-core.md) (approuvée, implémentation en cours : phase A).
+> Specs existantes : [`sim-core`](SPEC-sim-core.md) (implémenté ; déterminisme dans Firefox encore à vérifier).
 
 ## Vision
 

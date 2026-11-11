@@ -5,6 +5,7 @@ import {
   BTN_SHIELD,
   STATE_BYTES,
   checksum,
+  createFighterView,
   createSim,
   encodeInput,
   frame,
@@ -16,7 +17,6 @@ import {
   readFighter,
   saveState,
   step,
-  type FighterView,
 } from '../src/index.ts';
 import { fxToFloat } from '../src/fixed.ts';
 import { TEST_FIGHTER, TEST_STAGE, testConfig } from '../src/testing/fixtures.ts';
@@ -62,7 +62,7 @@ describe('createSim', () => {
 
   it('place chaque joueur sur son point d’apparition, tourné vers le centre', () => {
     const sim = createSim(testConfig(8));
-    const v = {} as FighterView;
+    const v = createFighterView();
     for (let p = 0; p < 8; p++) {
       readFighter(sim, p, v);
       expect(v.x).toBe(fxToFloat(TEST_STAGE.spawns[p]!.x));
