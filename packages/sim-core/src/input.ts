@@ -23,12 +23,13 @@ export const BTN_TAUNT = 1 << 9;
 
 export const STICK_MAX = 127;
 
-const clampStick = (v: number): number =>
-  Math.max(-STICK_MAX, Math.min(STICK_MAX, Math.trunc(v)));
+const clampStick = (v: number): number => Math.max(-STICK_MAX, Math.min(STICK_MAX, Math.trunc(v)));
 
 export function encodeInput(stickX: number, stickY: number, buttons: number): InputFrame {
   return (
-    ((clampStick(stickX) & 0xff) | ((clampStick(stickY) & 0xff) << 8) | ((buttons & 0xffff) << 16)) >>>
+    ((clampStick(stickX) & 0xff) |
+      ((clampStick(stickY) & 0xff) << 8) |
+      ((buttons & 0xffff) << 16)) >>>
     0
   );
 }
@@ -39,4 +40,4 @@ export const inputButtons = (i: InputFrame): number => i >>> 16;
 
 /** Vrai si `button` est enfoncé à cette frame et ne l'était pas à la précédente. */
 export const inputPressed = (now: InputFrame, prev: InputFrame, button: number): boolean =>
-  ((now & ~prev) >>> 16 & button) !== 0;
+  (((now & ~prev) >>> 16) & button) !== 0;

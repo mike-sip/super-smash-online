@@ -25,19 +25,13 @@ describe('disposition mémoire', () => {
     expect(STATE_BYTES).toBeLessThan(64 * 1024);
     expect(STATE_BYTES).toBe(
       4 *
-        (GLOBAL_COUNT +
-          FIGHTER_FIELDS.length * MAX_PLAYERS +
-          ENTITY_FIELDS.length * MAX_ENTITIES),
+        (GLOBAL_COUNT + FIGHTER_FIELDS.length * MAX_PLAYERS + ENTITY_FIELDS.length * MAX_ENTITIES),
     );
   });
 
   it('donne à chaque champ sa propre zone, sans recouvrement', () => {
     const s = createState();
-    const views = [
-      s.g,
-      ...FIGHTER_FIELDS.map((f) => s[f]),
-      ...ENTITY_FIELDS.map((f) => s[f]),
-    ];
+    const views = [s.g, ...FIGHTER_FIELDS.map((f) => s[f]), ...ENTITY_FIELDS.map((f) => s[f])];
     let n = 0;
     for (const v of views) for (let i = 0; i < v.length; i++) v[i] = ++n;
     n = 0;

@@ -25,6 +25,11 @@ export const FIGHTER_FIELDS = [
   'velY',
   'facing',
   'grounded',
+  /** Surface sous les pieds : index dans la géométrie du stage + 1, ou 0 en l'air. */
+  'surface',
+  'jumpsLeft',
+  /** Frames consécutives stick incliné du même côté, signées par la direction. Sert au dash. */
+  'tilt',
   'fastFall',
   'action',
   'actionFrame',

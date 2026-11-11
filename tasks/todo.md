@@ -35,17 +35,17 @@
 
 ## Phase B — Mouvement
 
-- [ ] **T6 : Déplacement au sol**
+- [x] **T6 : Déplacement au sol**
   - Acceptation : marche, dash, course, demi-tour, accroupi, friction ; collision avec un sol plat ; le combattant ne tombe pas du bord en marchant vers un rebord sans input de chute.
   - Vérification : scénarios scriptés (positions attendues frame par frame).
   - Fichiers : `src/systems/movement.ts`, `src/systems/collision.ts`, `test/scenarios/ground.test.ts`
 
-- [ ] **T7 : Sauts, airs et plateformes**
+- [x] **T7 : Sauts, airs et plateformes**
   - Acceptation : pré-saut, saut, short hop (bouton relâché pendant le pré-saut), double saut, dérive aérienne, gravité, fast fall ; murs et plafonds ; plateformes traversables par le bas et par stick bas.
   - Vérification : scénarios scriptés, dont hauteur de saut complet et de short hop.
   - Fichiers : `src/systems/movement.ts`, `src/systems/collision.ts`, `test/scenarios/air.test.ts`
 
-- [ ] **T8 : Zones limites et événements**
+- [x] **T8 : Zones limites et événements**
   - Acceptation : sortie des zones limites émet un événement KO ; file d'événements par frame, vidée à chaque `step` ; commande de réapparition utilisable par le futur module `match-rules`.
   - Vérification : scénario où un combattant est poussé hors zone, événement KO reçu une seule fois.
   - Fichiers : `src/systems/blast.ts`, `src/events.ts`, `test/scenarios/blast.test.ts`
