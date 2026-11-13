@@ -2,7 +2,7 @@
 
 > Statut : **APPROUVÉE le 2026-11-11**. Les specs de module sont nommées `SPEC-<id du module>.md` à la racine.
 >
-> Specs existantes : [`sim-core`](SPEC-sim-core.md) (implémenté ; déterminisme dans Firefox encore à vérifier).
+> Specs existantes : [`sim-core`](SPEC-sim-core.md) (implémenté ; déterminisme dans Firefox encore à vérifier), [`render`](SPEC-render.md) (implémenté hors audio ; ressenti et manette à valider à la main), [`input`](SPEC-input.md) (implémenté ; essai à la manette réelle, Firefox et Safari encore à faire).
 
 ## Vision
 
@@ -32,7 +32,7 @@ Un jeu de combat de plateforme (« platform fighter ») jouable entièrement en 
 | Id du module | Responsabilité | Dépend de |
 |---|---|---|
 | `sim-core` | Simulation déterministe 60 Hz sans rendu : physique, collisions, machine à états des combattants, hitbox/hurtbox, dégâts et éjection, bouclier, saisies, rebords. Sérialisation et restauration d'état (snapshot) | — |
-| `input` | Clavier et manette, remappage, tampon d'inputs, production d'un `InputFrame` par frame | `sim-core` (type `InputFrame` uniquement) |
+| `input` | Clavier et manette, remappage, conservation des appuis brefs, production d'un `InputFrame` par frame | `sim-core` (type `InputFrame` uniquement) |
 | `fighters` | Données des 4 personnages v1 (frame data, hitbox, movesets) et outillage de validation. Le format `FighterDef` est un contrat défini par `sim-core` | `sim-core` |
 | `stages-items` | Stages (plateformes, zones limites, dangers), objets et leur apparition | `sim-core` |
 | `match-rules` | Modes Stock / Temps / Endurance, équipes, jusqu'à 8 joueurs, jauge d'attaque ultime, résultats de fin de match | `sim-core` |
