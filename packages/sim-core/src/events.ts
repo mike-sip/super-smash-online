@@ -22,6 +22,9 @@ export const EV_GRAB = 6;
 /** Un joueur s'est accroché à un rebord. `a` = joueur, `b` = index du rebord. */
 export const EV_LEDGE = 7;
 
+/** Une attaque ultime a été lancée. `a` = joueur. Ajout demandé par `match-rules`. */
+export const EV_ULTIMATE = 8;
+
 export interface EventQueue {
   count: number;
   readonly type: Int32Array;

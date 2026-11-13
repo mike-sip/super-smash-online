@@ -1,6 +1,8 @@
 /** API publique de `sim-core`. Tout ce qui n'est pas exporté ici est un détail interne. */
 import { G_FRAME, STATE_BYTES, checksumState, loadInto, saveFrom } from './state.ts';
 import type { EventQueue } from './events.ts';
+import type { Fx } from './fixed.ts';
+import { koFighter } from './systems/blast.ts';
 import type { Sim } from './step.ts';
 
 export { fx, fxToFloat, FX_ONE, type Fx } from './fixed.ts';
@@ -64,6 +66,7 @@ export {
   EV_PARRY,
   EV_SHIELD,
   EV_SHIELD_BREAK,
+  EV_ULTIMATE,
   MAX_EVENTS,
   type EventQueue,
 } from './events.ts';
@@ -86,8 +89,8 @@ export {
   inputPressed,
   type InputFrame,
 } from './input.ts';
-export { MAX_PLAYERS, MAX_ENTITIES, STATE_BYTES } from './state.ts';
-export { createSim, respawn, step, type Sim, type SimConfig } from './step.ts';
+export { MAX_PLAYERS, MAX_ENTITIES, RULES_WORDS, STATE_BYTES } from './state.ts';
+export { createSim, respawn, step, type Sim, type SimConfig, type SimRules } from './step.ts';
 export {
   createEntityView,
   createFighterView,
@@ -130,6 +133,35 @@ export function checksum(sim: Sim): number {
 /** Événements émis pendant la dernière frame. La file est réutilisée : la lire avant le `step` suivant. */
 export function events(sim: Sim): EventQueue {
   return sim.events;
+}
+
+/**
+ * Zone de l'état réservée aux règles de match (`RULES_WORDS` mots), toujours la même vue.
+ * La simulation ne la lit jamais ; `saveState`, `loadState` et `checksum` la couvrent.
+ */
+export function rulesState(sim: Sim): Int32Array {
+  return sim.state.rules;
+}
+
+/**
+ * Met un joueur KO sur place (règles de match : points de vie épuisés en Endurance). Émet
+ * `EV_KO` dans la file de la frame en cours. Sans effet sur un joueur déjà KO.
+ */
+export function knockOut(sim: Sim, player: number): void {
+  koFighter(sim, player);
+}
+
+/** Impose les dégâts d'un joueur, en virgule fixe (règles de match : mort subite). */
+export function setDamage(sim: Sim, player: number, damage: Fx | number): void {
+  sim.state.damage[player] = damage | 0;
+}
+
+/**
+ * Autorise ou non l'attaque ultime du joueur (règles de match). Autorisée, le prochain spécial
+ * neutre lance `M_ULTIMATE` si le combattant en a une, retire l'autorisation et émet `EV_ULTIMATE`.
+ */
+export function setUltimateReady(sim: Sim, player: number, ready: boolean): void {
+  sim.state.ultimateReady[player] = ready ? 1 : 0;
 }
 
 /** Nombre de frames simulées depuis la création. */

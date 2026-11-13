@@ -224,3 +224,39 @@ Checksums de réf. :   pnpm --filter @game/sim-core golden:update
 Navigateurs :         pnpm --filter @game/sim-core exec playwright-core install firefox webkit
 Sans Firefox :        SIM_BROWSERS=chromium,webkit pnpm --filter @game/sim-core test
 ```
+
+## Ajouts demandés par `match-rules` (2026-11-13)
+
+Accordés par l'utilisateur à la validation de [SPEC-match-rules.md](SPEC-match-rules.md). Tous additifs : sans `rules`, `teams` ni autorisation d'ultime, la simulation se comporte comme avant (mêmes coups et mêmes KO sur les 5 séquences de référence ; seuls les checksums changent, parce que l'état grandit).
+
+```ts
+/** Règles de match, appelées dans step : elles sont donc re-simulées avec le reste après un rollback. */
+export interface SimRules {
+  init(sim: Sim): void;      // fin de createSim
+  afterStep(sim: Sim): void; // fin de step, frame déjà avancée, événements lisibles
+}
+interface SimConfig {
+  // …champs existants
+  readonly teams?: readonly number[]; // une équipe (entier ≥ 0) par joueur ; absent = chacun pour soi
+  readonly teamAttack?: boolean;      // tir allié, vrai par défaut
+  readonly rules?: SimRules;
+}
+export const RULES_WORDS = 256;
+export function rulesState(sim: Sim): Int32Array;  // zone réservée, jamais lue par sim-core
+export function respawn(sim: Sim, player: number, invincibleFrames = 0): void;
+export function knockOut(sim: Sim, player: number): void;   // KO sur place, émet EV_KO
+export function setDamage(sim: Sim, player: number, damage: Fx): void;
+export function setUltimateReady(sim: Sim, player: number, ready: boolean): void;
+export const M_ULTIMATE = 20; // MOVE_SLOTS passe à 21
+export const EV_ULTIMATE = 8; // a = joueur
+// FighterView : invincible, ultimateReady
+```
+
+| Ajout | Effet |
+|---|---|
+| Disposition mémoire | Deux champs par joueur en fin de liste (`invincible`, `ultimateReady`), puis la zone `rules` de 256 mots en fin de tampon. `STATE_BYTES` : 2 764 → 3 852 octets |
+| Tir allié désactivé | Coups, entités (d'après leur propriétaire) et saisies ignorent les coéquipiers ; une entité sans propriétaire touche tout le monde |
+| `invincible` | Vérifié avec `intangible` pour les coups, entités et saisies ; décompté chaque frame, hitlag compris ; aucune esquive ni remontée ne l'écrase |
+| `ultimateReady` | Un spécial neutre lance `M_ULTIMATE` si le combattant en a une, remet le drapeau à 0 et émet `EV_ULTIMATE` ; conservé à la réapparition |
+| Combattant de test | Reçoit une ultime provisoire (`moves[M_ULTIMATE]`) |
+| Tests | Scénarios `rules`, `teams`, `match-support`, `ultimate` ; les tests de disposition mémoire (`state.test.ts`) et de vue (`view.test.ts`) ont été étendus aux nouveaux champs, sans rien retirer |

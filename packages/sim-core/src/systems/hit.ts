@@ -115,6 +115,8 @@ export function resolveHits(sim: Sim): void {
   const fighters = sim.config.fighters;
   const sc = sim.scratch;
   const players = s.g[G_PLAYERS]!;
+  const team = sim.team;
+  const allies = !sim.teamAttack;
 
   for (let j = 0; j < players; j++) {
     sc.damage[j] = 0;
@@ -133,7 +135,10 @@ export function resolveHits(sim: Sim): void {
     const facing = s.facing[i]!;
 
     for (let j = 0; j < players; j++) {
-      if (j === i || s.action[j] === A_DEAD || s.intangible[j]! > 0) continue;
+      if (j === i || s.action[j] === A_DEAD || s.intangible[j]! > 0 || s.invincible[j]! > 0) {
+        continue;
+      }
+      if (allies && team[i] === team[j]) continue;
       for (let h = 0; h < hits.length; h++) {
         const hit = hits[h]!;
         if (moveFrame < hit.start || moveFrame > hit.end) continue;
@@ -189,7 +194,10 @@ export function resolveHits(sim: Sim): void {
     const dir = s.eVelX[e]! >= 0 ? 1 : -1;
 
     for (let j = 0; j < players; j++) {
-      if (j === owner || s.action[j] === A_DEAD || s.intangible[j]! > 0) continue;
+      if (j === owner || s.action[j] === A_DEAD || s.intangible[j]! > 0 || s.invincible[j]! > 0) {
+        continue;
+      }
+      if (allies && owner >= 0 && team[owner] === team[j]) continue;
       const bit = 1 << j;
       if ((s.eHitMask[e]! & bit) !== 0) continue;
       if (!overlapsHurtboxes(s, j, fighters[j]!, ex, ey, ex, ey, def.radius)) continue;
