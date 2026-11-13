@@ -1,6 +1,6 @@
 # Spec : `accounts` — invités, comptes, sessions et profils
 
-> Statut : **PROPOSÉE le 2026-11-13**, en attente d'approbation. Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : rien. Sera utilisé par `lobby`, `ranking` (pas encore faits), le relais de `netcode` (par la vérification de ticket) et `app-shell`.
+> Statut : **APPROUVÉE le 2026-11-13**. Plan : [tasks/accounts/plan.md](tasks/accounts/plan.md), tâches : [tasks/accounts/todo.md](tasks/accounts/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : rien. Sera utilisé par `lobby`, `ranking` (pas encore faits), le relais de `netcode` (par la vérification de ticket) et `app-shell`.
 
 ## Hypothèses
 
@@ -303,9 +303,9 @@ Le hachage de production est lent par conception : les tests utilisent des param
 9. **Intégré** : la démo a un panneau Compte qui fonctionne contre le vrai serveur ; sans serveur, elle reste jouable ; ses tests existants passent inchangés.
 10. **Relu** : une relecture de sécurité est faite et consignée, ses constats corrigés ou expliqués.
 
-## Décisions à valider
+## Décisions prises à la validation
 
-Mes choix par défaut, à confirmer ou corriger :
+Choix par défaut approuvés tels quels le 2026-11-13 :
 
 1. **Mot de passe oublié** : sans email, pas de récupération dans la v1. Le joueur est prévenu à l'inscription. Une piste pour plus tard : un code de secours affiché une seule fois à l'inscription.
 2. **Pseudo des invités** : tiré au hasard (`Invité-48213`) ou choisi par le joueur, avec les mêmes règles ; non réservé, mais jamais égal à celui d'un compte.
