@@ -57,6 +57,7 @@ export {
   A_LEDGE,
   A_LEDGE_GETUP,
   A_LEDGE_ROLL,
+  A_HELPLESS,
 } from './actions.ts';
 export {
   EV_GRAB,

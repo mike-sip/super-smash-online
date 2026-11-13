@@ -56,6 +56,15 @@ export const A_LEDGE_GETUP = 29;
 /** Remontée en roulade, plus loin sur le stage. */
 export const A_LEDGE_ROLL = 30;
 
+// Ajoutée pour le module `fighters` (SPEC-fighters.md, E2). Hors des plages ci-dessus : les tests
+// de plage (`>= A_SHIELD`, `>= A_LEDGE`) sont bornés à `A_LEDGE_ROLL` pour l'exclure.
+/**
+ * Chute impuissante, après un coup qui la déclare (`MoveDef.helpless`) terminé en l'air : dérive
+ * et accroche au rebord possibles, rien d'autre jusqu'à l'atterrissage. `state.move` garde le coup,
+ * dont le lag d'atterrissage s'applique.
+ */
+export const A_HELPLESS = 31;
+
 /**
  * Change d'action. `actionFrame` compte les frames passées dans l'action, frame du changement
  * incluse : il vaut 1 à la fin de la frame où l'action a commencé.

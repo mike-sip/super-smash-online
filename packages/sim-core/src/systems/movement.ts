@@ -10,10 +10,12 @@ import {
   A_DASH,
   A_DEAD,
   A_DOWN,
+  A_HELPLESS,
   A_HITSTUN,
   A_IDLE,
   A_JUMPSQUAT,
   A_LAND,
+  A_LEDGE_ROLL,
   A_RUN,
   A_SHIELD,
   A_TECH,
@@ -249,7 +251,7 @@ export function updateMovement(sim: Sim, i: number): void {
   const grounded = s.grounded[i] === 1;
 
   if (action === A_DEAD) return;
-  if (action >= A_SHIELD) {
+  if (action >= A_SHIELD && action <= A_LEDGE_ROLL) {
     // Bouclier, esquives, saisies, rebords : chacun a son propre système.
     updateDefense(sim, i);
     return;
@@ -292,7 +294,7 @@ export function updateMovement(sim: Sim, i: number): void {
     const move = def.moves[s.move[i]!]!;
     if (frames >= move.totalFrames) {
       // Fin de l'attaque : le combattant est libre dès cette frame.
-      setAction(s, i, grounded ? A_IDLE : A_AIR);
+      setAction(s, i, grounded ? A_IDLE : move.helpless === true ? A_HELPLESS : A_AIR);
       updateMovement(sim, i);
       return;
     }
@@ -360,6 +362,13 @@ export function updateMovement(sim: Sim, i: number): void {
       setAction(s, i, A_AIR);
     }
     airControl(s, def, i, stickX, dir, flickDown);
+    return;
+  }
+
+  if (action === A_HELPLESS) {
+    // Sur le sol par un autre chemin que l'atterrissage (téléportation) : plus rien à attendre.
+    if (grounded) setAction(s, i, A_IDLE);
+    else airControl(s, def, i, stickX, dir, flickDown);
     return;
   }
 

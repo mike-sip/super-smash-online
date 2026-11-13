@@ -64,7 +64,9 @@ function move(
   name: string,
   totalFrames: number,
   hits: HitSpec[],
-  extra: Partial<Pick<MoveDef, 'charge' | 'landingLag' | 'spawn' | 'motion' | 'intangible'>> & {
+  extra: Partial<
+    Pick<MoveDef, 'charge' | 'landingLag' | 'spawn' | 'motion' | 'intangible' | 'helpless'>
+  > & {
     cancels?: CancelDef[];
   } = {},
 ): MoveDef {
@@ -481,14 +483,14 @@ export const TEST_SPECIALIST: FighterDef = {
   name: 'specialist',
   moves: (() => {
     const moves = TEST_MOVES.slice();
-    // Fente : avance vite et frappe à l'arrivée.
+    // Fente : avance vite et frappe à l'arrivée ; en l'air, finit en chute impuissante.
     moves[M_SSPECIAL] = move(
       'lunge',
       30,
       [{ frames: [12, 14], shape: [5, 7, 3], damage: 8, angle: 40, base: 30, growth: 0.6 }],
-      { motion: [{ start: 5, end: 14, velX: fx(2) }], landingLag: 12 },
+      { motion: [{ start: 5, end: 14, velX: fx(2) }], helpless: true, landingLag: 12 },
     );
-    // Montée : décolle et monte, invincible au départ.
+    // Montée : décolle et monte, invincible au départ, puis chute impuissante.
     moves[M_USPECIAL] = move(
       'rise',
       30,
@@ -496,6 +498,7 @@ export const TEST_SPECIALIST: FighterDef = {
       {
         motion: [{ start: 4, end: 20, velY: fx(2.4) }],
         intangible: { start: 1, end: 5 },
+        helpless: true,
         landingLag: 15,
       },
     );

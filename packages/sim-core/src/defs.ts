@@ -134,6 +134,8 @@ export interface MoveDef {
   readonly motion?: readonly MotionDef[];
   /** Frames pendant lesquelles aucun coup ni saisie ne touche le combattant (E3). */
   readonly intangible?: FrameWindow;
+  /** Si vrai et que le coup se termine en l'air, le combattant passe en chute impuissante (E2). */
+  readonly helpless?: boolean;
 }
 
 export interface GrabDef {

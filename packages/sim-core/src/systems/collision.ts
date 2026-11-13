@@ -13,11 +13,13 @@ import {
   A_DEAD,
   A_DOWN,
   A_GRABBED,
+  A_HELPLESS,
   A_HITSTUN,
   A_IDLE,
   A_JUMPSQUAT,
   A_LAND,
   A_LEDGE,
+  A_LEDGE_ROLL,
   A_RUN,
   A_SHIELD_BREAK,
   A_TECH,
@@ -224,7 +226,7 @@ function land(sim: Sim, i: number, k: number, knocked: boolean): void {
     s.landLag[i] = def.airDodgeLandingLag;
     setAction(s, i, A_LAND);
   } else {
-    const move = action === A_ATTACK ? def.moves[s.move[i]!] : undefined;
+    const move = action === A_ATTACK || action === A_HELPLESS ? def.moves[s.move[i]!] : undefined;
     s.landLag[i] = move?.landingLag ?? def.landFrames;
     setAction(s, i, A_LAND);
   }
@@ -303,7 +305,9 @@ export function integrate(sim: Sim, i: number): void {
   const action = s.action[i]!;
   // Un combattant tenu ne bouge pas de lui-même : sa position est imposée par celui qui le tient.
   // Un combattant suspendu à un rebord non plus.
-  if (action === A_DEAD || action === A_GRABBED || action >= A_LEDGE) return;
+  if (action === A_DEAD || action === A_GRABBED || (action >= A_LEDGE && action <= A_LEDGE_ROLL)) {
+    return;
+  }
   if (s.grounded[i] === 1) integrateGrounded(sim, i);
   else integrateAirborne(sim, i);
 }
