@@ -22,8 +22,10 @@ import {
   M_LEDGE_ATTACK,
   M_NAIR,
   M_NSPECIAL,
+  M_SSPECIAL,
   M_UAIR,
   M_USMASH,
+  M_USPECIAL,
   M_UTILT,
 } from '../moves.ts';
 import type { SimConfig } from '../step.ts';
@@ -62,7 +64,7 @@ function move(
   name: string,
   totalFrames: number,
   hits: HitSpec[],
-  extra: Partial<Pick<MoveDef, 'charge' | 'landingLag' | 'spawn'>> & {
+  extra: Partial<Pick<MoveDef, 'charge' | 'landingLag' | 'spawn' | 'motion' | 'intangible'>> & {
     cancels?: CancelDef[];
   } = {},
 ): MoveDef {
@@ -468,3 +470,42 @@ export function testConfig(players: number, seed = 1): SimConfig {
     seed,
   };
 }
+
+/**
+ * Troisième combattant : celui de test, avec des spéciaux qui exercent les extensions demandées
+ * par le module `fighters` (SPEC-fighters.md, E1 à E6). `TEST_FIGHTER` reste inchangé, pour que
+ * les scénarios et checksums existants ne bougent pas.
+ */
+export const TEST_SPECIALIST: FighterDef = {
+  ...TEST_FIGHTER,
+  name: 'specialist',
+  moves: (() => {
+    const moves = TEST_MOVES.slice();
+    // Fente : avance vite et frappe à l'arrivée.
+    moves[M_SSPECIAL] = move(
+      'lunge',
+      30,
+      [{ frames: [12, 14], shape: [5, 7, 3], damage: 8, angle: 40, base: 30, growth: 0.6 }],
+      { motion: [{ start: 5, end: 14, velX: fx(2) }], landingLag: 12 },
+    );
+    // Montée : décolle et monte, invincible au départ.
+    moves[M_USPECIAL] = move(
+      'rise',
+      30,
+      [{ frames: [6, 18], shape: [0, 8, 5], damage: 6, angle: 85, base: 40, growth: 0.5 }],
+      {
+        motion: [{ start: 4, end: 20, velY: fx(2.4) }],
+        intangible: { start: 1, end: 5 },
+        landingLag: 15,
+      },
+    );
+    // Plongeon : en l'air, fonce en diagonale vers le bas.
+    moves[M_DAIR] = move(
+      'dive',
+      40,
+      [{ frames: [3, 40], shape: [2, 2, 3], damage: 9, angle: 280, base: 20, growth: 0.6 }],
+      { motion: [{ start: 3, end: 40, velX: fx(1), velY: fx(-2) }], landingLag: 16 },
+    );
+    return moves;
+  })(),
+};

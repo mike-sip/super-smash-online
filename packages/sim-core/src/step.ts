@@ -20,6 +20,7 @@ import { createHitScratch, resolveHits, type HitScratch } from './systems/hit.ts
 import { launch } from './systems/knockback.ts';
 import { resolveLedges } from './systems/ledge.ts';
 import { trackStick, updateMovement } from './systems/movement.ts';
+import { applyMoveEffects } from './systems/specials.ts';
 
 export interface SimConfig {
   readonly stage: StageDef;
@@ -128,6 +129,7 @@ export function step(sim: Sim, inputs: Uint32Array): void {
     } else {
       frozen[i] = 0;
       updateMovement(sim, i);
+      applyMoveEffects(sim, i);
     }
   }
 
