@@ -12,7 +12,9 @@ import {
   M_DAIR,
   M_DASH_ATTACK,
   M_DSMASH,
+  M_DSPECIAL,
   M_DTILT,
+  M_EXTRA1,
   M_FAIR,
   M_FSMASH,
   M_FTILT,
@@ -65,7 +67,10 @@ function move(
   totalFrames: number,
   hits: HitSpec[],
   extra: Partial<
-    Pick<MoveDef, 'charge' | 'landingLag' | 'spawn' | 'motion' | 'intangible' | 'helpless'>
+    Pick<
+      MoveDef,
+      'charge' | 'landingLag' | 'spawn' | 'motion' | 'intangible' | 'helpless' | 'armor' | 'counter'
+    >
   > & {
     cancels?: CancelDef[];
   } = {},
@@ -501,6 +506,18 @@ export const TEST_SPECIALIST: FighterDef = {
         helpless: true,
         landingLag: 15,
       },
+    );
+    // Contre : frappé pendant la garde, riposte en M_EXTRA1.
+    moves[M_DSPECIAL] = move('counter', 40, [], { counter: { start: 4, end: 20, to: M_EXTRA1 } });
+    moves[M_EXTRA1] = move('riposte', 30, [
+      { frames: [3, 6], shape: [6, 7, 4], damage: 10, angle: 40, base: 40, growth: 0.8 },
+    ]);
+    // Coup armé : encaisse les coups faibles pendant sa préparation.
+    moves[M_NSPECIAL] = move(
+      'armored punch',
+      40,
+      [{ frames: [18, 20], shape: [6, 7, 3], damage: 14, angle: 40, base: 30, growth: 0.9 }],
+      { armor: { start: 1, end: 20, maxKnockback: fx(60) } },
     );
     // Plongeon : en l'air, fonce en diagonale vers le bas.
     moves[M_DAIR] = move(

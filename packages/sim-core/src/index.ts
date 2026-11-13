@@ -5,9 +5,11 @@ import type { Sim } from './step.ts';
 
 export { fx, fxToFloat, FX_ONE, type Fx } from './fixed.ts';
 export type {
+  ArmorDef,
   CancelDef,
   CapsuleDef,
   ChargeDef,
+  CounterDef,
   DodgeDef,
   EntityDef,
   EntityHitDef,
@@ -60,6 +62,7 @@ export {
   A_HELPLESS,
 } from './actions.ts';
 export {
+  EV_COUNTER,
   EV_GRAB,
   EV_HIT,
   EV_KO,

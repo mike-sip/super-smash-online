@@ -9,20 +9,34 @@ import { A_ATTACK, A_HELPLESS, A_HITSTUN, A_IDLE, A_LAND, A_LEDGE } from '../../
 import { fx } from '../../src/fixed.ts';
 import {
   BTN_ATTACK,
+  BTN_CSTICK_LEFT,
   BTN_JUMP,
   BTN_SHIELD,
   BTN_SPECIAL,
+  EV_COUNTER,
+  EV_HIT,
   createSim,
   type Sim,
 } from '../../src/index.ts';
-import { M_DAIR, M_SSPECIAL, M_USPECIAL } from '../../src/moves.ts';
+import { M_DAIR, M_EXTRA1, M_JAB, M_NSPECIAL, M_SSPECIAL, M_USPECIAL } from '../../src/moves.ts';
 import {
   TEST_ENTITIES,
   TEST_FIGHTER,
   TEST_SPECIALIST,
   TEST_STAGE,
 } from '../../src/testing/fixtures.ts';
-import { NEUTRAL, hold, hold2, holdUntil, place, press, stick, teleportAir } from './helpers.ts';
+import {
+  NEUTRAL,
+  countEvents,
+  hold,
+  hold2,
+  holdAll,
+  holdUntil,
+  place,
+  press,
+  stick,
+  teleportAir,
+} from './helpers.ts';
 
 const SPECIAL = press(BTN_SPECIAL);
 const UP_SPECIAL = stick(0, 127, BTN_SPECIAL);
@@ -202,3 +216,135 @@ describe('chute impuissante (E2)', () => {
     expect(sim.state.action[0]).toBe(A_IDLE);
   });
 });
+
+describe('armure (E4)', () => {
+  /** Le joueur 0 lance son coup armé ; le joueur 1, collé à lui, frappe à la même frame. */
+  function armoredAgainst(input1: number, damage0 = 0): Sim {
+    const sim = specialistSim();
+    place(sim, 0, 0, 1);
+    place(sim, 1, 6, -1);
+    sim.state.damage[0] = fx(damage0);
+    hold2(sim, SPECIAL, input1, 1);
+    return sim;
+  }
+
+  it('encaisse un coup sous le seuil sans interrompre l’attaque', () => {
+    const sim = armoredAgainst(JAB);
+    const s = sim.state;
+    hold2(sim, NEUTRAL, NEUTRAL, 2);
+    // Frame 3 du jab : touché, mais toujours en attaque.
+    expect(s.damage[0]).toBe(TEST_FIGHTER.moves[M_JAB]!.hits[0]!.damage);
+    expect(s.action[0]).toBe(A_ATTACK);
+    expect(s.move[0]).toBe(M_NSPECIAL);
+    expect(s.hitlag[0]).toBeGreaterThan(0);
+    expect(countEvents(sim, EV_HIT)).toBe(1);
+  });
+
+  it('cède à un coup au-dessus du seuil', () => {
+    // Smash avant sur une cible à 100 % : bien au-delà du seuil d'éjection de 60.
+    const sim = armoredAgainst(press(BTN_CSTICK_LEFT), 100);
+    holdUntil2(sim, () => sim.state.action[0] === A_HITSTUN, 20);
+  });
+
+  it('n’agit pas sur un coup qui n’en a pas', () => {
+    const sim = specialistSim();
+    place(sim, 0, 0, -1);
+    place(sim, 1, 6, -1);
+    // Le joueur 0 lance sa fente, sans armure, dos au joueur 1 dont le jab le touche.
+    hold2(sim, stick(-127, 0, BTN_SPECIAL), JAB, 1);
+    holdUntil2(sim, () => sim.state.action[0] === A_HITSTUN, 10);
+  });
+});
+
+describe('contre (E5)', () => {
+  const DOWN_SPECIAL = stick(0, -127, BTN_SPECIAL);
+
+  /** Le joueur 0, tourné à l'opposé, lance son contre ; le joueur 1 lance un jab `delay` frames après. */
+  function counterSim(delay: number): Sim {
+    const sim = specialistSim();
+    place(sim, 0, 0, -1);
+    place(sim, 1, 6, -1);
+    hold2(sim, DOWN_SPECIAL, delay === 0 ? JAB : NEUTRAL, 1);
+    for (let f = 1; f < delay; f++) hold2(sim, NEUTRAL, NEUTRAL, 1);
+    if (delay > 0) hold2(sim, NEUTRAL, JAB, 1);
+    return sim;
+  }
+
+  it('annule le coup reçu et lance la riposte, tourné vers l’attaquant', () => {
+    const sim = counterSim(2);
+    const s = sim.state;
+    let countered = 0;
+    // Jab actif à sa frame 3, soit la frame 5 du contre.
+    for (let f = 0; f < 3; f++) {
+      hold2(sim, NEUTRAL, NEUTRAL, 1);
+      countered += countEvents(sim, EV_COUNTER);
+    }
+    expect(countered).toBe(1);
+    expect(s.damage[0]).toBe(0);
+    expect(s.move[0]).toBe(M_EXTRA1);
+    expect(s.facing[0]).toBe(1);
+    // L'attaquant reste gelé plus longtemps que le défenseur : la riposte le touche.
+    holdUntil2(sim, () => s.damage[1]! > 0, 40);
+    expect(s.damage[1]).toBe(TEST_SPECIALIST.moves[M_EXTRA1]!.hits[0]!.damage);
+  });
+
+  it('ne joue pas avant le début de sa fenêtre', () => {
+    // Jab actif à la frame 2 du contre, avant la fenêtre (4 à 20).
+    const sim = counterSim(0);
+    hold2(sim, NEUTRAL, NEUTRAL, 3);
+    expect(sim.state.damage[0]).toBeGreaterThan(0);
+    expect(sim.state.action[0]).toBe(A_HITSTUN);
+  });
+
+  it('se déclenche aussi sur un projectile', () => {
+    const sim = specialistSim();
+    const s = sim.state;
+    place(sim, 0, 0, 1);
+    place(sim, 1, 30, -1);
+    hold2(sim, NEUTRAL, SPECIAL, 1);
+    for (let f = 0; f < 11; f++) hold2(sim, NEUTRAL, NEUTRAL, 1);
+    // Le tir part à la frame 12 et atteint le joueur 0 vers la frame 19.
+    hold2(sim, DOWN_SPECIAL, NEUTRAL, 1);
+    let countered = 0;
+    for (let f = 0; f < 20; f++) {
+      hold2(sim, NEUTRAL, NEUTRAL, 1);
+      countered += countEvents(sim, EV_COUNTER);
+    }
+    expect(countered).toBe(1);
+    expect(s.damage[0]).toBe(0);
+  });
+
+  it('répond à deux attaquants simultanés, chacun gelé', () => {
+    const sim = createSim({
+      stage: TEST_STAGE,
+      fighters: [TEST_SPECIALIST, TEST_FIGHTER, TEST_FIGHTER],
+      entities: TEST_ENTITIES,
+      seed: 1,
+    });
+    const s = sim.state;
+    place(sim, 0, 0, 1);
+    place(sim, 1, 6, -1);
+    place(sim, 2, -6, 1);
+    holdAll(sim, [DOWN_SPECIAL, NEUTRAL, NEUTRAL], 1);
+    holdAll(sim, [NEUTRAL, NEUTRAL, NEUTRAL], 1);
+    holdAll(sim, [NEUTRAL, JAB, JAB], 1);
+    let countered = 0;
+    for (let f = 0; f < 3; f++) {
+      holdAll(sim, [NEUTRAL, NEUTRAL, NEUTRAL], 1);
+      countered += countEvents(sim, EV_COUNTER);
+    }
+    expect(countered).toBe(2);
+    expect(s.damage[0]).toBe(0);
+    expect(s.hitlag[1]).toBeGreaterThan(s.hitlag[0]!);
+    expect(s.hitlag[2]).toBeGreaterThan(s.hitlag[0]!);
+  });
+});
+
+/** Joue des frames neutres pour les deux joueurs jusqu'à ce que `until` soit vrai. */
+function holdUntil2(sim: Sim, until: () => boolean, max: number): void {
+  for (let f = 0; f < max; f++) {
+    hold2(sim, NEUTRAL, NEUTRAL, 1);
+    if (until()) return;
+  }
+  throw new Error(`Condition jamais atteinte en ${max} frames.`);
+}

@@ -136,6 +136,20 @@ export interface MoveDef {
   readonly intangible?: FrameWindow;
   /** Si vrai et que le coup se termine en l'air, le combattant passe en chute impuissante (E2). */
   readonly helpless?: boolean;
+  /** Armure (E4) : pendant la fenêtre, un coup reçu d'éjection au plus `maxKnockback` inflige ses
+   * dégâts et son gel, sans hitstun ni éjection : l'attaque continue. */
+  readonly armor?: ArmorDef;
+  /** Contre (E5) : frappé pendant la fenêtre, le combattant ne subit rien et lance l'emplacement `to`. */
+  readonly counter?: CounterDef;
+}
+
+export interface ArmorDef extends FrameWindow {
+  readonly maxKnockback: Fx;
+}
+
+export interface CounterDef extends FrameWindow {
+  /** Emplacement de la riposte, en général `M_EXTRA1` ou `M_EXTRA2`. */
+  readonly to: number;
 }
 
 export interface GrabDef {

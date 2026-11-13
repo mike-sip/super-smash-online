@@ -24,4 +24,9 @@ export const M_USPECIAL = 17;
 export const M_DSPECIAL = 18;
 /** Attaque de remontée depuis un rebord. */
 export const M_LEDGE_ATTACK = 19;
-export const MOVE_SLOTS = 20;
+// Emplacements ajoutés pour le module `fighters` (SPEC-fighters.md). Le 20 est réservé à l'attaque
+// ultime (E6).
+/** Emplacements libres, atteignables seulement par annulation ou par un contre (E5). */
+export const M_EXTRA1 = 21;
+export const M_EXTRA2 = 22;
+export const MOVE_SLOTS = 23;

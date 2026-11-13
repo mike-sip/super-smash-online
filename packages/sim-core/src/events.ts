@@ -21,6 +21,8 @@ export const EV_SHIELD_BREAK = 5;
 export const EV_GRAB = 6;
 /** Un joueur s'est accroché à un rebord. `a` = joueur, `b` = index du rebord. */
 export const EV_LEDGE = 7;
+/** Un coup a été contré (SPEC-fighters.md, E5). `a` = attaquant (-1 : entité sans propriétaire), `b` = défenseur. */
+export const EV_COUNTER = 8;
 
 export interface EventQueue {
   count: number;
