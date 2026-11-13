@@ -19,4 +19,8 @@ describe('frontières', () => {
         expect(allowed, `${file} importe ${target}`).toContain(target);
     }
   });
+
+  it('la vérification des tickets ne dépend que de node:crypto', () => {
+    expect(importsOf('ticket.ts')).toEqual(['node:crypto']);
+  });
 });

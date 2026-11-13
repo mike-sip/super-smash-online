@@ -11,12 +11,12 @@
   - Vérification : tests unitaires de chaque règle et de chaque raison de refus, dont `Élodie`/`elodie` même clé, `4dm1n` refusé, `Invité-1` refusé pour un compte.
   - Fichiers : `packages/accounts/package.json`, `packages/accounts/tsconfig.json`, `packages/accounts/tsconfig.build.json`, `packages/accounts/vitest.config.ts`, `packages/accounts/src/protocol.ts`, `packages/accounts/src/names.ts`, `packages/accounts/src/passwords.ts`, `packages/accounts/src/wordlists.ts`, `packages/accounts/test/names.test.ts`, `packages/accounts/test/passwords.test.ts`
 
-- [ ] **T2 : Hachage, jetons de session et tickets**
+- [x] **T2 : Hachage, jetons de session et tickets**
   - Acceptation : `hashPassword`/`verifyPassword` avec scrypt, format `scrypt$15$8$3$<sel>$<empreinte>`, comparaison en temps constant ; détection d'une empreinte aux paramètres périmés ; plafond de calculs simultanés avec file courte puis refus « occupé » ; empreinte factice pour les pseudos inconnus ; jetons de session de 32 octets et leur empreinte SHA-256 ; `signTicket`/`verifyTicket` : format `v1.<charge>.<signature>`, durée 60 s, tolérance de 5 s, audience, rotation des clés, jamais d'exception ; `ticket.ts` n'importe que `node:crypto`.
   - Vérification : tests unitaires (aller-retour, mauvais mot de passe, empreinte mal formée, paramètres périmés, plafond ; ticket valide, expiré, falsifié sur la charge ou la signature, mauvaise audience, clé ancienne acceptée, clé inconnue refusée, textes mal formés) ; test que les paramètres par défaut sont ceux de production.
   - Fichiers : `packages/accounts/src/hashing.ts`, `packages/accounts/src/tokens.ts`, `packages/accounts/src/ticket.ts`, `packages/accounts/test/hashing.test.ts`, `packages/accounts/test/tokens.test.ts`, `packages/accounts/test/ticket.test.ts`
 
-- [ ] **T3 : Limitation des tentatives**
+- [x] **T3 : Limitation des tentatives**
   - Acceptation : interface `RateLimiter` et implémentation en mémoire par seaux à jetons, horloge injectée ; réponse « refusé » avec le délai d'attente en secondes ; seaux inactifs oubliés (aucune croissance illimitée de la mémoire) ; règles de la spec : 20 tentatives d'authentification par minute et par adresse, 30 invités par heure et par adresse, 10 échecs de connexion par quart d'heure et par pseudo.
   - Vérification : tests unitaires avec horloge factice (épuisement, remplissage, délai annoncé, oubli des seaux, clés indépendantes).
   - Fichiers : `packages/accounts/src/rate-limit.ts`, `packages/accounts/test/rate-limit.test.ts`
