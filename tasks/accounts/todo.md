@@ -25,7 +25,7 @@
 
 ## Phase B — Métier
 
-- [ ] **T4 : Interface de stockage, stockage mémoire et suite de contrat**
+- [x] **T4 : Interface de stockage, stockage mémoire et suite de contrat**
   - Acceptation : interface `AccountStore` (comptes, sessions, purge, suppression en cascade) et types des enregistrements ; stockage mémoire ; suite de contrat réutilisable : création, unicité de la clé (y compris entre invités et comptes selon la spec), conversion, mise à jour du profil, sessions (création, recherche par empreinte, prolongation, suppression, plafond), purge des sessions expirées et des invités inactifs, suppression en cascade, statistiques.
   - Vérification : suite de contrat sur le stockage mémoire.
   - Fichiers : `packages/accounts/src/store.ts`, `packages/accounts/src/store-memory.ts`, `packages/accounts/test/store-contract.ts`, `packages/accounts/test/store-memory.test.ts`
