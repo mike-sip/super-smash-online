@@ -1,12 +1,12 @@
 # Tâches : module `accounts`
 
-> Statut : **PROPOSÉ le 2026-11-13**, en attente de validation. Plan : [plan.md](plan.md).
+> Statut : **VALIDÉ le 2026-11-13**. Plan : [plan.md](plan.md).
 >
 > Vérification commune à chaque tâche : `pnpm --filter @game/accounts test`, `pnpm --filter @game/accounts typecheck` et `pnpm lint` passent ; à partir de T9, `pnpm --filter @game/accounts-client test` aussi ; à partir de T10, `pnpm --filter @game/demo test` aussi.
 
 ## Phase A — Règles
 
-- [ ] **T1 : Paquet, protocole, pseudos et mots de passe**
+- [x] **T1 : Paquet, protocole, pseudos et mots de passe**
   - Acceptation : paquet `@game/accounts` dans le monorepo avec ses trois points d'entrée (`.`, `./protocol`, `./ticket`) ; types `AccountView`, `ErrorCode` et corps des requêtes ; `validatePseudo` : normalisation NFKC, bords retirés, 3 à 16 caractères, lettres latines accentuées, chiffres, `_` et `-`, première lettre, pas deux séparateurs de suite, clé d'unicité sans casse ni accents, mots interdits trouvés même déguisés ; `validatePassword` : 8 à 128 caractères, différent du pseudo, absent de la liste des mots de passe courants ; aucun import Node dans ces fichiers.
   - Vérification : tests unitaires de chaque règle et de chaque raison de refus, dont `Élodie`/`elodie` même clé, `4dm1n` refusé, `Invité-1` refusé pour un compte.
   - Fichiers : `packages/accounts/package.json`, `packages/accounts/tsconfig.json`, `packages/accounts/tsconfig.build.json`, `packages/accounts/vitest.config.ts`, `packages/accounts/src/protocol.ts`, `packages/accounts/src/names.ts`, `packages/accounts/src/passwords.ts`, `packages/accounts/src/wordlists.ts`, `packages/accounts/test/names.test.ts`, `packages/accounts/test/passwords.test.ts`

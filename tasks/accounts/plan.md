@@ -1,6 +1,6 @@
 # Plan : module `accounts`
 
-> Statut : **PROPOSÉ le 2026-11-13**, en attente de validation. Spec : [SPEC-accounts.md](../../SPEC-accounts.md). Tâches détaillées : [todo.md](todo.md).
+> Statut : **VALIDÉ le 2026-11-13**. Spec : [SPEC-accounts.md](../../SPEC-accounts.md). Tâches détaillées : [todo.md](todo.md).
 
 ## Approche
 
