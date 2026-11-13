@@ -1,6 +1,6 @@
 # Tâches : audio du module `render`
 
-> Statut : **PROPOSÉ le 2026-11-13**, en attente d'approbation. Plan : [audio-plan.md](audio-plan.md).
+> Statut : **APPROUVÉ le 2026-11-13**. Plan : [audio-plan.md](audio-plan.md).
 >
 > Vérification commune à chaque tâche : `pnpm --filter @game/render test`, `pnpm --filter @game/render typecheck` et `pnpm lint` passent.
 

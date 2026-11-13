@@ -1,6 +1,6 @@
 # Plan : audio du module `render`
 
-> Statut : **PROPOSÉ le 2026-11-13**, en attente d'approbation. Spec : [SPEC-render.md, « Phase audio »](../../SPEC-render.md#phase-audio). Tâches détaillées : [audio-todo.md](audio-todo.md). Fait suite au point de contrôle D du [plan du module](plan.md).
+> Statut : **APPROUVÉ le 2026-11-13**. Spec : [SPEC-render.md, « Phase audio »](../../SPEC-render.md#phase-audio). Tâches détaillées : [audio-todo.md](audio-todo.md). Fait suite au point de contrôle D du [plan du module](plan.md).
 
 ## Approche
 

@@ -192,7 +192,7 @@ Le rendu lui-même (ce qui apparaît à l'écran) ne se vérifie pas par test au
 
 ## Phase audio
 
-> Statut : **PROPOSÉE le 2026-11-13**, en attente d'approbation. Plan : [tasks/render/audio-plan.md](tasks/render/audio-plan.md), tâches : [tasks/render/audio-todo.md](tasks/render/audio-todo.md). Cette section remplace l'hypothèse 7 et la mention « audio (phase ultérieure) » du périmètre : l'audio entre maintenant dans le module.
+> Statut : **APPROUVÉE le 2026-11-13**. Plan : [tasks/render/audio-plan.md](tasks/render/audio-plan.md), tâches : [tasks/render/audio-todo.md](tasks/render/audio-todo.md). Cette section remplace l'hypothèse 7 et la mention « audio (phase ultérieure) » du périmètre : l'audio entre maintenant dans le module.
 
 ### Hypothèses
 
