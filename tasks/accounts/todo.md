@@ -30,7 +30,7 @@
   - Vérification : suite de contrat sur le stockage mémoire.
   - Fichiers : `packages/accounts/src/store.ts`, `packages/accounts/src/store-memory.ts`, `packages/accounts/test/store-contract.ts`, `packages/accounts/test/store-memory.test.ts`
 
-- [ ] **T5 : Stockage SQLite**
+- [x] **T5 : Stockage SQLite**
   - Acceptation : `openSqliteStore(path)` avec `node:sqlite`, mode WAL, clés étrangères actives, index unique sur la clé de pseudo des comptes, migrations numérotées par `PRAGMA user_version` ; requêtes préparées uniquement ; fermeture propre.
   - Vérification : suite de contrat sur SQLite en mémoire et sur fichier ; réouverture d'une base existante sans perte ; migration d'une base vide ; contrainte d'unicité tenue par la base même sans vérification préalable.
   - Fichiers : `packages/accounts/src/store-sqlite.ts`, `packages/accounts/test/store-sqlite.test.ts`
