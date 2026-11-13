@@ -1,0 +1,35 @@
+{
+  "name": "@game/netcode",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/network.d.ts",
+      "default": "./dist/testing/network.js"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "bench": "pnpm --filter @game/sim-core build && node --expose-gc bench/rollback.bench.ts",
+    "typecheck": "pnpm --filter @game/sim-core build && tsc --noEmit",
+    "build": "pnpm --filter @game/sim-core build && tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@game/sim-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
