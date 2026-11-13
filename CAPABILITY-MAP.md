@@ -65,9 +65,16 @@ Le netcode arrive tôt, volontairement : le rollback impose des contraintes fort
 | 2.5D : coût des assets et du rendu à 8 personnages | Low-poly, skinning GPU, budget de draw calls, placeholders jusqu'à validation du gameplay |
 | Ampleur du contenu (4 movesets complets, équilibrage) | Moteur piloté par données, un personnage de référence terminé avant de lancer les trois autres |
 
-## Questions ouvertes
+## Questions tranchées le 2026-11-13
 
-1. Hébergement et régions visés (Europe seule au départ ?) et budget serveur.
-2. Objets et attaque ultime : dans la v1, ou reportés après le jalon 3 ?
-3. Provenance des assets 3D finaux (création maison, artiste, packs sous licence) ?
-4. Méthode de connexion des comptes (email + mot de passe, OAuth Google/Discord, compte invité) ?
+1. **Hébergement** : une seule région, l'Europe, pour la v1. Le code reste prêt pour d'autres régions (matchmaking par région prévu dans les données, pas déployé). Budget serveur encore à chiffrer.
+2. **Objets et attaque ultime** : dans la v1.
+3. **Assets** : générés par le code pour la v1 (modèles low-poly procéduraux, sons et musiques de synthèse). Ils restent derrière des interfaces qui permettront de brancher plus tard des assets d'artiste sans toucher au reste.
+4. **Comptes** : jeu possible en invité, puis compte par pseudo et mot de passe, sans email (pas de service d'envoi à opérer).
+
+## Développement en parallèle
+
+À partir du 2026-11-13, les modules indépendants sont menés en parallèle, chacun dans sa session et sur sa branche, puis fusionnés un par un. Règles communes :
+
+- Une modification de `sim-core` reste **additive et isolée** (nouveaux champs ou fonctions, aucun changement de sens des existants), est signalée dans la spec du module qui la demande, et passe par l'accord explicite de l'utilisateur, comme le veut la spec de `sim-core`. Les checksums de référence sont régénérés à la fusion.
+- La ligne « Specs existantes » en tête de ce document n'est mise à jour qu'à la fusion, pour éviter les conflits.
