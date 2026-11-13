@@ -1,6 +1,6 @@
 # Plan : module `sim-core`
 
-> Statut : **APPROUVÉ le 2026-11-11**. Spec : [SPEC-sim-core.md](../SPEC-sim-core.md). Tâches détaillées : [todo.md](todo.md).
+> Statut : **APPROUVÉ le 2026-11-11**. Spec : [SPEC-sim-core.md](../../SPEC-sim-core.md). Tâches détaillées : [todo.md](todo.md).
 
 ## Approche
 

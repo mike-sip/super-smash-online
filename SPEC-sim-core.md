@@ -1,6 +1,6 @@
 # Spec : `sim-core` — simulation déterministe du combat
 
-> Statut : **APPROUVÉE le 2026-11-11, implémentée** (bilan en fin de document ; un critère reste partiellement vérifié). Plan : [tasks/plan.md](tasks/plan.md), tâches : [tasks/todo.md](tasks/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : rien.
+> Statut : **APPROUVÉE le 2026-11-11, implémentée** (bilan en fin de document ; un critère reste partiellement vérifié). Plan : [tasks/sim-core/plan.md](tasks/sim-core/plan.md), tâches : [tasks/sim-core/todo.md](tasks/sim-core/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : rien.
 
 ## Hypothèses
 
