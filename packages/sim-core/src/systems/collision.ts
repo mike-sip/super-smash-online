@@ -18,6 +18,7 @@ import {
   A_JUMPSQUAT,
   A_LAND,
   A_LEDGE,
+  A_LEDGE_ROLL,
   A_RUN,
   A_SHIELD_BREAK,
   A_TECH,
@@ -312,7 +313,9 @@ export function integrate(sim: Sim, i: number): void {
   const action = s.action[i]!;
   // Un combattant tenu ne bouge pas de lui-même : sa position est imposée par celui qui le tient.
   // Un combattant suspendu à un rebord non plus.
-  if (action === A_DEAD || action === A_GRABBED || action >= A_LEDGE) return;
+  if (action === A_DEAD || action === A_GRABBED || (action >= A_LEDGE && action <= A_LEDGE_ROLL)) {
+    return;
+  }
   if (s.grounded[i] === 1) integrateGrounded(sim, i);
   else integrateAirborne(sim, i);
 }

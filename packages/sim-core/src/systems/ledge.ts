@@ -21,6 +21,7 @@ import { M_LEDGE_ATTACK } from '../moves.ts';
 import { G_PLAYERS } from '../state.ts';
 import type { Sim } from '../step.ts';
 import { STICK_HOLD_DOWN, findSurface } from './collision.ts';
+import { dropHeld } from './items.ts';
 import { forceMove, updateMovement } from './movement.ts';
 
 /** Intangibilité à la première accroche, et ce que chaque accroche suivante lui retire. */
@@ -200,6 +201,8 @@ export function resolveLedges(sim: Sim): void {
       s.tumble[i] = 0;
       s.jumpsLeft[i] = def.airJumps;
       setAction(s, i, A_LEDGE);
+      // On ne s'accroche pas un objet à la main : il tombe.
+      dropHeld(sim, i);
       emit(sim.events, EV_LEDGE, i, l);
       break;
     }

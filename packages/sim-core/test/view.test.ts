@@ -93,7 +93,16 @@ describe('readEntity', () => {
     const slot = spawnEntity(sim, E_BALL, 1, fx(4), fx(30), fx(0.5), fx(-0.25));
     const v = createEntityView();
     expect(readEntity(sim, slot, v)).toBe(true);
-    expect(v).toEqual({ kind: E_BALL, owner: 1, x: 4, y: 30, velX: 0.5, velY: -0.25, life: 300 });
+    expect(v).toEqual({
+      kind: E_BALL,
+      owner: 1,
+      x: 4,
+      y: 30,
+      velX: 0.5,
+      velY: -0.25,
+      life: 300,
+      mode: 0,
+    });
   });
 
   it('permet de parcourir toute la réserve', () => {

@@ -12,6 +12,8 @@ import {
   A_DOWN,
   A_HITSTUN,
   A_IDLE,
+  A_ITEM_SWING,
+  A_ITEM_THROW,
   A_JUMPSQUAT,
   A_LAND,
   A_RUN,
@@ -60,6 +62,7 @@ import { C_DOWN, C_LEFT, C_UP } from './buffer.ts';
 import { STICK_HOLD_DOWN } from './collision.ts';
 import { tryAirDodge, tryGroundDefense, updateDefense } from './defense.ts';
 import { spawnEntity } from './entities.ts';
+import { ITEM_THROW_RELEASE, itemActionFrames, releaseThrow, tryItemAction } from './items.ts';
 import { approach } from './util.ts';
 
 /** En dessous, le stick est considéré au neutre. */
@@ -249,6 +252,18 @@ export function updateMovement(sim: Sim, i: number): void {
   const grounded = s.grounded[i] === 1;
 
   if (action === A_DEAD) return;
+  if (action === A_ITEM_THROW || action === A_ITEM_SWING) {
+    // Lancer ou coup d'objet (module stages-items) : numérotés hors des plages ci-dessous.
+    if (action === A_ITEM_THROW && frames + 1 === ITEM_THROW_RELEASE) releaseThrow(sim, i);
+    if (frames >= itemActionFrames(sim, i)) {
+      setAction(s, i, grounded ? A_IDLE : A_AIR);
+      updateMovement(sim, i);
+      return;
+    }
+    if (grounded) s.velX[i] = approach(s.velX[i]!, 0, def.friction);
+    else airControl(s, def, i, stickX, dir, false);
+    return;
+  }
   if (action >= A_SHIELD) {
     // Bouclier, esquives, saisies, rebords : chacun a son propre système.
     updateDefense(sim, i);
@@ -349,6 +364,8 @@ export function updateMovement(sim: Sim, i: number): void {
       // Le double saut permet de repartir franchement dans la direction du stick.
       if (dir !== 0) s.velX[i] = Math.trunc((def.airSpeed * stickX) / STICK_MAX);
       if (action === A_TUMBLE) setAction(s, i, A_AIR);
+    } else if (tryItemAction(sim, i, false)) {
+      // Lancer ou coup d'objet en l'air : le contrôle aérien reste actif ci-dessous.
     } else if (tryAttack(s, def, i, false, false, stickX, stickY)) {
       // L'attaque aérienne démarre : le contrôle aérien reste actif ci-dessous.
     } else if (action === A_AIR && tryAirDodge(sim, i, stickX, stickY)) {
@@ -387,6 +404,7 @@ export function updateMovement(sim: Sim, i: number): void {
     setAction(s, i, A_JUMPSQUAT);
     return;
   }
+  if (tryItemAction(sim, i, true)) return;
   if (tryAttack(s, def, i, true, action === A_DASH || action === A_RUN, stickX, stickY)) {
     return;
   }

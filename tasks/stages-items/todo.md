@@ -49,12 +49,12 @@
 
 ## Phase C — Objets
 
-- [ ] **T8 : Apparition et physique des objets**
+- [x] **T8 : Apparition et physique des objets**
   - Acceptation : compteur `G_ITEM_TIMER`, délai tiré dans l'intervalle, objet tiré selon les poids, position tirée dans une zone d'apparition ; maximum respecté ; objet libre : gravité, pose sur les blocs et les plateformes (mobiles comprises), rebond sur les flancs, freinage au sol, disparition après sa durée de vie ; aucune apparition sans `SimConfig.items`.
   - Vérification : tests unitaires du tirage (délais, poids sur 10 000 tirages, maximum) ; scénarios : chute et pose sur plateforme, porté par une barge, disparition, sortie des zones limites.
   - Fichiers : `packages/sim-core/src/systems/items.ts`, `src/step.ts`, `test/items-spawn.test.ts`, `test/scenarios/items.test.ts`
 
-- [ ] **T9 : Ramasser, lancer, frapper**
+- [x] **T9 : Ramasser, lancer, frapper**
   - Acceptation : ramassage à l'attaque au sol à portée ; lancer à la saisie (4 directions, en l'air aussi) et à l'attaque pour un objet à lancer, action `A_ITEM_THROW` ; coup de Bâton `A_ITEM_SWING` avec la hitbox de l'objet ; objet tenu qui suit le combattant ; objet lancé qui frappe (sauf son lanceur) puis redevient libre en touchant le sol ; lâché à l'accroche, détruit au KO.
   - Vérification : un scénario par comportement de la liste ; deux joueurs qui ramassent le même objet à la même frame (le plus petit index l'obtient).
   - Fichiers : `src/systems/items.ts`, `src/systems/movement.ts`, `src/systems/hit.ts`, `src/systems/ledge.ts`, `src/systems/blast.ts`, `test/scenarios/items.test.ts`

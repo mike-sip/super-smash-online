@@ -117,6 +117,17 @@ export {
   destroyEntity,
   spawnEntity,
 } from './systems/entities.ts';
+export {
+  ITEM_MODE_FREE,
+  ITEM_MODE_HELD,
+  ITEM_MODE_THROWN,
+  ITEM_THROW_FRAMES,
+  ITEM_THROW_RELEASE,
+  THROW_BACK,
+  THROW_DOWN,
+  THROW_FORWARD,
+  THROW_UP,
+} from './systems/items.ts';
 
 function checkSize(buf: Uint8Array): void {
   if (buf.length < STATE_BYTES) {

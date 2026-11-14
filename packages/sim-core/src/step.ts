@@ -17,6 +17,7 @@ import { SHIELD_REGEN, tickDodgeStale } from './systems/defense.ts';
 import { updateEntities } from './systems/entities.ts';
 import { resolveGrabs } from './systems/grab.ts';
 import { createHitScratch, resolveHits, type HitScratch } from './systems/hit.ts';
+import { initItems, updateItemSpawner, updateItems } from './systems/items.ts';
 import { launch } from './systems/knockback.ts';
 import { resolveLedges } from './systems/ledge.ts';
 import { trackStick, updateMovement } from './systems/movement.ts';
@@ -98,6 +99,7 @@ export function createSim(config: SimConfig): Sim {
   };
   sim.state.g[G_PLAYERS] = players;
   rngSeed(sim.state, config.seed);
+  initItems(sim);
   for (let i = 0; i < players; i++) placeAtSpawn(sim, i);
   return sim;
 }
@@ -154,6 +156,8 @@ export function step(sim: Sim, inputs: Uint32Array): void {
   resolveLedges(sim);
   updateEntities(sim);
   updateHazards(sim);
+  updateItemSpawner(sim);
+  updateItems(sim);
 
   // 4. Coups, sur les positions à jour.
   resolveHits(sim);

@@ -46,6 +46,11 @@ export interface EntityView {
   velY: number;
   /** Frames de vie restantes. */
   life: number;
+  /**
+   * Objets seulement (module stages-items) : 1 libre, 2 tenu (par `owner`), 3 lancé (par `owner`).
+   * 0 pour un projectile.
+   */
+  mode: number;
 }
 
 export function createFighterView(): FighterView {
@@ -69,7 +74,7 @@ export function createFighterView(): FighterView {
 }
 
 export function createEntityView(): EntityView {
-  return { kind: 0, owner: -1, x: 0, y: 0, velX: 0, velY: 0, life: 0 };
+  return { kind: 0, owner: -1, x: 0, y: 0, velX: 0, velY: 0, life: 0, mode: 0 };
 }
 
 export function readFighter(sim: Sim, player: number, out: FighterView): void {
@@ -106,6 +111,7 @@ export function readEntity(sim: Sim, slot: number, out: EntityView): boolean {
   out.velX = fxToFloat(s.eVelX[slot]!);
   out.velY = fxToFloat(s.eVelY[slot]!);
   out.life = s.eLife[slot]!;
+  out.mode = s.eMode[slot]!;
   return true;
 }
 
