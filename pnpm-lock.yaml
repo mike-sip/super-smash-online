@@ -184,6 +184,9 @@ importers:
       '@game/input':
         specifier: workspace:*
         version: link:../../packages/input
+      '@game/match-rules':
+        specifier: workspace:*
+        version: link:../../packages/match-rules
       '@game/render':
         specifier: workspace:*
         version: link:../../packages/render

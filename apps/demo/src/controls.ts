@@ -4,6 +4,8 @@ export interface ControlHandlers {
   onReset(): void;
   onTuning(): void;
   onRemap(): void;
+  /** Ouvre ou ferme le choix des règles du match. */
+  onRules(): void;
   onDebug(enabled: boolean): void;
 }
 
@@ -103,6 +105,7 @@ export function createControls(
   );
   button('KeyT', 'T', 'Réglages', () => handlers.onTuning());
   button('KeyM', 'M', 'Commandes', () => handlers.onRemap());
+  button('KeyG', 'G', 'Règles du match', () => handlers.onRules());
   const keys: ReadonlySet<string> = new Set(actions.keys());
   refresh();
 
@@ -110,7 +113,11 @@ export function createControls(
     if (event.repeat && event.code !== 'KeyN') return;
     if (event.ctrlKey || event.altKey || event.metaKey) return;
     // Une touche tapée dans un champ du panneau de réglage n'est pas une commande.
-    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+    if (
+      event.target instanceof HTMLInputElement ||
+      event.target instanceof HTMLTextAreaElement ||
+      event.target instanceof HTMLSelectElement
+    ) {
       return;
     }
     const run = actions.get(event.code);

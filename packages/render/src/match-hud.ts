@@ -140,8 +140,9 @@ export function createMatchDomSink(overlay: HTMLElement, players: number): Match
 
   const bar = doc.createElement('div');
   bar.style.cssText =
-    'position:absolute;left:0;right:0;bottom:10px;display:flex;justify-content:center;gap:10px;' +
-    'flex-wrap:wrap;padding:0 16px;';
+    // Sous les pourcentages du HUD de combat, mêmes largeurs et même écart : chaque carte se
+    // range sous le pourcentage de son joueur.
+    'position:absolute;left:0;right:0;top:66px;display:flex;justify-content:center;gap:12px;';
   root.append(bar);
 
   interface Card {
@@ -157,10 +158,9 @@ export function createMatchDomSink(overlay: HTMLElement, players: number): Match
     const panel = doc.createElement('div');
     panel.dataset.hud = `match-${i}`;
     panel.style.cssText =
-      'min-width:76px;padding:4px 8px;border-radius:6px;background:rgba(15,23,42,0.72);' +
-      'border-top:4px solid transparent;text-align:center;font-size:12px;';
-    const label = doc.createElement('div');
-    label.textContent = `J${i + 1}`;
+      'width:84px;box-sizing:border-box;padding:3px 8px;border-radius:6px;' +
+      'background:rgba(15,23,42,0.72);border-top:4px solid transparent;text-align:center;' +
+      'font-size:12px;';
     const stocks = doc.createElement('div');
     stocks.dataset.hud = `stocks-${i}`;
     stocks.style.cssText = 'font-size:14px;letter-spacing:1px;min-height:17px;';
@@ -175,7 +175,7 @@ export function createMatchDomSink(overlay: HTMLElement, players: number): Match
     const fill = doc.createElement('div');
     fill.style.cssText = 'height:100%;width:0;background:#94a3b8;';
     meter.append(fill);
-    panel.append(label, stocks, hp, score, meter);
+    panel.append(stocks, hp, score, meter);
     bar.append(panel);
     cards.push({ panel, stocks, hp, score, meter, fill });
   }

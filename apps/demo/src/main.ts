@@ -1,12 +1,26 @@
 /** Démo jouable : boucle à pas fixe, assemblage de la simulation et du rendu. */
 import { KEYBOARD_ID, MAX_LOCAL_PLAYERS, createInput, type Device } from '@game/input';
-import { createRenderer, type Renderer } from '@game/render';
+import {
+  createMatchSimConfig,
+  createMatchView,
+  matchResult,
+  readMatch,
+  type MatchConfig,
+} from '@game/match-rules';
+import {
+  createMatchDomSink,
+  createMatchHud,
+  createRenderer,
+  type MatchHud,
+  type Renderer,
+} from '@game/render';
 import {
   A_DEAD,
   checksum,
   createFighterView,
   createSim,
   frame,
+  knockOut,
   readFighter,
   respawn,
   step,
@@ -16,14 +30,16 @@ import {
 import { testConfig } from '@game/sim-core/testing';
 import { createControls } from './controls.ts';
 import { createDummies, type Dummies, type DummyMode } from './dummies.ts';
+import { createMatchSetup, matchFromParams, matchToParams } from './match-setup.ts';
 import { createEntityFeeder, createPerfProbe, type EntityFeeder } from './perf.ts';
 import { createRemap, type Remap } from './remap.ts';
+import { createResults } from './results.ts';
 import { createTuning } from './tuning.ts';
 
 const STEP_MS = 1000 / 60;
 /** Au-delà, le retard est abandonné : un onglet resté inactif ne rattrape pas des minutes de jeu. */
 const MAX_STEPS_PER_DRAW = 5;
-/** Frames entre un KO et la réapparition. */
+/** Frames entre un KO et la réapparition, en combat libre (sans règles de match). */
 const RESPAWN_FRAMES = 60;
 
 /** `localStorage`, ou rien si le navigateur l'interdit (navigation privée, réglages stricts). */
@@ -54,6 +70,8 @@ const seed = intParam(params, 'seed', 1, 0x7fffffff, 1);
 const entityTarget = intParam(params, 'entities', 0, 32, 0);
 
 const players = 1 + dummyCount;
+/** Règles du match en cours, ou `null` pour un combat libre sans fin. */
+let match: MatchConfig | null = matchFromParams(params, players);
 const baseConfig = testConfig(players, seed);
 /** Configuration en cours : celle d'origine, ou la copie produite par le panneau de réglage. */
 let config: SimConfig = baseConfig;
@@ -123,6 +141,10 @@ let sim: Sim;
 let renderer: Renderer;
 let dummies: Dummies;
 let feeder: EntityFeeder;
+let matchHud: MatchHud | undefined;
+/** Vrai une fois l'écran de résultats montré pour le match en cours : il ne revient pas s'il est fermé. */
+let resultsShown = false;
+const matchView = createMatchView();
 const probe = createPerfProbe();
 
 const tuning = createTuning(element('tuning'), baseConfig, (tuned) => {
@@ -134,6 +156,7 @@ const controls = createControls(window, element('toolbar'), {
   onReset: () => start(),
   onTuning: () => tuning.toggle(),
   onRemap: () => remap.screen?.toggle(),
+  onRules: () => (setup.visible ? setup.close() : setup.open(match)),
   onDebug: (enabled) => renderer.setDebug(enabled),
 });
 
@@ -144,6 +167,31 @@ remap.screen = createRemap({
   reservedKeys: controls.keys,
 });
 
+const setup = createMatchSetup({
+  panel: element('rules'),
+  players,
+  onStart(chosen) {
+    match = chosen;
+    matchToParams(match, params);
+    history.replaceState(null, '', `?${params.toString()}`);
+    start();
+  },
+  onPlayers(count) {
+    params.set('dummies', String(count - 1));
+    matchToParams(match, params);
+    location.search = params.toString();
+  },
+});
+
+const results = createResults({
+  panel: element('results'),
+  onReplay: () => start(),
+  onRules: () => {
+    results.hide();
+    setup.open(match);
+  },
+});
+
 function resize(): void {
   renderer.resize(canvas.clientWidth, canvas.clientHeight, Math.min(window.devicePixelRatio, 2));
 }
@@ -152,8 +200,24 @@ window.addEventListener('resize', resize);
 function start(): void {
   // À la première création `renderer` n'existe pas encore.
   (renderer as Renderer | undefined)?.dispose();
-  sim = createSim(config);
-  renderer = createRenderer({ canvas, overlay, config });
+  matchHud?.dispose();
+  matchHud = undefined;
+  results.hide();
+  resultsShown = false;
+  sim = createSim(
+    match === null
+      ? config
+      : createMatchSimConfig(match, {
+          stage: config.stage,
+          fighters: config.fighters,
+          entities: config.entities,
+          seed: config.seed,
+        }),
+  );
+  renderer = createRenderer({ canvas, overlay, config: sim.config });
+  if (match !== null) {
+    matchHud = createMatchHud(players, createMatchDomSink(overlay, players));
+  }
   dummies = createDummies(mode, dummyCount, seed);
   feeder = createEntityFeeder(entityTarget, seed);
   deadFrames.fill(0);
@@ -176,8 +240,8 @@ function simulateFrame(): void {
   feeder.feed(sim);
   step(sim, inputs);
 
-  // Réapparition automatique : la démo n'a pas de règles de match.
-  for (let i = 0; i < players; i++) {
+  // Combat libre : réapparition automatique. En match, les règles s'en chargent dans `step`.
+  for (let i = 0; match === null && i < players; i++) {
     readFighter(sim, i, view);
     const waited = view.action === A_DEAD ? deadFrames[i]! + 1 : 0;
     if (waited >= RESPAWN_FRAMES) {
@@ -215,6 +279,14 @@ function tick(now: number): void {
     alpha = accumulator / STEP_MS;
   }
   const simulated = performance.now();
+  if (matchHud !== undefined) {
+    readMatch(sim, matchView);
+    matchHud.update(matchView);
+    if (matchView.phase === 'over' && !resultsShown) {
+      resultsShown = true;
+      results.show(matchResult(sim)!);
+    }
+  }
   renderer.draw(alpha);
   probe.record(now, simulated - began, performance.now() - simulated);
   requestAnimationFrame(tick);
@@ -232,6 +304,27 @@ const testHook = {
   status: () => status.textContent ?? '',
   perfStart: () => probe.start(),
   perfStop: () => probe.stop(),
+  /** Règles en cours (`null` : combat libre), vue du match et résultats. */
+  rules: () => match,
+  match() {
+    readMatch(sim, matchView);
+    return {
+      phase: matchView.phase,
+      timeLeft: matchView.timeLeft,
+      stocks: Array.from(matchView.stocks.subarray(0, players)),
+      team: Array.from(matchView.team.subarray(0, players)),
+    };
+  },
+  result: () => matchResult(sim),
+  /** Met un joueur KO et joue une frame, pour atteindre la fin d'un match dans un test. */
+  knockOut(player: number) {
+    knockOut(sim, player);
+    simulateFrame();
+  },
+  /** Simule `frames` frames d'un coup, sans attendre l'horloge. */
+  fastForward(frames: number) {
+    for (let f = 0; f < frames; f++) simulateFrame();
+  },
   fighter(player: number) {
     const v = createFighterView();
     readFighter(sim, player, v);
