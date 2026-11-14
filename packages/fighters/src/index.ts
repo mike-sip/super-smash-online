@@ -28,3 +28,5 @@ export {
   type ThrowSpec,
 } from './build.ts';
 export { SLOTS } from './slots.ts';
+export { frameData, frameDataMarkdown, movementData, type FrameDataRow } from './framedata.ts';
+export { fingerprint } from './fingerprint.ts';

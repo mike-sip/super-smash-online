@@ -40,7 +40,7 @@
   - Vérification : un test par règle avec une donnée fautive construite pour la déclencher ; le combattant de test de `sim-core` habillé en `Character` ne lève que les problèmes attendus (moveset incomplet).
   - Fichiers : `packages/fighters/src/validate.ts`, `scripts/validate.ts`, `test/validate.test.ts`
 
-- [ ] **T7 : Frame data et empreinte**
+- [x] **T7 : Frame data et empreinte**
   - Acceptation : `frameData` et `frameDataMarkdown` (valeurs de mouvement, puis une ligne par coup : démarrage, actives, total, dégâts avec charge max, angle, éjection, lag d'atterrissage, notes) ; script qui régénère `FRAMEDATA.md` ; `fingerprint` stable sur 32 bits, sensible à toute valeur.
   - Vérification : test des lignes sur des coups connus (jab de test : démarrage 3, actives 3–4, total 16) ; test « tableau versionné à jour » ; empreinte identique sur deux constructions, différente après modification d'une seule valeur.
   - Fichiers : `packages/fighters/src/framedata.ts`, `src/fingerprint.ts`, `scripts/framedata.ts`, `FRAMEDATA.md`, `test/framedata.test.ts`
