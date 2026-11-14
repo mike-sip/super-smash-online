@@ -40,6 +40,7 @@ import {
   M_USMASH,
   M_USPECIAL,
   M_UTILT,
+  MAX_ENTITIES,
   createSim,
   encodeInput,
   fx,
@@ -117,6 +118,21 @@ function pinTarget(sim: Sim, move: MoveDef, air: boolean): void {
   s.velY[1] = 0;
 }
 
+/** Maintient la cible sur le premier projectile du joueur 0, s'il y en a un. */
+function pinOnProjectile(sim: Sim): void {
+  const s = sim.state;
+  for (let e = 0; e < MAX_ENTITIES; e++) {
+    if (s.eKind[e] === 0 || s.eOwner[e] !== 1) continue;
+    s.posX[1] = s.ePosX[e]!;
+    s.posY[1] = Math.max(0, s.ePosY[e]! - fx(TARGET_CENTER));
+    s.velX[1] = 0;
+    s.velY[1] = 0;
+    return;
+  }
+  // Pas encore de projectile : la cible attend à l'écart.
+  s.posX[1] = fx(GROUND_X + 40);
+}
+
 interface Trigger {
   readonly air: boolean;
   /** Inputs du joueur 0, une frame chacun ; ensuite il reste au neutre. */
@@ -146,6 +162,7 @@ const TRIGGERS: ReadonlyMap<number, Trigger> = new Map<number, Trigger>([
   [M_NSPECIAL, { air: false, inputs: [B] }],
   [M_SSPECIAL, { air: false, inputs: [stick(70, 0, BTN_SPECIAL)] }],
   [M_USPECIAL, { air: false, inputs: [stick(0, 70, BTN_SPECIAL)] }],
+  [M_DSPECIAL, { air: false, inputs: [stick(0, -70, BTN_SPECIAL)] }],
   [M_ULTIMATE, { air: false, inputs: [B] }],
 ]);
 
@@ -162,13 +179,13 @@ export function slotConnects(c: Character, slot: number): { started: boolean; hi
   else placeGround(sim, 0, GROUND_X, 1);
   if (slot === M_ULTIMATE) setUltimateReady(sim, 0, true);
   const projectile = move.hits.length === 0;
-  if (projectile) placeGround(sim, 1, GROUND_X + 25, -1);
 
   let started = false;
   let hit = false;
   const frames = trigger.inputs.length + move.totalFrames + (projectile ? 60 : 0);
   for (let f = 0; f < frames && !hit; f++) {
-    if (!projectile) pinTarget(sim, move, trigger.air);
+    if (projectile) pinOnProjectile(sim);
+    else pinTarget(sim, move, trigger.air);
     frameInputs(sim, trigger.inputs[f] ?? NEUTRAL);
     const inMove = s.action[0] === A_ATTACK && s.move[0] === slot;
     started ||= inMove;
@@ -264,7 +281,8 @@ export function recover(c: Character, out: number, below: number): 'ledge' | 'st
 export function commonScenarios(c: Character): void {
   for (const slot of TRIGGERS.keys()) {
     const move = c.def.moves[slot];
-    if (move === undefined) continue;
+    // Un contre ne frappe pas de lui-même : il a son propre scénario.
+    if (move === undefined || move.counter !== undefined) continue;
     it(`${SLOTS[slot]!.label} « ${move.name} » part sur son input et touche`, () => {
       const result = slotConnects(c, slot);
       expect(result.started, 'le coup part').toBe(true);

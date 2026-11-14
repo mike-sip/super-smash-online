@@ -45,7 +45,8 @@ const ENTITIES: EntityDef[] = [
     name: 'Trait de vent',
     radius: fx(1.8),
     gravity: fx(0),
-    lifetime: 50,
+    // 27 frames à 2,2 : 59 unités. Seuls les projectiles du zoneur portent au-delà de 60.
+    lifetime: 27,
     stageCollision: ENTITY_DESTROY,
     hit: { damage: fx(6), angle: 35, baseKnockback: fx(14), knockbackGrowth: fx(0.4) },
     destroyOnHit: true,

@@ -63,3 +63,62 @@
 | Projection arrière | 16 | — | 34 | 10 | 135 | 55 / 0,7 |
 | Projection haute | 10 | — | 30 | 7 | 90 | 55 / 0,65 |
 | Projection basse | 14 | — | 32 | 6 | 75 | 40 / 0,4 |
+
+## Zéphine — rapide
+
+### Mouvement
+
+| Valeur | |
+|---|---|
+| Poids | 82 |
+| Taille / demi-largeur | 11 / 2,6 |
+| Marche | 1,3 |
+| Dash (vitesse, frames) | 2,5, 9 |
+| Course | 2,3 |
+| Pré-saut | 3 |
+| Saut / petit saut / double saut | 2,6 / 1,7 / 2,3 |
+| Sauts aériens | 2 |
+| Vitesse aérienne | 1,35 |
+| Gravité | 0,1 |
+| Chute max / rapide | 1,9 / 2,9 |
+| Atterrissage (frames) | 2 |
+| Bouclier | 45 |
+| Esquive sur place | 24 (intangible 3–16) |
+| Roulade | 28 (intangible 4–14) |
+| Esquive aérienne | 38 (intangible 3–27) |
+
+### Coups
+
+| Coup | Nom | Démarrage | Actives | Durée | Dégâts (%) | Angle | Éjection (base / croissance) | Atterrissage | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| Jab 1 | Pique | 2 | 2–3 | 14 | 2 | 80 | 5 / 0,2 | — | suite : Jab 2 (frames 5–14) |
+| Jab 2 | Contre-pique | 2 | 2–3 | 16 | 2 | 80 | 5 / 0,2 | — | suite : Jab 3 (frames 5–16) |
+| Jab 3 | Coup de talon | 4 | 4–6 | 24 | 4 | 45 | 28 / 0,8 | — |  |
+| Tilt avant | Fouet | 5 | 5–7 | 22 | 7 | 40 | 10 / 0,9 | — |  |
+| Tilt haut | Moulinet | 4 | 4–9 | 22 | 5 | 95 | 20 / 0,8 | — |  |
+| Tilt bas | Fauchage | 4 | 4–6 | 16 | 5 | 75 | 18 / 0,5 | — |  |
+| Attaque de dash | Glissade | 5 | 5–12 | 30 | 7 | 70 | 30 / 0,6 | — | élan 1–10 (avant 2,2) |
+| Smash avant | Double estoc | 11 | 11–12, 16–18 | 40 | 4 + 10 (5,6 + 14 chargé) | 60 / 38 | 20 / 0 ; 24 / 1 | — | chargeable (jusqu'à 60 frames) |
+| Smash haut | Vrille | 9 | 9–13 | 40 | 12 (16,8 chargé) | 88 | 28 / 0,95 | — | chargeable (jusqu'à 60 frames) |
+| Smash bas | Éventail | 6 | 6–7 | 40 | 11 (15,4 chargé) | 30 / 150 | 24 / 0,95 | — | chargeable (jusqu'à 60 frames) |
+| Aérienne neutre | Roue | 3 | 3–5, 6–16 | 30 | 7 / 4 | 45 | 15 / 0,8 ; 10 / 0,6 | 5 |  |
+| Aérienne avant | Ciseaux | 6 | 6–7, 11–13 | 32 | 3 + 6 | 60 / 40 | 20 / 0 ; 18 / 0,9 | 8 |  |
+| Aérienne arrière | Talon arrière | 5 | 5–8 | 28 | 9 | 140 | 18 / 1 | 8 |  |
+| Aérienne haute | Pirouette | 4 | 4–8 | 26 | 6 | 85 | 18 / 0,85 | 6 |  |
+| Aérienne basse | Piétinement | 6 | 6–7, 10–11, 14–16 | 34 | 2 + 2 + 5 | 270 / 280 | 2 / 0 ; 22 / 0,85 | 12 |  |
+| Spécial neutre | Plumes | 9 | — | 30 | — | — | — | — | projectile « Plume » (3 %) |
+| Spécial côté | Fente | 7 | 7–16 | 34 | 7 | 35 | 30 / 0,6 | 14 | élan 6–16 (avant 2,8) |
+| Spécial haut | Envol | 4 | 4–8, 12–16 | 34 | 4 + 4 | 80 / 70 | 30 / 0 ; 40 / 0,6 | 18 | élan 4–16 (avant 1,5, haut 2,4) ; élan 17–20 (avant 0,6, haut 0,8) ; chute impuissante ; invincible 1–3 |
+| Spécial bas | Piqué | 5 | 5–30 | 36 | 8 | 45 | 25 / 0,7 | 10 | élan 5–30 (avant 1,6, bas 2,6) |
+| Ultime | Mille rafales | 10 | 10–14, 20–24, 30–34, 44–48 | 80 | 5 + 5 + 5 + 18 | 80 / 45 | 40 / 0 ; 85 / 1 | — | élan 10–40 (avant 3) ; invincible 1–80 |
+| Attaque de rebord | Bond du rebord | 16 | 16–19 | 34 | 8 | 45 | 38 / 0,5 | — | invincible 1–15 |
+
+### Saisie et projections
+
+|  | Démarrage | Actives | Durée | Dégâts (%) | Angle | Éjection (base / croissance) |
+|---|---|---|---|---|---|---|
+| Saisie | 6 | 6–7 | 32 | coup pendant la prise : 1 toutes les 14 frames | — | — |
+| Projection avant | 10 | — | 26 | 6 | 40 | 45 / 0,55 |
+| Projection arrière | 14 | — | 30 | 9 | 140 | 50 / 0,65 |
+| Projection haute | 9 | — | 26 | 5 | 90 | 45 / 0,55 |
+| Projection basse | 12 | — | 28 | 5 | 70 | 35 / 0,35 |

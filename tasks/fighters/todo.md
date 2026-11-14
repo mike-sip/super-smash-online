@@ -68,7 +68,7 @@
 
 ## Phase D — Les trois autres et le bilan
 
-- [ ] **T11 : Zéphine** — données, projectile *Plumes*, `FighterLook`, scénarios (mêmes vérifications que T8, retour sur le stage compris) ; frame data régénéré.
+- [x] **T11 : Zéphine** — données, projectile *Plumes*, `FighterLook`, scénarios (mêmes vérifications que T8, retour sur le stage compris) ; frame data régénéré.
   - Fichiers : `packages/fighters/src/characters/zephine.ts`, `src/roster.ts`, `test/characters/zephine.test.ts`, `FRAMEDATA.md`
 
 - [ ] **T12 : Ferroc** — données (armure du *Bélier* et du *Rempart*), `FighterLook`, scénarios (armure comprise) ; frame data régénéré.
