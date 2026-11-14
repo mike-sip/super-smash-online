@@ -1,6 +1,7 @@
 /** Démo jouable : boucle à pas fixe, assemblage de la simulation et du rendu. */
 import { KEYBOARD_ID, MAX_LOCAL_PLAYERS, createInput, type Device } from '@game/input';
-import { createRenderer, type Renderer } from '@game/render';
+import { buildMatchConfig } from '@game/fighters';
+import { createRenderer, createStyledMannequins, type Renderer } from '@game/render';
 import {
   A_DEAD,
   checksum,
@@ -9,15 +10,22 @@ import {
   frame,
   readFighter,
   respawn,
+  setUltimateReady,
   step,
   type Sim,
   type SimConfig,
 } from '@game/sim-core';
-import { testConfig } from '@game/sim-core/testing';
+import { TEST_ENTITIES, TEST_STAGE } from '@game/sim-core/testing';
 import { createControls } from './controls.ts';
 import { createDummies, type Dummies, type DummyMode } from './dummies.ts';
 import { createEntityFeeder, createPerfProbe, type EntityFeeder } from './perf.ts';
 import { createRemap, type Remap } from './remap.ts';
+import {
+  createFrameDataPanel,
+  createRosterPanel,
+  findCharacter,
+  parseSelection,
+} from './roster-panel.ts';
 import { createTuning } from './tuning.ts';
 
 const STEP_MS = 1000 / 60;
@@ -54,7 +62,23 @@ const seed = intParam(params, 'seed', 1, 0x7fffffff, 1);
 const entityTarget = intParam(params, 'entities', 0, 32, 0);
 
 const players = 1 + dummyCount;
-const baseConfig = testConfig(players, seed);
+/** Personnage de chaque joueur, par identifiant. */
+let selection = parseSelection(params, players);
+
+/**
+ * Configuration du combat pour une sélection. Les entités de test passent en tête de liste : le
+ * scénario de performance (`?entities=`) fait apparaître l'une d'elles, quels que soient les
+ * personnages.
+ */
+function configFor(ids: readonly string[]): SimConfig {
+  return buildMatchConfig({
+    stage: TEST_STAGE,
+    players: ids.map((id) => findCharacter(id)!),
+    entities: TEST_ENTITIES,
+    seed,
+  });
+}
+let baseConfig = configFor(selection);
 /** Configuration en cours : celle d'origine, ou la copie produite par le panneau de réglage. */
 let config: SimConfig = baseConfig;
 const canvas = element<HTMLCanvasElement>('game');
@@ -125,14 +149,40 @@ let dummies: Dummies;
 let feeder: EntityFeeder;
 const probe = createPerfProbe();
 
-const tuning = createTuning(element('tuning'), baseConfig, (tuned) => {
-  config = tuned;
+function makeTuning() {
+  return createTuning(element('tuning'), baseConfig, (tuned) => {
+    config = tuned;
+    start();
+  });
+}
+let tuning = makeTuning();
+
+const frameDataPanel = createFrameDataPanel(element('framedata'));
+frameDataPanel.show(findCharacter(selection[0]!)!);
+
+/** Change de personnages : nouvelle configuration, panneau de réglage remis à zéro. */
+function select(ids: string[]): void {
+  selection = ids;
+  baseConfig = configFor(selection);
+  config = baseConfig;
+  tuning.dispose();
+  tuning = makeTuning();
+  frameDataPanel.show(findCharacter(selection[0]!)!);
+  const names = selection.map((id, p) => `J${p + 1} ${findCharacter(id)!.name}`).join(', ');
+  announce(names);
   start();
-});
+}
+const rosterPanel = createRosterPanel(element('roster'), selection, select);
 
 const controls = createControls(window, element('toolbar'), {
   onReset: () => start(),
   onTuning: () => tuning.toggle(),
+  onRoster: () => rosterPanel.toggle(),
+  onFrameData: () => frameDataPanel.toggle(),
+  onUltimate: () => {
+    for (let p = 0; p < players; p++) setUltimateReady(sim, p, true);
+    announce('Ultime prête pour tous : spécial neutre pour la lancer.');
+  },
   onRemap: () => remap.screen?.toggle(),
   onDebug: (enabled) => renderer.setDebug(enabled),
 });
@@ -153,7 +203,14 @@ function start(): void {
   // À la première création `renderer` n'existe pas encore.
   (renderer as Renderer | undefined)?.dispose();
   sim = createSim(config);
-  renderer = createRenderer({ canvas, overlay, config });
+  // Le combattant de test garde le mannequin standard, aux couleurs du joueur.
+  const styles = selection.map((id) => (id === 'test' ? undefined : findCharacter(id)!.look));
+  renderer = createRenderer({
+    canvas,
+    overlay,
+    config,
+    fighterVisuals: createStyledMannequins((p) => styles[p]),
+  });
   dummies = createDummies(mode, dummyCount, seed);
   feeder = createEntityFeeder(entityTarget, seed);
   deadFrames.fill(0);
@@ -224,6 +281,10 @@ requestAnimationFrame(tick);
 /** Prise pour les tests automatiques de la démo. Aucun code de jeu ne doit s'en servir. */
 const testHook = {
   frame: () => frame(sim),
+  /** Identifiant du personnage de chaque joueur. */
+  selection: () => [...selection],
+  select: (ids: string[]) => select(ids),
+  fighterName: (player: number) => sim.config.fighters[player]!.name,
   players,
   paused: () => controls.paused,
   speed: () => controls.speed,

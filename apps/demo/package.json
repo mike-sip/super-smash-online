@@ -7,10 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "test": "vitest run",
-    "typecheck": "pnpm --filter @game/render build && pnpm --filter @game/input build && tsc --noEmit",
+    "typecheck": "pnpm --filter @game/render build && pnpm --filter @game/input build && pnpm --filter @game/fighters build && tsc --noEmit",
     "perf": "vitest run --config vitest.perf.config.ts"
   },
   "dependencies": {
+    "@game/fighters": "workspace:*",
     "@game/input": "workspace:*",
     "@game/render": "workspace:*",
     "@game/sim-core": "workspace:*"

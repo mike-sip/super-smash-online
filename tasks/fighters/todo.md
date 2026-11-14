@@ -59,7 +59,7 @@
   - Vérification : tests de poses (finies, continues) ; test du style (dimensions et couleurs des pièces, pièces masquées sans style) ; capture de Sorel ; compteur d'appels de dessin inchangé.
   - Fichiers : `packages/render/src/fighters/mannequin.ts`, `src/fighters/poses.ts`, `src/index.ts`, `test/poses.test.ts`, `test/scene.test.ts`, `packages/fighters/src/characters/sorel.ts`
 
-- [ ] **T10 : Démo : choix du personnage, ultime, frame data**
+- [x] **T10 : Démo : choix du personnage, ultime, frame data**
   - Acceptation : panneau « Personnages » (un choix par joueur, aussi par URL `?p1=sorel&p2=…`), qui recrée simulation et renderer ; le combattant de test reste choisissable ; bouton « ultime prête » qui lève le drapeau de tous les joueurs ; affichage du tableau de frame data du personnage de J1 ; le panneau de réglage s'applique au personnage choisi.
   - Vérification : test Playwright dans Edge (choisir Sorel pour J1 : nom et taille lus dans la simulation ; lancer l'ultime après le bouton) ; essai manuel.
   - Fichiers : `apps/demo/package.json`, `apps/demo/vite.config.ts`, `apps/demo/index.html`, `apps/demo/src/main.ts`, `apps/demo/src/roster-panel.ts`, `apps/demo/test/smoke.test.ts`

@@ -115,6 +115,57 @@
       #tuning button {
         margin-top: 8px;
       }
+      #roster,
+      #framedata {
+        position: absolute;
+        top: 70px;
+        left: 12px;
+        padding: 8px 12px;
+        overflow-y: auto;
+        border: 1px solid #475569;
+        border-radius: 6px;
+        background: rgba(15, 23, 42, 0.92);
+        color: #cbd5e1;
+        font-size: 12px;
+      }
+      #roster {
+        width: 260px;
+      }
+      #roster h2,
+      #framedata h2 {
+        margin: 0 0 6px;
+        font-size: 14px;
+      }
+      #roster label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 4px 0;
+      }
+      #roster p {
+        margin: 8px 0 0;
+        color: #94a3b8;
+      }
+      #framedata {
+        bottom: 80px;
+        width: min(960px, calc(100% - 60px));
+      }
+      #framedata table {
+        width: 100%;
+        margin-bottom: 10px;
+        border-collapse: collapse;
+        font-size: 11px;
+      }
+      #framedata th,
+      #framedata td {
+        padding: 2px 4px;
+        border-bottom: 1px solid #334155;
+        text-align: left;
+        vertical-align: top;
+      }
+      #framedata th {
+        color: #facc15;
+      }
       #remap {
         position: absolute;
         top: 70px;
@@ -186,6 +237,8 @@
     </p>
     <div id="tuning" hidden></div>
     <div id="remap" hidden></div>
+    <div id="roster" hidden></div>
+    <div id="framedata" hidden></div>
     <div id="status" role="status"></div>
     <div id="toolbar"></div>
     <script type="module" src="/src/main.ts"></script>

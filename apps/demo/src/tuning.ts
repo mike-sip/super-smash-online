@@ -129,8 +129,9 @@ function scaleBlow<T extends Blow>(blow: T, scales: Scales): T {
 }
 
 /**
- * Copie de `base` où chaque combattant reçoit `values` et où tous les coups sont multipliés par
- * `scales`. `base` n'est pas modifiée.
+ * Copie de `base` où le combattant de J1 reçoit `values` et où tous ses coups sont multipliés par
+ * `scales`. Les joueurs qui ont le même personnage que J1 (mêmes données) les reçoivent aussi ; les
+ * autres personnages ne changent pas. `base` n'est pas modifiée.
  */
 export function buildConfig(base: SimConfig, values: TuningValues, scales: Scales): SimConfig {
   const neutral = scales.damage === 1 && scales.baseKnockback === 1 && scales.knockbackGrowth === 1;
@@ -141,7 +142,9 @@ export function buildConfig(base: SimConfig, values: TuningValues, scales: Scale
       if (value !== undefined) overrides[field.key] = field.integer ? value : fx(value);
     }
   }
+  const reference = base.fighters[0];
   const fighters = base.fighters.map((def): FighterDef => {
+    if (def !== reference) return def;
     const tuned = { ...def, ...overrides } as FighterDef;
     if (neutral) return tuned;
     return {
