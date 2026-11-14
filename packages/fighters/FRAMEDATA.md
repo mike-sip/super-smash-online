@@ -181,3 +181,62 @@
 | Projection arrière | 20 | — | 42 | 13 | 135 | 60 / 0,8 |
 | Projection haute | 14 | — | 36 | 10 | 90 | 60 / 0,75 |
 | Projection basse | 18 | — | 40 | 8 | 70 | 45 / 0,5 |
+
+## Nacre — zoneur
+
+### Mouvement
+
+| Valeur | |
+|---|---|
+| Poids | 92 |
+| Taille / demi-largeur | 13 / 3 |
+| Marche | 1 |
+| Dash (vitesse, frames) | 1,75, 12 |
+| Course | 1,5 |
+| Pré-saut | 3 |
+| Saut / petit saut / double saut | 2,3 / 1,45 / 2,2 |
+| Sauts aériens | 1 |
+| Vitesse aérienne | 1,05 |
+| Gravité | 0,075 |
+| Chute max / rapide | 1,4 / 2,3 |
+| Atterrissage (frames) | 2 |
+| Bouclier | 50 |
+| Esquive sur place | 26 (intangible 3–17) |
+| Roulade | 30 (intangible 4–15) |
+| Esquive aérienne | 40 (intangible 3–29) |
+
+### Coups
+
+| Coup | Nom | Démarrage | Actives | Durée | Dégâts (%) | Angle | Éjection (base / croissance) | Atterrissage | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| Jab 1 | Bâton | 4 | 4–5 | 20 | 3 | 75 | 8 / 0,3 | — | suite : Jab 2 (frames 7–20) |
+| Jab 2 | Revers de bâton | 4 | 4–5 | 22 | 3 | 75 | 8 / 0,3 | — | suite : Jab 3 (frames 8–22) |
+| Jab 3 | Tourbillon | 6 | 6–9 | 30 | 5 | 45 | 30 / 0,8 | — |  |
+| Tilt avant | Estoc | 7 | 7–9 | 28 | 9 | 40 | 14 / 0,9 | — |  |
+| Tilt haut | Arc de corail | 6 | 6–12 | 30 | 7 | 92 | 22 / 0,85 | — |  |
+| Tilt bas | Balayage long | 6 | 6–8 | 24 | 6 | 75 | 18 / 0,55 | — |  |
+| Attaque de dash | Glissement | 7 | 7–11 | 34 | 8 | 55 | 30 / 0,7 | — | élan 1–8 (avant 1,2) |
+| Smash avant | Lance de corail | 16 | 16–18 | 50 | 15 (21 chargé) | 38 | 28 / 1 | — | chargeable (jusqu'à 60 frames) |
+| Smash haut | Gerbe | 12 | 12–16 | 46 | 14 (19,6 chargé) | 88 | 30 / 1 | — | chargeable (jusqu'à 60 frames) |
+| Smash bas | Ressac | 9 | 9–11 | 48 | 12 (16,8 chargé) | 30 / 150 | 26 / 0,95 | — | chargeable (jusqu'à 60 frames) |
+| Aérienne neutre | Bulle | 6 | 6–22 | 38 | 8 | 50 | 18 / 0,8 | 9 |  |
+| Aérienne avant | Pointe | 10 | 10–13 | 40 | 10 | 42 | 20 / 0,95 | 12 |  |
+| Aérienne arrière | Contre-courant | 9 | 9–12 | 36 | 12 | 140 | 22 / 1 | 11 |  |
+| Aérienne haute | Vague haute | 6 | 6–11 | 34 | 8 | 85 | 20 / 0,9 | 9 |  |
+| Aérienne basse | Plongée | 12 | 12–15 | 42 | 12 | 275 | 20 / 0,9 | 16 |  |
+| Spécial neutre | Perle | 14 | — | 40 | — | — | — | — | projectile « Perle » (7 %) |
+| Spécial côté | Galet | 15 | — | 44 | — | — | — | — | projectile « Galet » (9 %) |
+| Spécial haut | Écume | 6 | 6–10, 12–16, 18–22, 24–27 | 46 | 2 + 2 + 2 + 5 | 85 / 70 | 25 / 0 ; 40 / 0,7 | 20 | élan 6–22 (haut 2,1) ; élan 23–26 (haut 0,8) ; chute impuissante ; invincible 1–4 |
+| Spécial bas | Corail | 18 | — | 46 | — | — | — | — | projectile « Corail » (10 %) |
+| Ultime | Grande perle | 30 | — | 80 | — | — | — | — | projectile « Grande perle » (30 %) ; invincible 1–80 |
+| Attaque de rebord | Remontée en vague | 20 | 20–23 | 40 | 9 | 45 | 40 / 0,5 | — | invincible 1–18 |
+
+### Saisie et projections
+
+|  | Démarrage | Actives | Durée | Dégâts (%) | Angle | Éjection (base / croissance) |
+|---|---|---|---|---|---|---|
+| Saisie | 7 | 7–8 | 36 | coup pendant la prise : 1,2 toutes les 18 frames | — | — |
+| Projection avant | 12 | — | 30 | 8 | 45 | 48 / 0,6 |
+| Projection arrière | 16 | — | 34 | 9 | 135 | 52 / 0,65 |
+| Projection haute | 11 | — | 30 | 7 | 90 | 52 / 0,62 |
+| Projection basse | 14 | — | 32 | 6 | 72 | 40 / 0,4 |

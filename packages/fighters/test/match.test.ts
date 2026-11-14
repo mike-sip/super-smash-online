@@ -1,6 +1,7 @@
 import { ENTITY_PASS, M_NSPECIAL, createSim, fx, type EntityDef } from '@game/sim-core';
 import { TEST_FIGHTER, TEST_STAGE } from '@game/sim-core/testing';
 import { describe, expect, it } from 'vitest';
+import type { FighterId } from '../src/character.ts';
 import { buildMatchConfig } from '../src/match.ts';
 import { TEST_CHAR, TEST_HEAVY_CHAR } from './helpers.ts';
 
@@ -63,7 +64,7 @@ describe('buildMatchConfig', () => {
 
   it('refuse un identifiant inconnu', () => {
     expect(() =>
-      buildMatchConfig({ stage: TEST_STAGE, players: ['nacre', 'sorel'], seed: 1 }),
+      buildMatchConfig({ stage: TEST_STAGE, players: ['inconnu' as FighterId, 'sorel'], seed: 1 }),
     ).toThrow(/inconnu/);
   });
 });

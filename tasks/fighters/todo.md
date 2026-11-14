@@ -74,7 +74,7 @@
 - [x] **T12 : Ferroc** — données (armure du *Bélier* et du *Rempart*), `FighterLook`, scénarios (armure comprise) ; frame data régénéré.
   - Fichiers : `packages/fighters/src/characters/ferroc.ts`, `src/roster.ts`, `test/characters/ferroc.test.ts`, `FRAMEDATA.md`
 
-- [ ] **T13 : Nacre** — données, projectiles *Perle*, *Galet*, *Corail* et *Grande perle*, `FighterLook`, scénarios (pièges, projectile en cloche) ; frame data régénéré.
+- [x] **T13 : Nacre** — données, projectiles *Perle*, *Galet*, *Corail* et *Grande perle*, `FighterLook`, scénarios (pièges, projectile en cloche) ; frame data régénéré.
   - Fichiers : `packages/fighters/src/characters/nacre.ts`, `src/roster.ts`, `test/characters/nacre.test.ts`, `FRAMEDATA.md`
 
 - [ ] **T14 : Identité, 8 joueurs, performance et bilan**
