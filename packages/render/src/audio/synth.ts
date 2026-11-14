@@ -190,10 +190,16 @@ export function addNoise(
 /** Échantillons entre deux recalculs du filtre pendant un balayage. */
 const FILTER_BLOCK = 16;
 
+/** Échantillons de fin de boucle passés dans le filtre avant le début, pour un raccord sans saut. */
+const LOOP_WARMUP = 8192;
+
 /**
  * Filtre `buf` sur place (filtre à variable d'état, 12 dB par octave), entre les échantillons
  * `from` et `to`. La fréquence de coupure glisse exponentiellement de `cutoffStart` à
  * `cutoffEnd` ; `q` règle la résonance (0,707 : aucune).
+ *
+ * `loop` : le tampon est une boucle. Le filtre parcourt d'abord la fin du tampon sans l'écrire,
+ * pour aborder le début avec l'état qu'il aurait en sortant de la fin.
  */
 export function filter(
   buf: Float32Array,
@@ -204,6 +210,7 @@ export function filter(
   sampleRate = SAMPLE_RATE,
   from = 0,
   to = buf.length,
+  loop = false,
 ): void {
   const k = 1 / q;
   const nyquistSafe = sampleRate * 0.45;
@@ -215,15 +222,24 @@ export function filter(
   let a1 = 0;
   let a2 = 0;
   let a3 = 0;
-  for (let i = from; i < to; i++) {
-    const n = i - from;
-    if (n % FILTER_BLOCK === 0) {
-      const fc = Math.min(nyquistSafe, cutoff);
-      const g = Math.tan((Math.PI * fc) / sampleRate);
-      a1 = 1 / (1 + g * (g + k));
-      a2 = g * a1;
-      a3 = g * a2;
+  const coefficients = (fc: number): void => {
+    const g = Math.tan((Math.PI * Math.min(nyquistSafe, fc)) / sampleRate);
+    a1 = 1 / (1 + g * (g + k));
+    a2 = g * a1;
+    a3 = g * a2;
+  };
+  if (loop) {
+    coefficients(cutoffEnd);
+    for (let i = Math.max(from, to - LOOP_WARMUP); i < to; i++) {
+      const v3 = buf[i]! - ic2;
+      const v1 = a1 * ic1 + a2 * v3;
+      const v2 = ic2 + a2 * ic1 + a3 * v3;
+      ic1 = 2 * v1 - ic1;
+      ic2 = 2 * v2 - ic2;
     }
+  }
+  for (let i = from; i < to; i++) {
+    if ((i - from) % FILTER_BLOCK === 0) coefficients(cutoff);
     cutoff *= ratio;
     const v0 = buf[i]!;
     const v3 = v0 - ic2;
