@@ -84,6 +84,32 @@ function expectResponsive(
   );
 }
 
+/**
+ * Critère n° 7 : effets du rendu après rollback. Le rendu ne déclenche un effet que pour les
+ * événements d'une frame nouvelle. Comparés à la rejoue hors ligne : un événement de la rejoue
+ * absent chez le client est un effet manqué ; un événement vu par le client mais absent de la
+ * rejoue est un effet joué à tort (prédiction fausse).
+ */
+function effectAccuracy(result: MatchResult): string {
+  let reference = 0;
+  let missed = 0;
+  let wrong = 0;
+  for (const c of result.clients) {
+    const last = c.stats.frame;
+    for (const key of result.referenceEvents) {
+      if (Number.parseInt(key, 10) > last) continue;
+      reference++;
+      if (!c.events.has(key)) missed++;
+    }
+    for (const key of c.events.keys()) if (!result.referenceEvents.has(key)) wrong++;
+  }
+  const pct = (n: number): string => ((100 * n) / reference).toFixed(1);
+  return (
+    `effets : ${reference} attendus (tous clients), ${pct(missed)} % manqués, ` +
+    `${pct(wrong)} % joués à tort`
+  );
+}
+
 describe('bout en bout simulé', () => {
   it('2 clients, 10 minutes, datagrammes avec 5 % de pertes', () => {
     const clients = typicalClients(2, 1, 0.05);
@@ -95,7 +121,8 @@ describe('bout en bout simulé', () => {
     });
     const sync = expectInSync(result, TEN_MINUTES);
     const responsive = expectResponsive(result, clients, TEN_MINUTES);
-    console.log(`2 clients, datagrammes, 5 % de pertes\n${sync}\n${responsive}`);
+    const effects = effectAccuracy(result);
+    console.log(`2 clients, datagrammes, 5 % de pertes\n${sync}\n${responsive}\n${effects}`);
   }, 120_000);
 
   it('8 clients, 10 minutes, datagrammes avec 5 % de pertes', () => {
@@ -108,7 +135,8 @@ describe('bout en bout simulé', () => {
     });
     const sync = expectInSync(result, TEN_MINUTES);
     const responsive = expectResponsive(result, clients, TEN_MINUTES);
-    console.log(`8 clients, datagrammes, 5 % de pertes\n${sync}\n${responsive}`);
+    const effects = effectAccuracy(result);
+    console.log(`8 clients, datagrammes, 5 % de pertes\n${sync}\n${responsive}\n${effects}`);
   }, 300_000);
 
   it('8 clients, 10 minutes, ordre garanti (WebSocket) avec 0,5 % de retransmissions', () => {

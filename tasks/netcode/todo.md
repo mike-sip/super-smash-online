@@ -64,7 +64,7 @@
   - Vérification : bout en bout réel dans Node : serveur local et 2 puis 8 clients sur de vrais WebSocket, latence artificielle à l'envoi, quelques secondes de jeu, empreintes identiques ; un client qui envoie n'importe quoi est déconnecté sans faire tomber la partie.
   - Fichiers : `packages/netcode/src/server/host.ts`, `packages/netcode/src/server/main.ts`, `packages/netcode/src/transport.ts`, `packages/netcode/test/e2e/websocket.test.ts`, `packages/netcode/package.json`
 
-- [ ] **T11 : Contrat rendu et rollback**
+- [x] **T11 : Contrat rendu et rollback**
   - Acceptation : test dans `render` : une simulation suivie d'un rollback, où seules les frames nouvelles sont capturées, ne rejoue aucun effet et garde interpolation et caméra continues ; un second cas documente qu'une capture de frame re-simulée réinitialise l'interpolation (raison du contrat). Comptage, dans le bout en bout simulé, des événements manqués ou joués à tort par rapport à la rejoue hors ligne.
   - Vérification : `pnpm --filter @game/render test` passe ; proportions consignées dans la spec.
   - Fichiers : `packages/render/test/rollback.test.ts` (nouveau), `packages/netcode/test/session.test.ts`
