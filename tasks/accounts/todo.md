@@ -72,7 +72,7 @@
 
 ## Phase E — Relu
 
-- [ ] **T11 : Relecture de sécurité et bilan**
+- [x] **T11 : Relecture de sécurité et bilan**
   - Acceptation : relecture de sécurité de tout le module (authentification, sessions, requêtes intersites, injections, énumération, déni de service, journaux, données personnelles), constats corrigés ou expliqués et consignés dans la spec ; bilan des dix critères de succès, chacun marqué vérifié automatiquement, vérifié à la main ou non vérifié ; note de branchement laissée à `netcode` mise à jour.
   - Vérification : tous les tests, typecheck et lint du dépôt passent ; compte rendu des critères.
   - Fichiers : `SPEC-accounts.md`, `tasks/accounts/todo.md`
