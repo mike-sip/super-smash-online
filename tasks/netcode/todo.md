@@ -6,32 +6,32 @@
 
 ## Phase A — Rollback
 
-- [ ] **T1 : Paquet et adaptateur `sim-core`**
+- [x] **T1 : Paquet et adaptateur `sim-core`**
   - Acceptation : paquet `@game/netcode` résolu comme `input` (sources en test, `dist/` pour le typecheck et le build), points d'entrée `.` (client) et `./server` (Node) ; réglages par défaut de la spec (`D = 2`, `P = 15`, `G = 8`, checksum toutes les 15 frames) ; interface `RollbackGame` et adaptateur `simGame` ; règle de réapparition calculée depuis l'état (KO depuis 60 frames), exportée pour la démo et les tests.
   - Vérification : tests de l'adaptateur (sauvegarde, restauration, empreinte égales à celles de `sim-core`) ; avec la réapparition, `step×N → save → step×M → load → step×M` donne la même empreinte.
   - Fichiers : `packages/netcode/package.json`, `packages/netcode/tsconfig.json`, `packages/netcode/tsconfig.build.json`, `packages/netcode/vitest.config.ts`, `packages/netcode/src/constants.ts`, `packages/netcode/src/game.ts`, `packages/netcode/src/index.ts`, `packages/netcode/test/game.test.ts`
 
-- [ ] **T2 : Protocole**
+- [x] **T2 : Protocole**
   - Acceptation : encodage et décodage binaires des onze messages de la spec ; version portée par `HELLO` ; décodage dans des structures réutilisées, sans exception : un message tronqué, trop long, d'un type inconnu ou hors bornes donne une erreur décrite ; taille maximale d'un message plafonnée.
   - Vérification : aller-retour de chaque message, cas limites (8 joueurs, 32 frames par joueur, identifiant de 32 caractères) ; 10 000 messages aléatoires ou tronqués décodés sans exception.
   - Fichiers : `packages/netcode/src/protocol.ts`, `packages/netcode/test/protocol.test.ts`
 
-- [ ] **T3 : Historique des inputs**
+- [x] **T3 : Historique des inputs**
   - Acceptation : par joueur, anneau d'inputs confirmés, utilisés et locaux ; frontières `connu[p]` et `C` ; inputs des frames `0` à `D-1` confirmés d'office ; prédiction (dernier confirmé pour un distant, lu localement pour un local) ; confirmation par plages qui ignore le déjà connu, refuse les trous et les frames au-delà de l'anneau, et renvoie la première frame simulée mal prédite ; aucune allocation.
   - Vérification : tests unitaires de chacun de ces cas.
   - Fichiers : `packages/netcode/src/timeline.ts`, `packages/netcode/test/timeline.test.ts`
 
-- [ ] **T4 : Moteur de rollback**
+- [x] **T4 : Moteur de rollback**
   - Acceptation : `createRollback` : avance d'une frame avec les inputs locaux (appliqués à `n + D`) et sauvegarde ; refus d'avancer au-delà de `P` frames après `C` ; corrections en attente appliquées par restauration et re-simulation, avec les meilleures prédictions du moment ; empreintes des états confirmés aux frames multiples de l'intervalle, calculées une seule fois et seulement sur un état confirmé ; signalement des seules frames nouvelles ; mesures (rollbacks, profondeur, attentes).
   - Vérification : test de propriété sur 1 000 tirages : deux à huit joueurs, inputs confirmés livrés en retard, par paquets et dans le désordre ; état final et empreintes égaux à une simulation directe avec les inputs définitifs ; frames nouvelles signalées une fois chacune, dans l'ordre.
   - Fichiers : `packages/netcode/src/rollback.ts`, `packages/netcode/test/rollback.test.ts`
 
-- [ ] **T5 : Banc du rollback**
+- [x] **T5 : Banc du rollback**
   - Acceptation : banc bloquant à 8 joueurs et 16 entités, sur le modèle de `sim-core/bench/step.bench.ts` : à chaque frame, une correction à la plus ancienne frame de la fenêtre force un rollback de 15 frames plus une frame nouvelle ; échec au-delà de 1 ms en moyenne, 2 ms au 99ᵉ centile, ou 32 Ko de croissance du tas sur 10 000 frames.
   - Vérification : `pnpm --filter @game/netcode bench` passe et affiche les mesures.
   - Fichiers : `packages/netcode/bench/rollback.bench.ts`, `packages/netcode/package.json`
 
-**Point de contrôle A** : mesures du banc et test de propriété consignés dans le commit ; relecture au point C (décision du 2026-11-13).
+**Point de contrôle A** : mesures du banc et test de propriété consignés dans le commit ; relecture au point C (décision du 2026-11-13). Mesuré le 2026-11-14 : pire cas (rollback de 15 frames + 1 nouvelle, 8 joueurs, 16 entités) 0,055 ms en moyenne, 0,10 ms au 99ᵉ centile, tas +9 Ko sur 10 000 frames ; test de propriété : 1 000 tirages passants, un bogue trouvé et corrigé.
 
 ## Phase B — En ligne, simulé
 
