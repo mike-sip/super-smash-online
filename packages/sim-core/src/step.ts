@@ -20,6 +20,7 @@ import { createHitScratch, resolveHits, type HitScratch } from './systems/hit.ts
 import { launch } from './systems/knockback.ts';
 import { resolveLedges } from './systems/ledge.ts';
 import { trackStick, updateMovement } from './systems/movement.ts';
+import { compileMotion, updateStageMotion, type StageMotion } from './systems/stage-motion.ts';
 
 export interface SimConfig {
   readonly stage: StageDef;
@@ -40,6 +41,8 @@ export interface Sim {
   readonly entityDefs: readonly EntityDef[];
   /** Géométrie du stage, figée à la création. */
   readonly geo: StageGeo;
+  /** Plateformes mobiles du stage, figées à la création ; leur position dépend de la frame. */
+  readonly motion: StageMotion;
   /** Événements de la dernière frame. Hors snapshot : reconstruits à chaque `step`. */
   readonly events: EventQueue;
   /** Tableaux de travail internes à une frame. Hors snapshot. */
@@ -78,11 +81,13 @@ export function createSim(config: SimConfig): Sim {
       `Le stage « ${config.stage.name} » n'a que ${config.stage.spawns.length} points d'apparition pour ${players} joueurs.`,
     );
   }
+  const geo = compileStage(config.stage);
   const sim: Sim = {
     config,
     state: createState(),
     entityDefs: config.entities ?? [],
-    geo: compileStage(config.stage),
+    geo,
+    motion: compileMotion(config.stage, geo),
     events: createEventQueue(),
     scratch: createHitScratch(),
   };
@@ -111,6 +116,9 @@ export function step(sim: Sim, inputs: Uint32Array): void {
   const frozen = sim.scratch.frozen;
   const players = s.g[G_PLAYERS]!;
   sim.events.count = 0;
+
+  // 0. Le stage bouge et emporte ceux qui s'y tiennent.
+  updateStageMotion(sim);
 
   // 1. Inputs : mémorisés et mis en tampon pour tous, même gelés par le hitlag.
   for (let i = 0; i < players; i++) {

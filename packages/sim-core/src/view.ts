@@ -7,6 +7,7 @@
  */
 import { fxToFloat } from './fixed.ts';
 import type { Sim } from './step.ts';
+import { platformAt } from './systems/stage-motion.ts';
 
 export interface FighterView {
   x: number;
@@ -106,4 +107,24 @@ export function readEntity(sim: Sim, slot: number, out: EntityView): boolean {
   out.velY = fxToFloat(s.eVelY[slot]!);
   out.life = s.eLife[slot]!;
   return true;
+}
+
+export interface PlatformView {
+  x1: number;
+  x2: number;
+  y: number;
+}
+
+const platformScratch = { x1: 0, x2: 0, y: 0 };
+
+/**
+ * Position courante de la plateforme `index` de `StageDef.platforms`, en unités de jeu : celle où
+ * la simulation a posé les combattants pendant la dernière frame. Pour une plateforme fixe, ce sont
+ * ses coordonnées de définition.
+ */
+export function readPlatform(sim: Sim, index: number, out: PlatformView): void {
+  platformAt(sim, index, platformScratch);
+  out.x1 = fxToFloat(platformScratch.x1);
+  out.x2 = fxToFloat(platformScratch.x2);
+  out.y = fxToFloat(platformScratch.y);
 }

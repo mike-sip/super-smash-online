@@ -30,7 +30,7 @@
   - Vérification : un script compare, sur les 5 séquences de référence et les séquences rapides, positions, vitesses, actions et dégâts finaux de chaque joueur avant et après (identiques) ; puis `golden:update` dans un commit dédié qui l'explique.
   - Fichiers : `packages/sim-core/src/{defs,state,actions,events,step,index}.ts`, `test/state.test.ts`, `test/determinism/golden.json`
 
-- [ ] **T5 : Plateformes mobiles**
+- [x] **T5 : Plateformes mobiles**
   - Acceptation : position d'une plateforme = fonction pure de la frame (aller-retour adouci par un polynôme entier) ; surfaces recalculées en début de `step` ; combattants au sol et objets posés portés par leur surface ; atterrissage comparé à la hauteur de la frame précédente ; `readPlatform` pour le rendu ; rien ne change pour une plateforme fixe.
   - Vérification : tests unitaires de la trajectoire (bornes, période, continuité : jamais plus d'un pas maximal entre deux frames) ; scénarios : porté à l'horizontale et à la verticale, atterrissage sur une plateforme qui monte, chute à travers stick bas, quitter le bord d'une barge ; rollback au milieu d'un trajet.
   - Fichiers : `packages/sim-core/src/systems/stage-motion.ts`, `src/systems/collision.ts`, `src/step.ts`, `src/view.ts`, `test/stage-motion.test.ts`, `test/scenarios/moving.test.ts`

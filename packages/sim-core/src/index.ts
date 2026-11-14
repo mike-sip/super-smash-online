@@ -105,8 +105,10 @@ export {
   createFighterView,
   readEntity,
   readFighter,
+  readPlatform,
   type EntityView,
   type FighterView,
+  type PlatformView,
 } from './view.ts';
 export {
   ENTITY_BOUNCE,
