@@ -35,7 +35,7 @@
   - Vérification : suite de contrat sur SQLite en mémoire et sur fichier ; réouverture d'une base existante sans perte ; migration d'une base vide ; contrainte d'unicité tenue par la base même sans vérification préalable.
   - Fichiers : `packages/accounts/src/store-sqlite.ts`, `packages/accounts/test/store-sqlite.test.ts`
 
-- [ ] **T6 : Règles métier**
+- [x] **T6 : Règles métier**
   - Acceptation : `AccountService` : invité (pseudo tiré au hasard ou choisi, jamais celui d'un compte), inscription, conversion (même identifiant, profil gardé, nouveau jeton), connexion (même échec et même travail pour pseudo inconnu et mauvais mot de passe, rehachage des empreintes périmées, invité courant effacé), déconnexion (invité effacé), profil (pseudo, personnage favori au format de la spec), changement de mot de passe (autres sessions fermées), suppression (mot de passe exigé pour un compte, écouteurs `onAccountDeleted` appelés), tickets, `recordMatch` ; sessions de 30 jours prolongées au plus une fois par heure, 10 au plus par compte ; purge périodique.
   - Vérification : tests avec stockage mémoire et horloge factice pour chaque parcours et chaque refus.
   - Fichiers : `packages/accounts/src/service.ts`, `packages/accounts/test/service.test.ts`
