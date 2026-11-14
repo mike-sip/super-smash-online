@@ -319,3 +319,34 @@ describe('rollback', () => {
     expect(run(old.tracker, sim, old.inputs, 10)).toContain(SND_HIT_WEAK);
   });
 });
+
+describe('budget', () => {
+  it('lit une frame à 8 combattants et 16 entités en moins de 0,1 ms', () => {
+    const { sim, tracker } = setup(8);
+    const inputs = new Uint32Array(8);
+    let seed = 1;
+    const next = (): number => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0);
+    for (let n = 0; n < 16; n++) spawnEntity(sim, E_BALL, -1, fx(n * 6 - 45), fx(60), 0, 0);
+    const frames = 2000;
+    let spent = 0;
+    for (let f = 0; f < frames; f++) {
+      for (let p = 0; p < 8; p++) {
+        const r = next();
+        inputs[p] = encodeInput(
+          ((r & 0xff) % 255) - 127,
+          ((r >>> 8) % 255) - 127,
+          (r >>> 16) & 0x1f,
+        );
+      }
+      step(sim, inputs);
+      const started = performance.now();
+      collectCues(tracker, sim);
+      spent += performance.now() - started;
+    }
+    const perFrame = spent / frames;
+    process.stdout.write(
+      `\nLecture des sons d'une frame à 8 combattants : ${(perFrame * 1000).toFixed(1)} µs\n`,
+    );
+    expect(perFrame).toBeLessThan(0.1);
+  });
+});
