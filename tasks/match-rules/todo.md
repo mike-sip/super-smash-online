@@ -73,17 +73,19 @@
 
 ## Phase C — Robustesse
 
-- [ ] **T12 : Rollback et déterminisme**
+- [x] **T12 : Rollback et déterminisme**
   - Acceptation : propriété de rollback sur 500 tirages (mode, équipes, joueurs, inputs aléatoires, points de sauvegarde au hasard, y compris après la fin) ; 3 matchs de référence à 8 joueurs (Stock, Temps en équipes, Endurance) dont checksums et résultats sont versionnés ; script de régénération.
   - Vérification : `pnpm --filter @game/match-rules test:determinism`.
   - Fichiers : `test/determinism/*`, `package.json`
 
-- [ ] **T13 : Coût du crochet**
+- [x] **T13 : Coût du crochet**
   - Acceptation : benchmark à 8 joueurs : coût moyen du crochet sous 0,02 ms (différence entre `step` avec et sans règles), croissance du tas sous 32 Ko sur 10 000 frames.
   - Vérification : `pnpm --filter @game/match-rules bench`.
   - Fichiers : `bench/rules.bench.ts`
 
 **Point de contrôle C** : chiffres de rollback, déterminisme et coût.
+
+> Fait le 2026-11-14. Rollback : 500 tirages sans divergence (sauvegardes en jeu 179, en mort subite 13, après la fin 308 ; 218 avec une réapparition en attente). Matchs de référence : les trois se terminent (Stock à la frame 4 658, Temps en équipes à 10 800, Endurance à 4 394), checksums identiques entre Vitest (sources de `sim-core`) et Node (build). Coût : crochet 0,0003 ms par frame en moyenne ; tas : médiane de 5 fenêtres de 10 000 frames (la première après l'échauffement varie de −10 à +45 Ko d'une exécution à l'autre, les suivantes sont proches de 0).
 
 ## Phase D — Visible
 
