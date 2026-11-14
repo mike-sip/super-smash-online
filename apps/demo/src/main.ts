@@ -18,6 +18,7 @@ import { createControls } from './controls.ts';
 import { createDummies, type Dummies, type DummyMode } from './dummies.ts';
 import { createEntityFeeder, createPerfProbe, type EntityFeeder } from './perf.ts';
 import { createRemap, type Remap } from './remap.ts';
+import { applySetup, createStageSelect, readSetup } from './stage-select.ts';
 import { createTuning } from './tuning.ts';
 
 const STEP_MS = 1000 / 60;
@@ -55,8 +56,12 @@ const entityTarget = intParam(params, 'entities', 0, 32, 0);
 
 const players = 1 + dummyCount;
 const baseConfig = testConfig(players, seed);
-/** Configuration en cours : celle d'origine, ou la copie produite par le panneau de réglage. */
-let config: SimConfig = baseConfig;
+/** Combattants en cours : ceux d'origine, ou la copie produite par le panneau de réglage. */
+let fighterConfig: SimConfig = baseConfig;
+/** Stage choisi dans la barre d'outils ou par l'adresse. */
+const setup = readSetup(params);
+/** Configuration réellement simulée : les combattants, sur le stage choisi. */
+let config: SimConfig = applySetup(fighterConfig, setup);
 const canvas = element<HTMLCanvasElement>('game');
 const overlay = element('overlay');
 
@@ -126,7 +131,7 @@ let feeder: EntityFeeder;
 const probe = createPerfProbe();
 
 const tuning = createTuning(element('tuning'), baseConfig, (tuned) => {
-  config = tuned;
+  fighterConfig = tuned;
   start();
 });
 
@@ -149,7 +154,10 @@ function resize(): void {
 }
 window.addEventListener('resize', resize);
 
+createStageSelect(element('toolbar'), setup, () => start());
+
 function start(): void {
+  config = applySetup(fighterConfig, setup);
   // À la première création `renderer` n'existe pas encore.
   (renderer as Renderer | undefined)?.dispose();
   sim = createSim(config);
@@ -224,6 +232,8 @@ requestAnimationFrame(tick);
 /** Prise pour les tests automatiques de la démo. Aucun code de jeu ne doit s'en servir. */
 const testHook = {
   frame: () => frame(sim),
+  /** Nom du stage simulé. */
+  stage: () => sim.config.stage.name,
   players,
   paused: () => controls.paused,
   speed: () => controls.speed,

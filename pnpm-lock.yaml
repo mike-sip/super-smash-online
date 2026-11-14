@@ -190,6 +190,9 @@ importers:
       '@game/sim-core':
         specifier: workspace:*
         version: link:../../packages/sim-core
+      '@game/stages-items':
+        specifier: workspace:*
+        version: link:../../packages/stages-items
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -256,6 +259,22 @@ importers:
       vite:
         specifier: ^8.3.7
         version: 8.3.7(@types/node@26.6.6)
+      vitest:
+        specifier: ^5.1.0
+        version: 5.1.0(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(vite@8.3.7(@types/node@26.6.6))
+
+  packages/stages-items:
+    dependencies:
+      '@game/sim-core':
+        specifier: workspace:*
+        version: link:../sim-core
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.6
+        version: 26.6.6
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
       vitest:
         specifier: ^5.1.0
         version: 5.1.0(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(vite@8.3.7(@types/node@26.6.6))

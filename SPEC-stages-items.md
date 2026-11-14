@@ -77,8 +77,8 @@ Tout est **additif** : de nouveaux champs optionnels dans les contrats, de nouve
 | `defs.ts` | `PlatformDef.motion?` : déplacement d'aller-retour (décalage `dx`, `dy`, période et phase en frames, départ et arrivée adoucis par un polynôme entier). `StageDef.itemSpawns?` : segments d'apparition des objets. `StageDef.hazards?` : danger périodique (position, période, phase, type d'entité créé pendant le jet). `EntityDef.height?` : la zone de coup d'une entité devient une capsule verticale (le jet de geyser). `EntityDef.item?` : comportement d'objet (`ItemDef` : catégorie lancer, frapper ou soin ; vitesse de lancer ; coup du Bâton sous forme de `MoveDef` ; soin ; se brise au contact ; entité créée en se brisant ou en explosant ; mèche) |
 | `step.ts` | `SimConfig.items?` : table d'apparition (`{ kind, weight }[]`), délai minimal et maximal en frames, nombre maximal d'objets présents. Deux appels insérés dans `step` : mouvement du stage en début de frame, puis système des objets après celui des entités |
 | `state.ts` | Champ de combattant `held` (objet tenu). Champs d'entité `eMode` (libre, tenu, lancé), `eSurface` (surface où l'objet est posé, pour qu'une plateforme mobile le porte), `eTimer` (mèche). Valeur globale `G_ITEM_TIMER`. L'état passe de 2 764 à environ 3 184 octets |
-| `actions.ts` | Deux actions : `A_ITEM_THROW` (31) et `A_ITEM_SWING` (32) |
-| `events.ts` | `EV_ITEM_SPAWN`, `EV_ITEM_PICKUP`, `EV_ITEM_THROW`, `EV_HEAL`, `EV_ITEM_BREAK` |
+| `actions.ts` | Deux actions : `A_ITEM_THROW` (40) et `A_ITEM_SWING` (41), numérotées hors des plages annoncées par `fighters` ; routées explicitement avant les tests de plage existants (`action >= A_SHIELD`, `action >= A_LEDGE`) |
+| `events.ts` | `EV_ITEM_SPAWN` à `EV_ITEM_BREAK` (20 à 24), hors des numéros annoncés par `fighters` et `match-rules` |
 | `systems/collision.ts` | Les surfaces mobiles sont recalculées à chaque frame à partir du numéro de frame. L'atterrissage compare les pieds à la hauteur de la surface **à la frame précédente** (identique pour une surface fixe), pour qu'une plateforme qui monte ne laisse pas passer un combattant qui tombe |
 | `systems/movement.ts` | Avant le choix d'une attaque : ramassage, lancer ou coup d'objet si le combattant tient un objet ou se trouve à portée d'un objet posé |
 | `systems/hit.ts` | Le coup de Bâton est traité comme une attaque, avec la hitbox de l'objet ; un objet n'a de hitbox que lancé ; la capsule verticale d'une entité |
@@ -89,7 +89,7 @@ Tout est **additif** : de nouveaux champs optionnels dans les contrats, de nouve
 
 Le budget de vitesse de `sim-core` reste un critère : `step` à 8 joueurs et 16 entités sous 0,25 ms en moyenne, mesuré par son benchmark existant, plus un scénario avec 4 objets et 2 plateformes mobiles.
 
-**Risque de fusion** : les modules `fighters` et `match-rules` peuvent aussi ajouter des actions, des événements ou des champs d'état en parallèle. Les numéros (`A_ITEM_THROW` = 31, etc.) entreront alors en collision : ils seront renumérotés à la fusion, ce qui est sans conséquence puisque les checksums sont régénérés à ce moment-là. Je dépose la liste de ces ajouts dans le dossier de notes partagé pour que les autres sessions la voient.
+**Risque de fusion** : les modules `fighters` et `match-rules` peuvent aussi ajouter des actions, des événements ou des champs d'état en parallèle. Pour l'éviter, les nouvelles actions et les nouveaux événements prennent des numéros éloignés de ceux annoncés par ces sessions dans le dossier de notes partagé ; restent les conflits textuels en fin de liste dans `state.ts`, simples à résoudre, et les checksums régénérés à la fusion. Je dépose la liste de ces ajouts dans le dossier de notes partagé pour que les autres sessions la voient.
 
 ## Stack technique
 

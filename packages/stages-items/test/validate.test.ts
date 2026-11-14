@@ -1,0 +1,84 @@
+import { fx, type StageDef } from '@game/sim-core';
+import { TEST_STAGE } from '@game/sim-core/testing';
+import { describe, expect, it } from 'vitest';
+import { validateStage } from '../src/validate.ts';
+
+/** Stage minimal valide pour 2 joueurs, que chaque test abîme d'une seule façon. */
+function base(overrides: Partial<StageDef> = {}): StageDef {
+  return {
+    name: 'base',
+    spawns: [
+      { x: fx(-20), y: fx(0) },
+      { x: fx(20), y: fx(0) },
+    ],
+    solids: [{ x1: fx(-50), y1: fx(-20), x2: fx(50), y2: fx(0) }],
+    platforms: [{ x1: fx(-15), x2: fx(15), y: fx(25) }],
+    blast: { left: fx(-150), right: fx(150), top: fx(120), bottom: fx(-80) },
+    ...overrides,
+  };
+}
+
+describe('validateStage', () => {
+  it('accepte un stage correct et le stage de test de sim-core', () => {
+    expect(validateStage(base(), 2)).toEqual([]);
+    for (let players = 2; players <= 8; players++) {
+      expect(validateStage(TEST_STAGE, players)).toEqual([]);
+    }
+  });
+
+  it('signale des points d’apparition en nombre insuffisant', () => {
+    const errors = validateStage(base(), 3);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/apparition/);
+  });
+
+  it('signale un point d’apparition dans le vide ou à côté d’une surface', () => {
+    const floating = base({
+      spawns: [
+        { x: fx(-20), y: fx(3) },
+        { x: fx(20), y: fx(0) },
+      ],
+    });
+    expect(validateStage(floating, 2)[0]).toMatch(/J1.*surface/);
+    const outside = base({
+      spawns: [
+        { x: fx(-20), y: fx(0) },
+        { x: fx(60), y: fx(0) },
+      ],
+    });
+    expect(validateStage(outside, 2)[0]).toMatch(/J2.*surface/);
+  });
+
+  it('signale deux points d’apparition trop proches', () => {
+    const close = base({
+      spawns: [
+        { x: fx(-2), y: fx(0) },
+        { x: fx(2), y: fx(0) },
+      ],
+    });
+    expect(validateStage(close, 2)[0]).toMatch(/J1 et J2/);
+  });
+
+  it('signale une géométrie qui sort des zones limites', () => {
+    const wide = base({ solids: [{ x1: fx(-160), y1: fx(-20), x2: fx(50), y2: fx(0) }] });
+    expect(validateStage(wide, 2).some((e) => /zones limites/.test(e))).toBe(true);
+    const high = base({ platforms: [{ x1: fx(-15), x2: fx(15), y: fx(130) }] });
+    expect(validateStage(high, 2).some((e) => /zones limites/.test(e))).toBe(true);
+  });
+
+  it('signale une plateforme inaccessible', () => {
+    const tooHigh = base({ platforms: [{ x1: fx(-15), x2: fx(15), y: fx(60) }] });
+    expect(validateStage(tooHigh, 2)[0]).toMatch(/plateforme 1.*inaccessible/);
+    // Une plateforme intermédiaire la rend accessible.
+    const ladder = base({
+      platforms: [
+        { x1: fx(-15), x2: fx(15), y: fx(60) },
+        { x1: fx(-30), x2: fx(-10), y: fx(30) },
+      ],
+    });
+    expect(validateStage(ladder, 2)).toEqual([]);
+    // Loin de tout, à l'horizontale.
+    const aside = base({ platforms: [{ x1: fx(100), x2: fx(120), y: fx(20) }] });
+    expect(validateStage(aside, 2)[0]).toMatch(/inaccessible/);
+  });
+});

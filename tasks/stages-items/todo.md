@@ -6,17 +6,17 @@
 
 ## Phase A — Stages fixes
 
-- [ ] **T1 : Paquet et validation des stages**
+- [x] **T1 : Paquet et validation des stages**
   - Acceptation : paquet `@game/stages-items` (dépendance `@game/sim-core` seule, alias vers les sources en test comme `render`) ; `validateStage(stage, players)` signale : points d'apparition manquants, hors d'une surface ou confondus ; géométrie hors des zones limites ; plateforme inaccessible (ni d'un saut depuis le sol, ni depuis une autre plateforme, pour un saut de référence de 30 unités).
   - Vérification : tests unitaires sur des stages fautifs construits pour l'occasion, et sur le stage de test de `sim-core` (aucune erreur).
   - Fichiers : `packages/stages-items/{package.json,tsconfig*.json,vitest.config.ts}`, `src/index.ts`, `src/validate.ts`, `test/validate.test.ts`, `eslint.config.js` si nécessaire
 
-- [ ] **T2 : Belvédère, Récif et `applyStage`**
+- [x] **T2 : Belvédère, Récif et `applyStage`**
   - Acceptation : `StageDef` des deux stages selon la spec, 8 points d'apparition chacun, zones d'apparition d'objets déclarées (ignorées tant que `sim-core` ne les connaît pas) ; registre `STAGES`, `stageById` ; `applyStage(config, id)` renvoie une copie avec le stage remplacé.
   - Vérification : `validateStage` ne signale rien de 2 à 8 joueurs ; scénario : un combattant qui marche jusqu'au bord du Récif s'y accroche ; 600 frames à 8 joueurs à inputs aléatoires sans exception sur chaque stage.
   - Fichiers : `src/stages/belvedere.ts`, `src/stages/recif.ts`, `src/stages/registry.ts`, `src/config.ts`, `test/stages.test.ts`
 
-- [ ] **T3 : Choix du stage dans la démo**
+- [x] **T3 : Choix du stage dans la démo**
   - Acceptation : paramètre d'URL `stage=` et liste déroulante dans la barre d'outils ; changer de stage recrée simulation et renderer ; le stage de test reste disponible (`stage=test`).
   - Vérification : test de fumée (chaque stage se charge sans erreur de console, canvas non vide) ; captures.
   - Fichiers : `apps/demo/src/stage-select.ts`, `apps/demo/src/main.ts`, `apps/demo/index.html`, `apps/demo/package.json`, `apps/demo/vite.config.ts`, `apps/demo/test/smoke.test.ts`

@@ -70,6 +70,7 @@ describe('démo', () => {
   it('déplace le joueur 1 quand une touche est enfoncée', async () => {
     const { page, errors } = await open('');
     const start = await page.evaluate(() => __demo.fighter(0).x);
+    const opponent = await page.evaluate(() => __demo.fighter(1).x);
     await page.keyboard.down('ArrowRight');
     await page.waitForFunction((x) => __demo.fighter(0).x > x + 5, start);
     await page.keyboard.up('ArrowRight');
@@ -78,7 +79,30 @@ describe('démo', () => {
     await page.waitForFunction(() => !__demo.fighter(0).grounded);
     await page.keyboard.up('KeyZ');
     // L'adversaire immobile n'a pas bougé.
-    expect(await page.evaluate(() => __demo.fighter(1).x)).toBe(35);
+    expect(await page.evaluate(() => __demo.fighter(1).x)).toBe(opponent);
+    expect(errors).toEqual([]);
+    await page.close();
+  }, 60_000);
+
+  it('se charge sur chaque stage, et change de stage depuis la barre d’outils', async () => {
+    for (const stage of ['belvedere', 'recif', 'test']) {
+      const { page, errors } = await open(`?stage=${stage}&dummies=3`);
+      expect(await page.evaluate(() => __demo.stage())).toBe(stage);
+      expect(await page.evaluate(() => __demo.distinctColors())).toBeGreaterThanOrEqual(4);
+      expect(errors).toEqual([]);
+      await page.close();
+    }
+    const { page, errors } = await open('');
+    expect(await page.evaluate(() => __demo.stage())).toBe('belvedere');
+    await page.locator('[data-control="stage"]').selectOption('recif');
+    await page.waitForFunction(() => __demo.stage() === 'recif' && __demo.frame() > 10);
+    expect(new URL(page.url()).searchParams.get('stage')).toBe('recif');
+    // La liste a rendu le focus : les flèches déplacent le joueur, pas la sélection.
+    const start = await page.evaluate(() => __demo.fighter(0).x);
+    await page.keyboard.down('ArrowRight');
+    await page.waitForFunction((x) => __demo.fighter(0).x > x + 5, start);
+    await page.keyboard.up('ArrowRight');
+    expect(await page.evaluate(() => __demo.stage())).toBe('recif');
     expect(errors).toEqual([]);
     await page.close();
   }, 60_000);

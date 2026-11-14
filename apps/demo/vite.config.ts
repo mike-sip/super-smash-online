@@ -15,6 +15,10 @@ export default defineConfig({
       { find: /^@game\/sim-core$/, replacement: source('../../packages/sim-core/src/index.ts') },
       { find: /^@game\/render$/, replacement: source('../../packages/render/src/index.ts') },
       { find: /^@game\/input$/, replacement: source('../../packages/input/src/index.ts') },
+      {
+        find: /^@game\/stages-items$/,
+        replacement: source('../../packages/stages-items/src/index.ts'),
+      },
     ],
   },
 });
