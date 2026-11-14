@@ -19,6 +19,8 @@
     }
   },
   "scripts": {
+    "dev": "node src/dev.ts",
+    "start": "node src/main.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json"

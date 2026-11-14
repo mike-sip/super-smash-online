@@ -66,6 +66,8 @@ export interface Authenticated {
   readonly account: AccountRecord;
   readonly session: SessionRecord;
   readonly view: AccountView;
+  /** Vrai si la session vient d'être prolongée : le cookie est à renvoyer avec sa nouvelle durée. */
+  readonly extended: boolean;
 }
 
 export interface RateLimiters {
@@ -169,13 +171,15 @@ export class AccountService {
       return null;
     }
     let current = session;
+    let extended = false;
     if (session.expiresAt - now <= SESSION_TTL_MS - SESSION_EXTEND_EVERY_MS) {
       current = { ...session, expiresAt: now + SESSION_TTL_MS };
       await this.#store.extendSession(digest, current.expiresAt);
       await this.#store.updateAccount(account.id, { lastSeenAt: now });
       account = { ...account, lastSeenAt: now };
+      extended = true;
     }
-    return { account, session: current, view: toView(account) };
+    return { account, session: current, view: toView(account), extended };
   }
 
   async #openSession(account: AccountRecord): Promise<SessionGrant> {
@@ -199,7 +203,11 @@ export class AccountService {
 
   // --- Parcours -----------------------------------------------------------------------------
 
-  createGuest(pseudo: unknown, address: string): Promise<Outcome<SessionGrant>> {
+  createGuest(
+    pseudo: unknown,
+    address: string,
+    currentToken?: string,
+  ): Promise<Outcome<SessionGrant>> {
     return this.#guarded(async () => {
       const wait = this.#limits.guestPerAddress.hit(address);
       if (wait > 0) return limited(wait);
@@ -226,6 +234,7 @@ export class AccountService {
         lastSeenAt: now,
       };
       await this.#store.createAccount(account);
+      await this.#leave(currentToken);
       return ok(await this.#openSession(account));
     });
   }

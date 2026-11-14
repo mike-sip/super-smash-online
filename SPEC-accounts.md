@@ -119,7 +119,7 @@ Préfixe : `/api/accounts/v1`. Corps en JSON. Toute réponse porte `Cache-Contro
 | `POST /register` | `{ pseudo, password }` | `201 { account }` + cookie | non |
 | `POST /convert` | `{ pseudo, password }` | `200 { account }` + nouveau cookie | invité |
 | `POST /login` | `{ pseudo, password }` | `200 { account }` + cookie | non |
-| `POST /logout` | `{}` | `204` + cookie effacé | oui |
+| `POST /logout` | `{}` | `204` + cookie effacé | non (sans effet sans session : la déconnexion est idempotente) |
 | `PATCH /profile` | `{ pseudo?, favoriteFighter? }` | `200 { account }` | oui |
 | `POST /password` | `{ current, next }` | `204` ; autres sessions fermées | compte |
 | `POST /delete` | `{ password }` (vide pour un invité) | `204` + cookie effacé | oui |

@@ -44,12 +44,12 @@
 
 ## Phase C — Serveur
 
-- [ ] **T7 : Serveur HTTP et parcours de bout en bout**
+- [x] **T7 : Serveur HTTP et parcours de bout en bout**
   - Acceptation : `createAccountsServer` avec `node:http` ; routes de la spec sous `/api/accounts/v1` ; cookie de session (`HttpOnly`, `SameSite=Strict`, `Path=/`, `Secure` et préfixe `__Host-` si `secureCookies`) ; réponses JSON et erreurs au format de la spec ; `Cache-Control: no-store` partout ; `GET /session` à 200 sans session ; `service` exposé ; journal d'une ligne par requête sans donnée sensible.
   - Vérification : tests de bout en bout sur un vrai serveur et `fetch` avec un petit pot à cookies : invité → rechargement → conversion → déconnexion → connexion → profil → mot de passe → suppression ; ticket obtenu par l'API et accepté par `verifyTicket`.
   - Fichiers : `packages/accounts/src/http.ts`, `packages/accounts/src/index.ts`, `packages/accounts/test/helpers.ts`, `packages/accounts/test/api.test.ts`
 
-- [ ] **T8 : Protections HTTP, configuration et commandes**
+- [x] **T8 : Protections HTTP, configuration et commandes**
   - Acceptation : `Content-Type: application/json` exigé hors `GET` ; `Origin` vérifiée quand elle est présente ; corps limité à 8 Ko ; JSON invalide ou champs inattendus refusés ; en-têtes `X-Content-Type-Options`, `Content-Security-Policy`, `Referrer-Policy`, `X-Frame-Options` ; limitation des tentatives branchée avec `Retry-After` ; `X-Forwarded-For` lu seulement avec `trustProxy` ; 404 et 405 ; erreur interne sans détail ; configuration lue de l'environnement, refus de démarrer sans clé de ticket ou avec une clé trop courte ; `main.ts` avec purge périodique et arrêt propre ; commandes `dev` et `start`.
   - Vérification : un test de bout en bout par protection ; test de la lecture de configuration ; lancement réel de `pnpm --filter @game/accounts dev` et requêtes à la main, consignés.
   - Fichiers : `packages/accounts/src/http.ts`, `packages/accounts/src/config.ts`, `packages/accounts/src/main.ts`, `packages/accounts/package.json`, `packages/accounts/test/api-security.test.ts`, `packages/accounts/test/config.test.ts`, `.gitignore`
