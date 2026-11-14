@@ -59,7 +59,7 @@
   - Vérification : un scénario par comportement de la liste ; deux joueurs qui ramassent le même objet à la même frame (le plus petit index l'obtient).
   - Fichiers : `src/systems/items.ts`, `src/systems/movement.ts`, `src/systems/hit.ts`, `src/systems/ledge.ts`, `src/systems/blast.ts`, `test/scenarios/items.test.ts`
 
-- [ ] **T10 : Soin, bris, explosion ; contenu des objets**
+- [x] **T10 : Soin, bris, explosion ; contenu des objets**
   - Acceptation : soin au contact plafonné à 0 % ; bris au contact (Galet) ; rebond et retour au sol (Bâton lancé) ; explosion au contact ou en fin de mèche (Pétard), qui touche aussi le lanceur ; les 5 objets et l'explosion définis dans le paquet ; `applyItems(config, settings)` et `itemOf` ; fréquences `off`, `low`, `normal`, `high`.
   - Vérification : scénarios par objet avec ses vraies données ; `applyItems` respecte `kinds` et ne renumérote pas les entités existantes ; démo : objets activables par `items=`.
   - Fichiers : `src/systems/items.ts`, `packages/stages-items/src/items.ts`, `src/config.ts`, `test/items.test.ts`, `apps/demo/src/main.ts`

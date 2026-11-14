@@ -3,10 +3,13 @@ import { KEYBOARD_ID, MAX_LOCAL_PLAYERS, createInput, type Device } from '@game/
 import { createRenderer, type Renderer } from '@game/render';
 import {
   A_DEAD,
+  MAX_ENTITIES,
   checksum,
+  createEntityView,
   createFighterView,
   createSim,
   frame,
+  readEntity,
   readFighter,
   respawn,
   step,
@@ -234,6 +237,14 @@ const testHook = {
   frame: () => frame(sim),
   /** Nom du stage simulé. */
   stage: () => sim.config.stage.name,
+  /** Objets présents (libres, tenus ou lancés). */
+  items(): number {
+    const v = createEntityView();
+    let n = 0;
+    for (let slot = 0; slot < MAX_ENTITIES; slot++)
+      if (readEntity(sim, slot, v) && v.mode !== 0) n++;
+    return n;
+  },
   players,
   paused: () => controls.paused,
   speed: () => controls.speed,

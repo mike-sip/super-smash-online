@@ -107,6 +107,19 @@ describe('démo', () => {
     await page.close();
   }, 60_000);
 
+  it('fait apparaître des objets quand on les active', async () => {
+    const { page, errors } = await open('?stage=recif&items=high');
+    expect(await page.locator('[data-control="items"]').inputValue()).toBe('high');
+    // Fréquence « fréquents » : un objet toutes les 5 à 9 s.
+    await page.waitForFunction(() => __demo.items() > 0, undefined, { timeout: 15_000 });
+    // Retour à « aucun » : la simulation repart sans objet.
+    await page.locator('[data-control="items"]').selectOption('off');
+    await page.waitForFunction(() => __demo.frame() < 60 && __demo.items() === 0);
+    expect(await page.locator('[data-control="hazards"]').isDisabled()).toBe(true);
+    expect(errors).toEqual([]);
+    await page.close();
+  }, 60_000);
+
   it('relâche tout quand la fenêtre perd le focus', async () => {
     const { page, errors } = await open('');
     await page.keyboard.down('ArrowRight');

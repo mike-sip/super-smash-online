@@ -8,6 +8,7 @@
  * quel ordre, ou plusieurs fois.
  */
 import type { EntityDef, SimConfig } from '@game/sim-core';
+import { EXPLOSION, ITEMS, itemDef, itemIdOf, type ItemId } from './items.ts';
 import { GEYSER_JET } from './stages/geysers.ts';
 import { stageById, type StageId } from './stages/registry.ts';
 
@@ -55,4 +56,59 @@ export function applyStage(config: SimConfig, id: StageId, options: StageOptions
 export function isHazardEntity(config: SimConfig, kind: number): boolean {
   const def = config.entities?.[kind - 1];
   return def !== undefined && HAZARD_ENTITIES.includes(def);
+}
+
+export type ItemFrequency = 'off' | 'low' | 'normal' | 'high';
+
+export interface ItemSettings {
+  readonly frequency: ItemFrequency;
+  /** Objets autorisés ; tous si absent. Une liste vide équivaut à « off ». */
+  readonly kinds?: readonly ItemId[];
+}
+
+export const DEFAULT_ITEM_SETTINGS: ItemSettings = { frequency: 'normal' };
+
+const SECOND = 60;
+
+/** Délai entre deux apparitions, en frames, et nombre maximal d'objets présents. */
+const FREQUENCIES: Readonly<
+  Record<Exclude<ItemFrequency, 'off'>, { min: number; max: number; active: number }>
+> = {
+  low: { min: 18 * SECOND, max: 26 * SECOND, active: 2 },
+  normal: { min: 10 * SECOND, max: 16 * SECOND, active: 3 },
+  high: { min: 5 * SECOND, max: 9 * SECOND, active: 4 },
+};
+
+/**
+ * Renvoie une copie de `config` où les objets apparaissent selon `settings`. À « off », la
+ * configuration est rendue sans apparition ni entité d'objet.
+ */
+export function applyItems(config: SimConfig, settings: ItemSettings): SimConfig {
+  const allowed = ITEMS.filter((item) => settings.kinds?.includes(item.id) ?? true);
+  if (settings.frequency === 'off' || allowed.length === 0) return { ...config, items: undefined };
+
+  let entities = config.entities ?? [];
+  const explosion = withEntity(entities, EXPLOSION);
+  entities = explosion.entities;
+  const table = allowed.map((item) => {
+    const added = withEntity(entities, itemDef(item.id, explosion.kind));
+    entities = added.entities;
+    return { kind: added.kind, weight: item.weight };
+  });
+  const frequency = FREQUENCIES[settings.frequency];
+  return {
+    ...config,
+    entities,
+    items: {
+      table,
+      minInterval: frequency.min,
+      maxInterval: frequency.max,
+      maxActive: frequency.active,
+    },
+  };
+}
+
+/** Objet que représente le type d'entité `kind` de `config`, ou undefined (projectile, danger…). */
+export function itemOf(config: SimConfig, kind: number): ItemId | undefined {
+  return itemIdOf(config.entities?.[kind - 1]);
 }
