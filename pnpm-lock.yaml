@@ -228,6 +228,9 @@ importers:
       '@game/sim-core':
         specifier: workspace:*
         version: link:../sim-core
+      '@game/stages-items':
+        specifier: workspace:*
+        version: link:../stages-items
       three:
         specifier: 0.187.0
         version: 0.187.0

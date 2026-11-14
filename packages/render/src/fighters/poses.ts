@@ -24,6 +24,8 @@ import {
   A_GRAB_RELEASE,
   A_HITSTUN,
   A_IDLE,
+  A_ITEM_SWING,
+  A_ITEM_THROW,
   A_JUMPSQUAT,
   A_LAND,
   A_LEDGE,
@@ -58,8 +60,11 @@ import {
   M_UAIR,
   M_USMASH,
   M_UTILT,
+  ITEM_THROW_FRAMES,
+  ITEM_THROW_RELEASE,
   fxToFloat,
   type FighterDef,
+  type MoveDef,
 } from '@game/sim-core';
 
 export interface Pose {
@@ -212,15 +217,30 @@ export function createPoseInput(): PoseInput {
 const SHIELD_DROP_FRAMES = 11;
 const GRAB_RELEASE_FRAMES = 20;
 
-/** Remplit `start`, `end`, `total` et `travel` d'après les données du combattant. */
-export function actionTiming(def: FighterDef, action: number, move: number, out: PoseInput): void {
+/**
+ * Remplit `start`, `end`, `total` et `travel` d'après les données du combattant. `swing` est le
+ * coup de l'objet à frapper tenu, pour `A_ITEM_SWING` (module stages-items).
+ */
+export function actionTiming(
+  def: FighterDef,
+  action: number,
+  move: number,
+  out: PoseInput,
+  swing?: MoveDef,
+): void {
   out.start = 0;
   out.end = 0;
   out.total = 0;
   out.travel = 0;
   switch (action) {
+    case A_ITEM_THROW:
+      out.start = ITEM_THROW_RELEASE;
+      out.end = ITEM_THROW_RELEASE;
+      out.total = ITEM_THROW_FRAMES;
+      return;
+    case A_ITEM_SWING:
     case A_ATTACK: {
-      const m = def.moves[move];
+      const m = action === A_ITEM_SWING ? swing : def.moves[move];
       if (m === undefined) return;
       out.total = m.totalFrames;
       if (m.hits.length > 0) {
@@ -644,8 +664,10 @@ export function computePose(input: PoseInput, out: Pose): void {
       plant(out);
       return;
     }
+    case A_ITEM_SWING:
     case A_ATTACK: {
-      attackKeys(input.move, keyA, keyB);
+      // Coup d'objet : la pose de l'attaque avant inclinée, objet au bout du bras.
+      attackKeys(input.action === A_ITEM_SWING ? M_FTILT : input.move, keyA, keyB);
       strike(input, keyA, keyB, out);
       if (input.charge > 0) {
         out.torso += Math.sin(input.charge * 1.4) * 0.03;
@@ -760,6 +782,8 @@ export function computePose(input: PoseInput, out: Pose): void {
       limbs(out, -0.12, -0.35, 0.05, 0.1, -0.05, 0.1, 0.12, -0.25, 0.05, -0.3);
       out.offsetY = 0.08;
       return;
+    // Lancer d'objet : mêmes poses que les projections, dans le même ordre de directions.
+    case A_ITEM_THROW:
     case A_THROW:
       throwKeys(input.move, keyA, keyB);
       strike(input, keyA, keyB, out);

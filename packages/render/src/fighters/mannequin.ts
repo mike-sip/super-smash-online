@@ -85,6 +85,8 @@ export const createMannequins: FighterVisualsFactory = (config) => {
   const players = config.fighters.length;
   const root = new Group();
   root.name = 'fighters';
+  // Coup de l'objet à frapper (module stages-items), pour rythmer sa pose.
+  const swing = config.entities?.find((def) => def.item?.swing !== undefined)?.item?.swing;
 
   const boxGeometry = new BoxGeometry(1, 1, 1);
   const headGeometry = new SphereGeometry(0.5, 16, 12);
@@ -240,7 +242,7 @@ export const createMannequins: FighterVisualsFactory = (config) => {
         }
         body.age = 0;
         body.prevAction = -1;
-        actionTiming(config.fighters[player]!, view.action, view.move, body.input);
+        actionTiming(config.fighters[player]!, view.action, view.move, body.input, swing);
       } else {
         body.prevAction = body.action;
       }

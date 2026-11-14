@@ -73,12 +73,12 @@
 
 ## Phase D — Décors et bilan
 
-- [ ] **T12 : Points d'extension de `render`**
+- [x] **T12 : Points d'extension de `render`**
   - Acceptation : interface `StageVisuals` (racine de scène, fond, lumières, `capture`, `update(frame, alpha)`, `dispose`) ; décor neutre par défaut identique à l'actuel ; plateformes mobiles interpolées d'après `readPlatform` ; objets dessinés par forme (instances), qui clignotent avant de disparaître, objet tenu devant le combattant ; jet de geyser et bouillonnement ; poses `A_ITEM_THROW` et `A_ITEM_SWING` ; hitbox du coup de Bâton dans la vue technique ; dépendance `@game/stages-items` ajoutée à `render`.
   - Vérification : tests unitaires (choix du décor, repli neutre, position d'une plateforme mobile affichée, non-ingérence sur chaque stage) ; mesure de base des appels de dessin avant et après.
   - Fichiers : `packages/render/src/stages/{decor,items}.ts`, `src/renderer.ts`, `src/fighters/poses.ts`, `src/debug.ts`, `packages/render/package.json`, `vitest.config.ts`, `test/stages.test.ts`
 
-- [ ] **T13 : Quatre décors procéduraux**
+- [x] **T13 : Quatre décors procéduraux**
   - Acceptation : un décor low-poly par stage, conforme au thème de la spec, généré par le code ; décor statique fusionné ; animations dérivées de la frame (nuages, eau, lanternes, vapeur), jamais de l'horloge ; blocs et plateformes habillés aux couleurs du thème.
   - Vérification : captures de chaque stage ; compteur d'appels de dessin dans la vue technique.
   - Fichiers : `packages/render/src/stages/{palette,belvedere,recif,canal,geysers}.ts`

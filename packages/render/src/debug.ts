@@ -9,11 +9,13 @@
 import {
   A_ATTACK,
   A_GRAB,
+  A_ITEM_SWING,
   A_THROW,
   fxToFloat,
   type CapsuleDef,
   type EntityDef,
   type FighterDef,
+  type MoveDef,
   type FighterView,
   type StageDef,
 } from '@game/sim-core';
@@ -118,14 +120,16 @@ export function fighterShapes(
   y: number,
   charging: boolean,
   out: Shapes,
+  swing?: MoveDef,
 ): void {
   const facing = view.facing;
   for (let h = 0; h < def.hurtboxes.length; h++) {
     pushCapsule(out, SHAPE_HURT, def.hurtboxes[h]!, x, y, facing);
   }
   const frame = testedFrame(view, charging);
-  if (view.action === A_ATTACK) {
-    const move = def.moves[view.move];
+  if (view.action === A_ATTACK || view.action === A_ITEM_SWING) {
+    // Coup d'objet : la hitbox est celle de l'objet tenu (module stages-items).
+    const move = view.action === A_ITEM_SWING ? swing : def.moves[view.move];
     if (move === undefined) return;
     for (let h = 0; h < move.hits.length; h++) {
       const hit = move.hits[h]!;
@@ -140,7 +144,9 @@ export function fighterShapes(
 }
 
 export function entityShape(def: EntityDef, x: number, y: number, out: Shapes): void {
-  push(out, SHAPE_ENTITY, x, y, x, y, fxToFloat(def.radius));
+  // Une entité qui a une hauteur (jet de geyser) frappe sur une capsule verticale.
+  const top = def.height === undefined ? y : y + fxToFloat(def.height);
+  push(out, SHAPE_ENTITY, x, y, x, top, fxToFloat(def.radius));
 }
 
 export interface Ledges {

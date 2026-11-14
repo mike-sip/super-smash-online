@@ -18,6 +18,7 @@ import {
   CircleGeometry,
   Color,
   DirectionalLight,
+  Fog,
   HemisphereLight,
   Mesh,
   MeshBasicMaterial,
@@ -69,7 +70,9 @@ import {
   sampleX,
   sampleY,
 } from './interpolation.ts';
-import { buildStage, groundBelow, stageSurfaces } from './stage.ts';
+import { groundBelow, stageSurfaces } from './stage.ts';
+import { createStageVisuals } from './stages/decor.ts';
+import { createItemVisuals, swingOf } from './stages/items.ts';
 
 export interface RendererOptions {
   readonly canvas: HTMLCanvasElement;
@@ -170,13 +173,17 @@ export function createRendererWith(
   const players = config.fighters.length;
 
   const scene = new Scene();
-  scene.background = new Color(0x1b2233);
-  scene.add(new HemisphereLight(0xffffff, 0x3b4252, 1.6));
-  const sun = new DirectionalLight(0xffffff, 1.8);
+  // Décor, fond et lumières : ceux du thème du stage (module stages-items), ou le décor neutre.
+  const stageVisuals = createStageVisuals(config.stage);
+  const theme = stageVisuals.theme;
+  scene.background = new Color(theme.background);
+  if (theme.fog !== undefined) scene.fog = new Fog(theme.fog.color, theme.fog.near, theme.fog.far);
+  scene.add(new HemisphereLight(theme.sky, theme.ground, theme.ambient));
+  const sun = new DirectionalLight(theme.sun, theme.sunIntensity);
   sun.position.set(40, 120, 90);
   scene.add(sun);
 
-  scene.add(buildStage(config.stage));
+  scene.add(stageVisuals.root);
   const surfaces = stageSurfaces(config.stage);
 
   // La caméra regarde le plan de jeu de face ; `camera.ts` décide où elle se place.
@@ -214,6 +221,10 @@ export function createRendererWith(
   scene.add(visuals.root);
   const entities = createEntityVisuals(config);
   scene.add(entities.mesh);
+  // Objets et dangers : chacun sous sa forme ; les autres entités restent des sphères.
+  const itemVisuals = createItemVisuals(config);
+  const swing = swingOf(config);
+  scene.add(itemVisuals.root);
 
   const views: FighterView[] = [];
   const heights = new Float64Array(players);
@@ -284,6 +295,8 @@ export function createRendererWith(
         resetTrack(entityTrack);
       }
       lastFrame = now;
+      stageVisuals.capture(sim, sequential);
+      itemVisuals.capture(sim);
 
       aliveCount = 0;
       for (let i = 0; i < players; i++) {
@@ -351,6 +364,7 @@ export function createRendererWith(
         framingShown.distance =
           framingPrev.distance + (framingCurr.distance - framingPrev.distance) * t;
         applyCamera(framingShown);
+        stageVisuals.update(lastFrame, t);
 
         for (let i = 0; i < players; i++) {
           const view = views[i]!;
@@ -368,7 +382,9 @@ export function createRendererWith(
           );
           if (debugEnabled) {
             const def = config.fighters[i]!;
-            if (alive) fighterShapes(def, view, x, y, charging[i] === 1, debugFrame.shapes);
+            if (alive) {
+              fighterShapes(def, view, x, y, charging[i] === 1, debugFrame.shapes, swing);
+            }
             debugFrame.lines[i] = describeFighter(def, i, view);
           }
           hud.tag(
@@ -393,16 +409,23 @@ export function createRendererWith(
         }
 
         const entityDefs = config.entities ?? [];
+        itemVisuals.begin();
         for (let slot = 0; slot < MAX_ENTITIES; slot++) {
           const kind = entityKind[slot]!;
           const x = sampleX(entityTrack, slot, t);
           const y = sampleY(entityTrack, slot, t);
-          entities.set(slot, kind, x, y);
+          if (itemVisuals.handles(kind)) {
+            entities.set(slot, 0, x, y);
+            itemVisuals.set(slot, x, y, lastFrame + t);
+          } else {
+            entities.set(slot, kind, x, y);
+          }
           if (debugEnabled && kind !== 0) {
             const def = entityDefs[kind - 1];
             if (def !== undefined) entityShape(def, x, y, debugFrame.shapes);
           }
         }
+        itemVisuals.end();
         effects.update(effectPool, lastFrame + t);
       }
       backend.render(scene, camera);
