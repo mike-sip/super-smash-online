@@ -304,3 +304,24 @@ export function commonScenarios(c: Character): void {
     expect(recover(c, 50, 30)).not.toBe('fell');
   });
 }
+
+/**
+ * Plus forte vitesse d'éjection infligée à la cible, à `percent` % de dégâts, par l'emplacement
+ * `slot` lancé sans charge. Mesurée dans la simulation : formule d'éjection, poids de la cible et
+ * coups multiples compris.
+ */
+export function strongestLaunch(c: Character, slot: number, percent: number): number {
+  const trigger = TRIGGERS.get(slot)!;
+  const move = c.def.moves[slot]!;
+  const sim = duel(c);
+  const s = sim.state;
+  placeGround(sim, 0, GROUND_X, 1);
+  s.damage[1] = fx(percent);
+  let best = 0;
+  for (let f = 0; f < trigger.inputs.length + move.totalFrames; f++) {
+    pinTarget(sim, move, trigger.air);
+    frameInputs(sim, trigger.inputs[f] ?? NEUTRAL);
+    if (s.launchPending[1] === 1 && s.launchSpeed[1]! > best) best = s.launchSpeed[1]!;
+  }
+  return fxToFloat(best);
+}

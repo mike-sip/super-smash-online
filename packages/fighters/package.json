@@ -15,7 +15,8 @@
     "typecheck": "pnpm --filter @game/sim-core build && tsc --noEmit",
     "build": "pnpm --filter @game/sim-core build && tsc -p tsconfig.build.json",
     "validate": "pnpm --filter @game/sim-core build && node scripts/validate.ts",
-    "framedata": "pnpm --filter @game/sim-core build && node scripts/framedata.ts"
+    "framedata": "pnpm --filter @game/sim-core build && node scripts/framedata.ts",
+    "bench": "pnpm --filter @game/sim-core build && node bench/step.bench.ts"
   },
   "dependencies": {
     "@game/sim-core": "workspace:*"
