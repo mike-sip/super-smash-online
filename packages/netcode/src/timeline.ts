@@ -136,3 +136,8 @@ export function confirmInputs(
   t.known[player] = known;
   return mismatch;
 }
+
+/** Input lu localement pour le joueur local `p` à la frame `f` (dans les limites de l'anneau). */
+export function localInputAt(t: Timeline, p: number, f: number): number {
+  return t.localInput[p * HISTORY_FRAMES + (f & MASK)]!;
+}

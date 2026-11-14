@@ -35,27 +35,27 @@
 
 ## Phase B — En ligne, simulé
 
-- [ ] **T6 : Horloge**
+- [x] **T6 : Horloge**
   - Acceptation : estimation de l'écart avec l'horloge du serveur à partir des échanges ping/pong (l'échange à l'aller-retour le plus court parmi les 16 derniers) ; horloge de jeu qui suit l'estimation d'au plus 1 ms par frame, ou d'un coup au-delà de 250 ms d'écart ; frame cible et fraction de frame à un instant donné.
   - Vérification : tests unitaires avec gigue, latences asymétriques, horloge locale qui dérive de ±0,1 %, saut d'horloge.
   - Fichiers : `packages/netcode/src/clock.ts`, `packages/netcode/test/clock.test.ts`
 
-- [ ] **T7 : Relais (logique pure)**
+- [x] **T7 : Relais (logique pure)**
   - Acceptation : parties par identifiant ; attribution des emplacements dans l'ordre d'arrivée ; `WAITING`, puis `START` 2 s après le dernier arrivé ; refus motivés (version, partie pleine ou commencée, nombre de joueurs incohérent) ; acceptation des inputs qui prolongent la suite d'un emplacement du client, relais immédiat à tous avec redondance jusqu'à accusé (32 frames par joueur au plus) ; input en retard de `G` frames remplacé par le précédent ; déconnexion : `LEFT` et inputs neutres ; empreintes comparées par frame, `DESYNC` au premier écart ; message invalide : connexion fermée ; partie supprimée quand tous sont partis ou après 10 minutes d'attente ; journal optionnel des inputs confirmés (pour les tests).
   - Vérification : tests unitaires de chacun de ces cas, avec des connexions factices et une horloge virtuelle.
   - Fichiers : `packages/netcode/src/server/relay.ts`, `packages/netcode/src/server/index.ts`, `packages/netcode/test/relay.test.ts`
 
-- [ ] **T8 : Session client**
+- [x] **T8 : Session client**
   - Acceptation : interface `Transport` ; `createNetClient` : `HELLO`, pings, états de la spec, `begin`, `update` (réception, rollback, avance cadencée par l'horloge, rattrapage borné à 240 frames, envoi d'un `INPUT` par frame avec redondance et accusés, empreintes), `onFrame` pour les seules frames nouvelles, fraction de frame renvoyée ; mesures ; événements de désync, de départ et d'état ; messages invalides ignorés.
   - Vérification : tests unitaires contre un relais en mémoire sans latence (déroulé complet d'une partie à 2) ; réponses à des messages invalides.
   - Fichiers : `packages/netcode/src/transport.ts`, `packages/netcode/src/client.ts`, `packages/netcode/src/index.ts`, `packages/netcode/test/client.test.ts`
 
-- [ ] **T9 : Réseau simulé et bout en bout simulé**
+- [x] **T9 : Réseau simulé et bout en bout simulé**
   - Acceptation : réseau en mémoire à horloge virtuelle : latence par liaison, gigue, pertes, désordre (mode « datagrammes ») ou ordre garanti (mode « WebSocket »), graine ; clients dont l'horloge dérive et dont les images n'arrivent pas à intervalles exacts. Scénarios : 2 puis 8 clients sur 36 000 frames dans les conditions du critère n° 1 ; joueur à 400 ms d'aller-retour ; joueur déconnecté en cours de partie ; onglet masqué 10 s.
   - Vérification : empreintes identiques entre clients et égales à une rejoue hors ligne du journal du serveur ; aucune désync ; attentes et profondeur de rollback sous les seuils des critères 2 et 3 ; un test témoin vérifie qu'une désync volontaire (un client au jeu modifié) est bien détectée.
   - Fichiers : `packages/netcode/src/testing/network.ts`, `packages/netcode/test/session.test.ts`, `packages/netcode/test/session-faults.test.ts`, `packages/netcode/test/helpers.ts`
 
-**Point de contrôle B** : résultats chiffrés du bout en bout simulé consignés dans le commit ; relecture au point C.
+**Point de contrôle B** : résultats chiffrés du bout en bout simulé consignés dans le commit et dans les « Écarts » de la spec ; relecture au point C. Mesuré le 2026-11-14 : aucune désync en 10 minutes à 2 et 8 clients (datagrammes 5 % de pertes, WebSocket 0,5 %), empreintes égales à la rejoue du relais ; attentes au plus 0,08 % en datagrammes, 1,5 % sur WebSocket ; profondeur moyenne 2,1 (2 clients) à 4,4 (8 clients) frames ; 18 Ko/s par client et par sens à 8 joueurs.
 
 ## Phase C — En ligne, réel
 

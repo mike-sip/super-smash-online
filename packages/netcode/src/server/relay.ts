@@ -90,8 +90,10 @@ export const SERVER_HISTORY = 4096;
 const SERVER_MASK = SERVER_HISTORY - 1;
 /** Un client peut envoyer des inputs jusqu'à `D + MAX_AHEAD` frames en avance sur le serveur. */
 const MAX_AHEAD = 60;
-/** Sans nouvelle donnée, les inputs non accusés sont renvoyés à cet intervalle. */
+/** Si les accusés d'un client n'avancent plus depuis ce délai, tout le non-accusé est renvoyé. */
 const RESEND_MS = 100;
+/** Chaque envoi reprend aussi les dernières frames déjà envoyées : une perte isolée est comblée. */
+const REDUNDANT_FRAMES = 3;
 /** Messages `INPUTS` au plus par envoi à un client (rattrapage d'un client en retard). */
 const MAX_CHUNKS = 4;
 /** Empreintes en attente gardées au plus, par partie. */
@@ -105,7 +107,8 @@ interface Client {
   readonly acks: Int32Array;
   /** Plus haute frame déjà envoyée au client, plus un, par joueur. */
   readonly sent: Int32Array;
-  lastSend: number;
+  /** Par joueur : dernière fois que l'accusé du client a avancé, ou qu'il était à jour. */
+  readonly ackedAt: Float64Array;
   open: boolean;
 }
 
@@ -131,6 +134,8 @@ interface Game {
   /** Instant de départ (horloge du serveur), `NaN` tant que des joueurs manquent. */
   startAt: number;
   desynced: boolean;
+  /** Des inputs ont été confirmés depuis le dernier envoi. */
+  dirty: boolean;
   readonly pending: PendingChecksum[];
 }
 
@@ -258,6 +263,7 @@ export function createRelay(options: RelayOptions): Relay {
       createdAt: now(),
       startAt: Number.NaN,
       desynced: false,
+      dirty: false,
       pending: [],
     };
   }
@@ -285,7 +291,7 @@ export function createRelay(options: RelayOptions): Relay {
     send(client, outgoing);
     client.acks.fill(inputDelay);
     client.sent.fill(inputDelay);
-    client.lastSend = now();
+    client.ackedAt.fill(now());
   }
 
   // ── Inputs ────────────────────────────────────────────────────────────────────────────────
@@ -315,7 +321,10 @@ export function createRelay(options: RelayOptions): Relay {
     for (let p = 0; p < game.players; p++) {
       const ack = m.acks[p]!;
       // Un accusé ne recule pas et ne dépasse pas ce qui a été confirmé.
-      if (ack > client.acks[p]! && ack <= game.known[p]!) client.acks[p] = ack;
+      if (ack > client.acks[p]! && ack <= game.known[p]!) {
+        client.acks[p] = ack;
+        client.ackedAt[p] = now();
+      }
     }
     const index = game.clients.indexOf(client);
     if (!scheduled(game)) return;
@@ -335,38 +344,50 @@ export function createRelay(options: RelayOptions): Relay {
         changed = true;
       }
     }
-    if (changed) flushAll(game);
+    // Le relais envoie à son pas suivant (au plus 4 ms) : les inputs de plusieurs joueurs
+    // partent ensemble, au lieu d'un message par input reçu et par destinataire.
+    if (changed) game.dirty = true;
   }
 
   /** Envoie à chaque client ce qu'il n'a pas encore. */
   function flushAll(game: Game): void {
-    for (const c of game.clients) flush(game, c, false);
+    game.dirty = false;
+    for (const c of game.clients) flush(game, c);
   }
 
   /**
-   * Envoie au client les inputs confirmés qu'il n'a pas accusés, s'il y a du nouveau ou si le
-   * dernier envoi date de plus de `RESEND_MS` (renvoi pour un transport à pertes).
+   * Envoie au client les inputs confirmés qu'il n'a pas encore reçus, avec les
+   * `REDUNDANT_FRAMES` dernières frames déjà envoyées. Si ses accusés stagnent depuis
+   * `RESEND_MS` (pertes sur un transport non fiable, ou client qui ne lit plus), tout le
+   * non-accusé est renvoyé.
    */
-  function flush(game: Game, client: Client, timer: boolean): void {
+  function flush(game: Game, client: Client): void {
     if (!client.open || !running(game)) return;
-    let fresh = false;
-    let unacked = false;
+    const t = now();
     for (let p = 0; p < game.players; p++) {
-      if (game.known[p]! > client.sent[p]!) fresh = true;
-      if (game.known[p]! > client.acks[p]!) unacked = true;
+      if (game.known[p]! === client.acks[p]!) {
+        client.ackedAt[p] = t;
+      } else if (t - client.ackedAt[p]! >= RESEND_MS) {
+        // Accusé bloqué (message perdu) : on reprend ce joueur depuis l'accusé.
+        client.sent[p] = client.acks[p]!;
+        client.ackedAt[p] = t;
+      }
       if (game.known[p]! - client.acks[p]! > SERVER_HISTORY - MAX_FRAMES_PER_MESSAGE) {
         fail(client, ERR_TIMEOUT, 'Trop de retard : la partie ne peut plus être rattrapée.');
         return;
       }
     }
-    if (!fresh && !(unacked && timer && now() - client.lastSend >= RESEND_MS)) return;
+    let fresh = false;
+    for (let p = 0; p < game.players; p++) if (game.known[p]! > client.sent[p]!) fresh = true;
+    if (!fresh) return;
     for (let chunk = 0; chunk < MAX_CHUNKS; chunk++) {
       outgoing.type = MSG_INPUTS;
       outgoing.blockCount = 0;
       for (let p = 0; p < game.players; p++) {
-        const start = client.acks[p]! + chunk * MAX_FRAMES_PER_MESSAGE;
+        const sent = client.sent[p]!;
+        const start = chunk === 0 ? Math.max(client.acks[p]!, sent - REDUNDANT_FRAMES) : sent;
         const end = Math.min(game.known[p]!, start + MAX_FRAMES_PER_MESSAGE);
-        if (end <= start) continue;
+        if (end <= start || (chunk > 0 && end <= sent)) continue;
         const b = outgoing.blockCount++;
         outgoing.blockPlayer[b] = p;
         outgoing.blockStart[b] = start;
@@ -376,12 +397,11 @@ export function createRelay(options: RelayOptions): Relay {
           outgoing.blockInputs[b * MAX_FRAMES_PER_MESSAGE + f - start] =
             game.confirmed[row + (f & SERVER_MASK)]!;
         }
-        if (end > client.sent[p]!) client.sent[p] = end;
+        if (end > sent) client.sent[p] = end;
       }
       if (outgoing.blockCount === 0) break;
       send(client, outgoing);
     }
-    client.lastSend = now();
   }
 
   /** Inputs en retard remplacés par le précédent ; joueurs partis : inputs neutres d'avance. */
@@ -518,7 +538,7 @@ export function createRelay(options: RelayOptions): Relay {
         slots: [],
         acks: new Int32Array(8),
         sent: new Int32Array(8),
-        lastSend: 0,
+        ackedAt: new Float64Array(8),
         open: true,
       };
       return {
@@ -560,7 +580,7 @@ export function createRelay(options: RelayOptions): Relay {
         if (scheduled(game)) {
           if (t < game.startAt) continue;
           arbitrate(game);
-          for (const c of game.clients) flush(game, c, true);
+          flushAll(game);
         } else if (t - game.createdAt > waitingTimeoutMs) {
           for (const c of [...game.clients]) fail(c, ERR_TIMEOUT, 'Personne d’autre n’est venu.');
           games.delete(game.id);

@@ -34,7 +34,10 @@ class FakeClient {
   readonly peer: RelayPeer;
   private readonly buf = new Uint8Array(MAX_MESSAGE_BYTES);
 
+  private readonly relay: Relay;
+
   constructor(relay: Relay) {
+    this.relay = relay;
     this.peer = relay.connect({
       send: (data) => {
         const m = createMessage();
@@ -52,6 +55,8 @@ class FakeClient {
     const m = createMessage();
     fill(m);
     this.peer.receive(this.buf.slice(0, encode(m, this.buf)));
+    // Le relais envoie à son pas suivant : on le fait passer aussitôt.
+    this.relay.tick();
   }
 
   hello(gameId: string, players: number, localPlayers = 1, version = PROTOCOL_VERSION): void {
@@ -233,7 +238,7 @@ describe('relais : arrivée dans une partie', () => {
 });
 
 describe('relais : inputs', () => {
-  it('relaie aussitôt les inputs confirmés à tous, auteur compris', () => {
+  it('relaie les inputs confirmés à tous, auteur compris, au pas suivant', () => {
     const { a, b } = started();
     a.input(2, 0, 2, [7, 8, 9]);
     for (const c of [a, b]) {
