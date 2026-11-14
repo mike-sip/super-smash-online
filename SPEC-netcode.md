@@ -1,6 +1,6 @@
 # Spec : `netcode` — jeu en ligne par rollback et serveur relais
 
-> Statut : **APPROUVÉE le 2026-11-13**. Plan : [tasks/netcode/plan.md](tasks/netcode/plan.md), tâches : [tasks/netcode/todo.md](tasks/netcode/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `sim-core` (implémenté), `input` (implémenté). Jalon visé : jalon 2 de la carte, « 2 puis 8 joueurs en ligne, sans désync ».
+> Statut : **APPROUVÉE le 2026-11-13, implémentée** (bilan en fin de document ; un critère partiel à reformuler, l'essai manuel reste à faire). Plan : [tasks/netcode/plan.md](tasks/netcode/plan.md), tâches : [tasks/netcode/todo.md](tasks/netcode/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `sim-core` (implémenté), `input` (implémenté). Jalon visé : jalon 2 de la carte, « 2 puis 8 joueurs en ligne, sans désync ».
 
 ## Hypothèses
 
@@ -355,3 +355,30 @@ Mis à jour à chaque tâche.
 | Modèle « datagrammes » | Seuls les messages de partie (`INPUT`, `INPUTS`, `PING`, `PONG`) y sont perdables ; les messages de contrôle passent par un flux fiable, comme le ferait un client WebTransport. Le premier essai les perdait aussi : deux clients n'avaient jamais reçu `START` (les six autres ont joué sans les attendre). | — |
 | Joueur à très forte latence | Au-delà d'environ 280 ms d'aller-retour, l'écho de ses propres inputs sort de la fenêtre de prédiction : il attend en permanence, prend du retard sur l'horloge, et tous ses inputs arrivent trop tard et sont remplacés. Il ne peut donc pas jouer, mais les autres ne l'attendent jamais (mesuré à 400 ms : 0 attente chez les autres). | Refuser ces joueurs dans `lobby`, ou fenêtre plus grande pour eux : à décider. |
 | Effets du rendu après rollback (critère n° 7) | Contrat vérifié par `packages/render/test/rollback.test.ts` : capturer les seules frames nouvelles garde caméra et interpolation continues ; capturer une frame re-simulée les remet à zéro ; un coup qui n'apparaît qu'après correction, dans une frame déjà affichée, n'a pas d'effet. Chiffré dans le bout en bout simulé, contre la rejoue hors ligne : 2 clients, 1,4 % d'effets manqués et 0 % joués à tort ; 8 clients, 9,6 % manqués et 7,5 % joués à tort. Les joueurs simulés changent d'input toutes les 4 frames en moyenne, bien plus souvent qu'un humain : ces proportions sont un majorant. | Transmis à `render` (et à sa phase audio) : déclencher les effets sur la frame confirmée, ou annuler ceux d'une frame corrigée, serait à décider dans ce module. |
+| API publique | Conforme à la spec, avec quelques ajouts : `MatchInfo` porte aussi `checksumInterval` et `startAt` ; `NetClient` expose `joined` et `error` ; `NetStats` porte `targetFrame` ; `NetClientOptions.ticket` (voir plus haut) ; `stepWithRespawn` et `RESPAWN_FRAMES` exportés pour la démo. | — |
+| Démo en ligne en production | `vite build` produit une page statique sans relais : il faut alors lancer `pnpm --filter @game/netcode serve` et ouvrir la page avec `&server=ws://hôte:8787/net`. En développement, le relais est attaché au serveur Vite. | Déploiement : module `app-shell`. |
+| Onglet en arrière-plan | Le navigateur suspend `requestAnimationFrame` : un onglet masqué n'avance plus et le serveur confirme pour lui la répétition de son dernier input. Constaté aussi dans le panneau de navigateur de l'environnement de développement quand il est masqué. Au retour, le client rattrape (240 frames par image au plus). | — |
+
+## Bilan des critères de succès (2026-11-14)
+
+| N° | Critère | État | Mesure |
+|---|---|---|---|
+| 1 | Sans désync | Atteint | Réseau simulé, 36 000 frames, 40 à 120 ms d'aller-retour, 15 ms de gigue, horloges à ±0,1 % : 2 et 8 clients en datagrammes avec 5 % de pertes, 8 clients en WebSocket avec 0,5 % de retransmissions. Toutes les empreintes (2 404 par client) égales à la rejoue hors ligne du journal du relais ; aucune désync signalée (`test/session.test.ts`). Le test témoin montre qu'une désync volontaire est détectée à la première frame de contrôle (`test/session-faults.test.ts`). |
+| 2 | Réactif | **Partiel** | Attentes : au plus 0,08 % des images en datagrammes ; en WebSocket, jusqu'à 1,5 % pour les clients au-delà de 100 ms d'aller-retour (blocage en tête de file après une perte), au-dessus du 1 % visé. Profondeur moyenne de l'ensemble des rollbacks : 2,08 frames à 2 clients, mais 4,14 (datagrammes) et 4,40 (WebSocket) à 8 clients, au-dessus des 4 visés. Le seuil était mal calibré : pour ces latences, l'arrivée d'un input distant impose environ 4,2 frames en moyenne (voir « Écarts »). Le test borne chaque client par la profondeur attendue d'après sa latence, plus une frame. **Critère à reformuler avec vous.** |
+| 3 | Robuste | Atteint | Joueur à 400 ms : 0 attente chez les trois autres ; déconnexion en pleine partie : les autres jouent jusqu'au bout, empreintes identiques ; onglet masqué 10 s : 0 attente chez les autres, le client masqué rattrape et reste synchronisé. **Limite** : le joueur à 400 ms, lui, ne peut pas jouer (tous ses inputs arrivent trop tard), voir « Écarts ». |
+| 4 | Budget | Atteint | Pire cas répété à chaque frame (rollback de 15 frames et une frame nouvelle, 8 joueurs, 16 entités) : 0,055 ms en moyenne, 0,10 ms au 99ᵉ centile (seuils 1 et 2 ms) ; tas +9 Ko sur 10 000 frames (seuil 32 Ko). `pnpm --filter @game/netcode bench`. |
+| 5 | Réel | Atteint | 2 et 8 clients Node.js sur de vrais WebSocket en local, latence artificielle de 5 à 45 ms : empreintes identiques à la rejoue du relais, aucune attente (`test:e2e`). Deux contextes d'Edge dans la démo : chacun voit l'autre courir et sauter, 12 empreintes sur 12 égales, aucune erreur de console (`apps/online/test/two-tabs.test.ts`). Capture d'écran vérifiée à la main : le combattant distant se déplace bien à l'écran. |
+| 6 | Sûr | Atteint | 10 000 messages aléatoires ou tronqués décodés sans exception ; le relais ferme la connexion d'un message invalide ou inattendu, ignore les inputs d'un emplacement étranger et ceux trop en avance sur son horloge ; sur vrai WebSocket, un client qui envoie n'importe quoi, du texte ou un message trop gros est déconnecté sans gêner la partie. |
+| 7 | Rendu | Atteint | Contrat vérifié par `packages/render/test/rollback.test.ts`. Effets comparés à la rejoue hors ligne : 1,4 % manqués et 0 % joués à tort à 2 clients ; 9,6 % manqués et 7,5 % joués à tort à 8 clients, avec des joueurs simulés bien plus nerveux qu'un humain (majorant). Transmis à `render` par une note dans le dossier partagé. |
+| 8 | Jouable | **Non vérifié** | En attente de votre essai à deux onglets ou deux machines du réseau local, et de votre avis sur le ressenti. |
+
+Commandes ajoutées pendant l'implémentation :
+
+```
+Bout en bout réel :        pnpm --filter @game/netcode test:e2e
+Serveur relais seul :      pnpm --filter @game/netcode serve -- --port 8787
+Démo en ligne :            pnpm --filter @game/online dev     (relais sur /net, ouverte au réseau local)
+Test de la démo en ligne : pnpm --filter @game/online test
+```
+
+Fichiers ajoutés en plus de la structure prévue : `test/match.ts` (partie simulée complète), `test/client.test.ts`, `test/session-faults.test.ts`, `vitest.e2e.config.ts`.

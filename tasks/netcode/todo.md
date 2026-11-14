@@ -83,9 +83,9 @@
 
 ## Phase D — Bilan
 
-- [ ] **T14 : Relecture finale**
+- [x] **T14 : Relecture finale**
   - Acceptation : chacun des huit critères de succès marqué vérifié automatiquement, vérifié à la main ou non vérifié, avec sa mesure ; écarts constatés consignés dans la spec ; note de passation à `render` sur les effets après rollback (dossier de notes partagé) ; commandes ajoutées documentées.
   - Vérification : tests, typecheck, lint et bancs de tout le dépôt passants ; compte rendu.
   - Fichiers : `SPEC-netcode.md`
 
-**Point de contrôle D** : relecture humaine, module terminé.
+**Point de contrôle D** : relecture humaine, module terminé. Bilan écrit le 2026-11-14 en fin de spec : critères 1, 3 à 7 atteints, critère 2 partiel (à reformuler), critère 8 en attente de votre essai.
