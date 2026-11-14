@@ -73,14 +73,13 @@ export interface Sim {
 function placeAtSpawn(sim: Sim, i: number): void {
   const s = sim.state;
   // L'input est conservé : sinon un bouton tenu pendant la réapparition compterait comme un appui.
-  // L'autorisation de l'ultime appartient aux règles de match : une réapparition ne la retire pas.
+  // L'autorisation de l'ultime est remise à 0 comme le reste (même choix que l'extension E6 de
+  // `fighters`) : les règles de match la relèvent si la jauge est encore pleine.
   const input = s.input[i]!;
   const prevInput = s.prevInput[i]!;
-  const ultimateReady = s.ultimateReady[i]!;
   for (let f = 0; f < FIGHTER_FIELDS.length; f++) s[FIGHTER_FIELDS[f]!][i] = 0;
   s.input[i] = input;
   s.prevInput[i] = prevInput;
-  s.ultimateReady[i] = ultimateReady;
 
   const spawn = sim.config.stage.spawns[i]!;
   const surface = findSurface(sim.geo, spawn.x, spawn.y);

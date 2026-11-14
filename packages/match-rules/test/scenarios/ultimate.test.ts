@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BTN_SPECIAL, M_ULTIMATE, encodeInput, setDamage, type Sim } from '@game/sim-core';
+import { A_DEAD, BTN_SPECIAL, M_ULTIMATE, encodeInput, setDamage, type Sim } from '@game/sim-core';
 import { RESPAWN_DELAY, matchResult } from '../../src/index.ts';
 import {
   SHOT_DAMAGE,
@@ -53,6 +53,17 @@ describe('jauge d’attaque ultime', () => {
     run(sim, 80);
     eliminate(sim, 0);
     expect(matchResult(sim)!.players[1]!.ultimatesUsed).toBe(1);
+  });
+
+  it('pleine, elle relève l’autorisation après une réapparition', () => {
+    const sim = newMatch(config('stock', 2));
+    shots(sim, 20);
+    expect(fighter(sim, 1).ultimateReady).toBe(true);
+    ko(sim, 1);
+    run(sim, RESPAWN_DELAY);
+    expect(fighter(sim, 1).action).not.toBe(A_DEAD);
+    expect(fighter(sim, 1).ultimateReady).toBe(true);
+    expect(view(sim).meter[1]).toBe(1);
   });
 
   it('est conservée après une chute', () => {

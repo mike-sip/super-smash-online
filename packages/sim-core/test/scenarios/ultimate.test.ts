@@ -11,6 +11,7 @@ import {
   createFighterView,
   createSim,
   readFighter,
+  respawn,
   setUltimateReady,
   type FighterDef,
 } from '../../src/index.ts';
@@ -81,6 +82,13 @@ describe('attaque ultime', () => {
     expect(sim.state.move[0]).toBe(M_NSPECIAL);
     expect(sim.state.ultimateReady[0]).toBe(1);
     expect(countEvents(sim, EV_ULTIMATE)).toBe(0);
+  });
+
+  it('respawn remet l’autorisation à 0, comme l’extension E6 de fighters', () => {
+    const sim = newSim();
+    setUltimateReady(sim, 0, true);
+    respawn(sim, 0);
+    expect(sim.state.ultimateReady[0]).toBe(0);
   });
 
   it('setUltimateReady(false) retire l’autorisation', () => {

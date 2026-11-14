@@ -248,7 +248,7 @@ export function knockOut(sim: Sim, player: number): void;   // KO sur place, ém
 export function setDamage(sim: Sim, player: number, damage: Fx): void;
 export function setUltimateReady(sim: Sim, player: number, ready: boolean): void;
 export const M_ULTIMATE = 20; // MOVE_SLOTS passe à 21
-export const EV_ULTIMATE = 8; // a = joueur
+export const EV_ULTIMATE = 9; // a = joueur (8 est pris par EV_COUNTER de fighters)
 // FighterView : invincible, ultimateReady
 ```
 
@@ -257,6 +257,7 @@ export const EV_ULTIMATE = 8; // a = joueur
 | Disposition mémoire | Deux champs par joueur en fin de liste (`invincible`, `ultimateReady`), puis la zone `rules` de 256 mots en fin de tampon. `STATE_BYTES` : 2 764 → 3 852 octets |
 | Tir allié désactivé | Coups, entités (d'après leur propriétaire) et saisies ignorent les coéquipiers ; une entité sans propriétaire touche tout le monde |
 | `invincible` | Vérifié avec `intangible` pour les coups, entités et saisies ; décompté chaque frame, hitlag compris ; aucune esquive ni remontée ne l'écrase |
-| `ultimateReady` | Un spécial neutre lance `M_ULTIMATE` si le combattant en a une, remet le drapeau à 0 et émet `EV_ULTIMATE` ; conservé à la réapparition |
+| `ultimateReady` | Un spécial neutre lance `M_ULTIMATE` si le combattant en a une, remet le drapeau à 0 et émet `EV_ULTIMATE` ; remis à 0 par `respawn` |
 | Combattant de test | Reçoit une ultime provisoire (`moves[M_ULTIMATE]`) |
+| Convergence avec `fighters` | L'extension E6 de `fighters` définit la même ultime (même emplacement, même champ, même fonction, même événement n° 9, même remise à 0 par `respawn`), avec `MOVE_SLOTS = 23` pour ses emplacements supplémentaires. À la fusion, une seule implémentation est gardée ; `golden.json` est régénéré |
 | Tests | Scénarios `rules`, `teams`, `match-support`, `ultimate` ; les tests de disposition mémoire (`state.test.ts`) et de vue (`view.test.ts`) ont été étendus aux nouveaux champs, sans rien retirer |

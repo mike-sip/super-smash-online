@@ -127,7 +127,7 @@ export interface MatchConfig {
   /** Jauge d'attaque ultime active. */
   readonly ultimate: boolean;
   /** Transmis à `stages-items`, non interprété ici. */
-  readonly items: { readonly enabled: boolean; readonly frequency: 'low' | 'medium' | 'high' };
+  readonly items: { readonly enabled: boolean; readonly frequency: 'low' | 'normal' | 'high' };
   /** De 2 à 8 joueurs. `team` de 0 à 3, ignoré sans équipes. */
   readonly players: readonly { readonly team: number }[];
 }

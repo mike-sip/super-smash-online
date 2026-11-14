@@ -6,7 +6,8 @@
  */
 
 export type MatchMode = 'stock' | 'time' | 'stamina';
-export type ItemFrequency = 'low' | 'medium' | 'high';
+/** Mêmes noms que `applyItems` de `stages-items` ('off' y correspond à `enabled: false`). */
+export type ItemFrequency = 'low' | 'normal' | 'high';
 
 export interface MatchPlayerConfig {
   /** Équipe de 0 à 3. Ignorée sans équipes. */
@@ -43,7 +44,7 @@ export const MIN_TIME_LIMIT = 30;
 export const MAX_TIME_LIMIT = 3600;
 
 const MODES: readonly MatchMode[] = ['stock', 'time', 'stamina'];
-const FREQUENCIES: readonly ItemFrequency[] = ['low', 'medium', 'high'];
+const FREQUENCIES: readonly ItemFrequency[] = ['low', 'normal', 'high'];
 const KEYS = [
   'version',
   'mode',
@@ -68,7 +69,7 @@ export function defaultMatchConfig(mode: MatchMode, players: number): MatchConfi
     teams: false,
     teamAttack: false,
     ultimate: true,
-    items: { enabled: true, frequency: 'medium' },
+    items: { enabled: true, frequency: 'normal' },
     players: Array.from({ length: players }, (_, i) => ({ team: i % 2 })),
   };
 }
@@ -133,7 +134,7 @@ export function validateMatchConfig(value: unknown): ValidationResult {
     unknownKeys('items.', items, ['enabled', 'frequency'], errors);
     if (typeof items.enabled !== 'boolean') errors.push('items.enabled : booléen attendu.');
     if (!FREQUENCIES.includes(items.frequency as ItemFrequency)) {
-      errors.push('items.frequency : « low », « medium » ou « high » attendu.');
+      errors.push('items.frequency : « low », « normal » ou « high » attendu.');
     }
   }
 
