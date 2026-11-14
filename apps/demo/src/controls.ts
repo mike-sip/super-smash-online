@@ -4,6 +4,7 @@ export interface ControlHandlers {
   onReset(): void;
   onTuning(): void;
   onRemap(): void;
+  onAccount(): void;
   onDebug(enabled: boolean): void;
 }
 
@@ -103,6 +104,7 @@ export function createControls(
   );
   button('KeyT', 'T', 'Réglages', () => handlers.onTuning());
   button('KeyM', 'M', 'Commandes', () => handlers.onRemap());
+  button('KeyU', 'U', 'Compte', () => handlers.onAccount());
   const keys: ReadonlySet<string> = new Set(actions.keys());
   refresh();
 

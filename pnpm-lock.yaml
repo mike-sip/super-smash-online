@@ -181,6 +181,9 @@ importers:
 
   apps/demo:
     dependencies:
+      '@game/accounts-client':
+        specifier: workspace:*
+        version: link:../../packages/accounts-client
       '@game/input':
         specifier: workspace:*
         version: link:../../packages/input
@@ -191,6 +194,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/sim-core
     devDependencies:
+      '@game/accounts':
+        specifier: workspace:*
+        version: link:../../packages/accounts
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6

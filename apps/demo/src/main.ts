@@ -1,4 +1,5 @@
 /** Démo jouable : boucle à pas fixe, assemblage de la simulation et du rendu. */
+import { createAccountsClient } from '@game/accounts-client';
 import { KEYBOARD_ID, MAX_LOCAL_PLAYERS, createInput, type Device } from '@game/input';
 import { createRenderer, type Renderer } from '@game/render';
 import {
@@ -14,6 +15,7 @@ import {
   type SimConfig,
 } from '@game/sim-core';
 import { testConfig } from '@game/sim-core/testing';
+import { createAccountPanel } from './account.ts';
 import { createControls } from './controls.ts';
 import { createDummies, type Dummies, type DummyMode } from './dummies.ts';
 import { createEntityFeeder, createPerfProbe, type EntityFeeder } from './perf.ts';
@@ -134,8 +136,13 @@ const controls = createControls(window, element('toolbar'), {
   onReset: () => start(),
   onTuning: () => tuning.toggle(),
   onRemap: () => remap.screen?.toggle(),
+  onAccount: () => account.toggle(),
   onDebug: (enabled) => renderer.setDebug(enabled),
 });
+
+// Panneau Compte : le serveur des comptes, relayé par Vite sous /api/accounts, n'est contacté
+// qu'à l'ouverture du panneau.
+const account = createAccountPanel({ panel: element('account'), client: createAccountsClient() });
 
 remap.screen = createRemap({
   panel: element('remap'),

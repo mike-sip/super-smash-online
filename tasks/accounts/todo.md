@@ -63,7 +63,7 @@
   - Vérification : tests du client contre un vrai serveur (chaque méthode) et contre un serveur éteint.
   - Fichiers : `packages/accounts-client/package.json`, `packages/accounts-client/tsconfig.json`, `packages/accounts-client/tsconfig.build.json`, `packages/accounts-client/vitest.config.ts`, `packages/accounts-client/src/index.ts`, `packages/accounts-client/test/client.test.ts`
 
-- [ ] **T10 : Panneau Compte de la démo**
+- [x] **T10 : Panneau Compte de la démo**
   - Acceptation : bouton « Compte » dans la barre d'outils (raccourci libre, non pris par le jeu) ; panneau : état (non connecté, invité, compte), jouer en invité, connexion, inscription, conversion d'un invité, personnage favori, déconnexion, suppression avec confirmation ; erreurs affichées en français ; avertissement « pas de récupération de mot de passe » à l'inscription ; serveur des comptes contacté seulement à l'ouverture du panneau ; sans serveur, message clair et jeu intact ; relais `/api/accounts` vers le serveur des comptes dans la configuration de Vite.
   - Vérification : tests de fumée existants inchangés et passants ; nouveaux tests dans Edge avec un vrai serveur des comptes lancé par le test (invité, conversion, déconnexion, connexion) et sans serveur (message, jeu qui tourne).
   - Fichiers : `apps/demo/package.json`, `apps/demo/vite.config.ts`, `apps/demo/index.html`, `apps/demo/src/account.ts`, `apps/demo/src/controls.ts`, `apps/demo/src/main.ts`, `apps/demo/test/account.test.ts`
