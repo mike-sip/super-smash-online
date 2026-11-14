@@ -85,7 +85,7 @@ describe('démo', () => {
   }, 60_000);
 
   it('se charge sur chaque stage, et change de stage depuis la barre d’outils', async () => {
-    for (const stage of ['belvedere', 'recif', 'test']) {
+    for (const stage of ['belvedere', 'recif', 'canal', 'geysers', 'test']) {
       const { page, errors } = await open(`?stage=${stage}&dummies=3`);
       expect(await page.evaluate(() => __demo.stage())).toBe(stage);
       expect(await page.evaluate(() => __demo.distinctColors())).toBeGreaterThanOrEqual(4);

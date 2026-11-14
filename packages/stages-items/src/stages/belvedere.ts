@@ -15,4 +15,5 @@ export const BELVEDERE: StageDef = {
     { x1: fx(-15), x2: fx(15), y: fx(44) },
   ],
   blast: { left: fx(-170), right: fx(170), top: fx(140), bottom: fx(-90) },
+  itemSpawns: [{ x1: fx(-60), x2: fx(60), y: fx(80) }],
 };

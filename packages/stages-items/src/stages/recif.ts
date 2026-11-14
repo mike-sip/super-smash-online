@@ -7,4 +7,5 @@ export const RECIF: StageDef = {
   solids: [{ x1: fx(-85), y1: fx(-40), x2: fx(85), y2: fx(0) }],
   platforms: [],
   blast: { left: fx(-185), right: fx(185), top: fx(140), bottom: fx(-90) },
+  itemSpawns: [{ x1: fx(-75), x2: fx(75), y: fx(70) }],
 };

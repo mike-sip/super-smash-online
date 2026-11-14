@@ -40,7 +40,7 @@
   - Vérification : scénarios : rien pendant le bouillonnement, coup au jet, une seule touche, bouclier, phase et période respectées sur plusieurs cycles.
   - Fichiers : `src/systems/stage-motion.ts`, `src/systems/hit.ts`, `test/scenarios/hazards.test.ts`
 
-- [ ] **T7 : Canal et Geysers**
+- [x] **T7 : Canal et Geysers**
   - Acceptation : `StageDef` des deux stages ; entité du jet de geyser ; `applyStage(config, id, { hazards })` ajoute les entités nécessaires après celles de la configuration ; `isHazardEntity`.
   - Vérification : `validateStage` sur les trajectoires complètes ; aucune plateforme mobile ne traverse un bloc plein ; double exécution identique sur 3 600 frames à 8 joueurs ; démo : les deux stages jouables (décor neutre).
   - Fichiers : `packages/stages-items/src/stages/{canal,geysers}.ts`, `src/stages/registry.ts`, `src/config.ts`, `test/stages.test.ts`

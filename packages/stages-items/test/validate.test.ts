@@ -81,4 +81,67 @@ describe('validateStage', () => {
     const aside = base({ platforms: [{ x1: fx(100), x2: fx(120), y: fx(20) }] });
     expect(validateStage(aside, 2)[0]).toMatch(/inaccessible/);
   });
+
+  it('signale une plateforme mobile qui traverse un bloc plein ou sort des zones limites', () => {
+    const through = base({
+      platforms: [
+        {
+          x1: fx(-15),
+          x2: fx(15),
+          y: fx(25),
+          motion: { dx: fx(0), dy: fx(-35), period: 120, phase: 0 },
+        },
+      ],
+    });
+    expect(validateStage(through, 2)[0]).toMatch(/plateforme 1.*bloc plein 1/);
+    const away = base({
+      platforms: [
+        {
+          x1: fx(-15),
+          x2: fx(15),
+          y: fx(25),
+          motion: { dx: fx(160), dy: fx(0), period: 120, phase: 0 },
+        },
+      ],
+    });
+    expect(validateStage(away, 2).some((e) => /plateforme 1 sort des zones limites/.test(e))).toBe(
+      true,
+    );
+    const fine = base({
+      platforms: [
+        {
+          x1: fx(-15),
+          x2: fx(15),
+          y: fx(25),
+          motion: { dx: fx(30), dy: fx(10), period: 120, phase: 0 },
+        },
+      ],
+    });
+    expect(validateStage(fine, 2)).toEqual([]);
+  });
+
+  it('refuse un point d’apparition sur une plateforme mobile', () => {
+    const stage = base({
+      spawns: [
+        { x: fx(0), y: fx(25) },
+        { x: fx(20), y: fx(0) },
+      ],
+      platforms: [
+        {
+          x1: fx(-15),
+          x2: fx(15),
+          y: fx(25),
+          motion: { dx: fx(30), dy: fx(0), period: 120, phase: 0 },
+        },
+      ],
+    });
+    expect(validateStage(stage, 2)[0]).toMatch(/J1.*surface fixe/);
+  });
+
+  it('signale une zone d’apparition d’objets au-dessus du vide', () => {
+    const ok = base({ itemSpawns: [{ x1: fx(-40), x2: fx(40), y: fx(70) }] });
+    expect(validateStage(ok, 2)).toEqual([]);
+    const off = base({ itemSpawns: [{ x1: fx(60), x2: fx(90), y: fx(70) }] });
+    expect(validateStage(off, 2)[0]).toMatch(/zone d.objets 1/);
+  });
 });

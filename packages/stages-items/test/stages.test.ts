@@ -1,6 +1,13 @@
-import { A_AIR, A_LEDGE, BTN_JUMP, encodeInput, fx, step } from '@game/sim-core';
+import { A_AIR, A_DEAD, A_LEDGE, BTN_JUMP, checksum, encodeInput, fx, step } from '@game/sim-core';
 import { describe, expect, it } from 'vitest';
-import { STAGES, applyStage, isStageId, stageById, validateStage } from '../src/index.ts';
+import {
+  STAGES,
+  applyStage,
+  isHazardEntity,
+  isStageId,
+  stageById,
+  validateStage,
+} from '../src/index.ts';
 import { baseConfig, createSim, playRandom } from './helpers.ts';
 
 describe('stages de la v1', () => {
@@ -69,5 +76,56 @@ describe('stages de la v1', () => {
     }
     expect(grabbed).toBe(true);
     expect(s.posX[0]! > fx(85)).toBe(true);
+  });
+
+  it('applyStage branche les geysers sur un nouveau type d’entité, sans renuméroter les autres', () => {
+    const base = baseConfig(2);
+    const before = base.entities!.length;
+    const config = applyStage(base, 'geysers');
+    expect(config.entities!.slice(0, before)).toEqual(base.entities);
+    expect(config.entities).toHaveLength(before + 1);
+    const kinds = config.stage.hazards!.map((h) => h.kind);
+    expect(kinds).toEqual([before + 1, before + 1]);
+    expect(isHazardEntity(config, before + 1)).toBe(true);
+    expect(isHazardEntity(config, 1)).toBe(false);
+    // Appliqué deux fois, il réutilise l'entité.
+    expect(applyStage(config, 'geysers').entities).toHaveLength(before + 1);
+    // Dangers désactivés : ni évent actif, ni entité ajoutée.
+    const calm = applyStage(base, 'geysers', { hazards: false });
+    expect(calm.stage.hazards).toBeUndefined();
+    expect(calm.entities).toBe(base.entities);
+    // Le stage du registre n'est pas modifié.
+    expect(stageById('geysers').def.hazards!.every((h) => h.kind === 0)).toBe(true);
+  });
+
+  it('les stages vivants se rejouent à l’identique à 8 joueurs', () => {
+    for (const id of ['canal', 'geysers'] as const) {
+      const run = (): number => {
+        const sim = createSim(applyStage(baseConfig(8, 9), id));
+        playRandom(sim, 99, 3600);
+        return checksum(sim);
+      };
+      expect(run(), id).toBe(run());
+    }
+  });
+
+  it('Geysers : le jet éjecte le combattant de test hors du haut de l’écran vers 110 %', () => {
+    const koAt = (damage: number): boolean => {
+      const sim = createSim(applyStage(baseConfig(2), 'geysers'));
+      const s = sim.state;
+      s.posX[0] = fx(-44);
+      s.damage[0] = fx(damage);
+      s.posX[1] = fx(60);
+      const inputs = new Uint32Array(2);
+      for (let f = 0; f < 600; f++) {
+        step(sim, inputs);
+        if (s.action[0] === A_DEAD) return true;
+      }
+      return false;
+    };
+    let threshold = 0;
+    while (threshold < 300 && !koAt(threshold)) threshold += 5;
+    expect(threshold).toBeGreaterThanOrEqual(90);
+    expect(threshold).toBeLessThanOrEqual(130);
   });
 });
