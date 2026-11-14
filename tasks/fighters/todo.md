@@ -49,7 +49,7 @@
 
 ## Phase C — Sorel, personnage de référence
 
-- [ ] **T8 : Sorel, données et scénarios**
+- [x] **T8 : Sorel, données et scénarios**
   - Acceptation : moveset complet (21 emplacements, saisie, 4 projections, riposte du contre en `M_EXTRA1`), valeurs de mouvement de la spec, projectile *Trait de vent* ; validation sans problème ; tableau de frame data régénéré.
   - Vérification : scénarios — chaque emplacement déclenché par son input touche un adversaire placé devant ; projectile créé ; contre ; ultime avec le drapeau ; retour sur le stage depuis 50 unités au-delà et 30 sous le rebord.
   - Fichiers : `packages/fighters/src/characters/sorel.ts`, `src/roster.ts`, `test/characters/helpers.ts`, `test/characters/sorel.test.ts`, `FRAMEDATA.md`

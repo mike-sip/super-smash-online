@@ -1,8 +1,9 @@
 /** Les personnages jouables de la v1. */
 import type { Character, FighterId } from './character.ts';
+import { SOREL } from './characters/sorel.ts';
 
 /** Dans l'ordre d'affichage. Rempli personnage par personnage (SPEC-fighters.md, ordre imposé). */
-export const ROSTER: readonly Character[] = Object.freeze([]);
+export const ROSTER: readonly Character[] = Object.freeze([SOREL]);
 
 export function isFighterId(id: string): id is FighterId {
   return ROSTER.some((c) => c.id === id);
