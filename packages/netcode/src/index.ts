@@ -14,3 +14,18 @@ export {
   type Advance,
   type RollbackGame,
 } from './game.ts';
+export {
+  createNetClient,
+  type MatchInfo,
+  type NetClient,
+  type NetClientOptions,
+  type NetStats,
+  type NetStatus,
+} from './client.ts';
+export {
+  createRollback,
+  type Rollback,
+  type RollbackOptions,
+  type RollbackStats,
+} from './rollback.ts';
+export { webSocketTransport, type Transport } from './transport.ts';

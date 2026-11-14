@@ -20,15 +20,19 @@
   },
   "scripts": {
     "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "bench": "pnpm --filter @game/sim-core build && node --expose-gc bench/rollback.bench.ts",
     "typecheck": "pnpm --filter @game/sim-core build && tsc --noEmit",
-    "build": "pnpm --filter @game/sim-core build && tsc -p tsconfig.build.json"
+    "build": "pnpm --filter @game/sim-core build && tsc -p tsconfig.build.json",
+    "serve": "node src/server/main.ts"
   },
   "dependencies": {
-    "@game/sim-core": "workspace:*"
+    "@game/sim-core": "workspace:*",
+    "ws": "^8.23.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
+    "@types/ws": "^8.18.2",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
   }

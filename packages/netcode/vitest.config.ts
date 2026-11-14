@@ -17,5 +17,7 @@ export default defineConfig({
   },
   test: {
     include: ['test/**/*.test.ts'],
+    // Les vrais WebSocket ont leur commande : `pnpm --filter @game/netcode test:e2e`.
+    exclude: ['test/e2e/**'],
   },
 });

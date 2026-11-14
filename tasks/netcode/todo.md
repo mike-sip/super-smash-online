@@ -59,7 +59,7 @@
 
 ## Phase C — En ligne, réel
 
-- [ ] **T10 : WebSocket réel**
+- [x] **T10 : WebSocket réel**
   - Acceptation : `attachRelay` branche le relais sur un serveur HTTP existant, sur un chemin donné, sans gêner ses autres connexions WebSocket ; `startRelayServer` et la commande `serve` ; chaque message copié avant envoi ; taille de message plafonnée par `ws` ; `webSocketTransport` côté client (navigateur et Node).
   - Vérification : bout en bout réel dans Node : serveur local et 2 puis 8 clients sur de vrais WebSocket, latence artificielle à l'envoi, quelques secondes de jeu, empreintes identiques ; un client qui envoie n'importe quoi est déconnecté sans faire tomber la partie.
   - Fichiers : `packages/netcode/src/server/host.ts`, `packages/netcode/src/server/main.ts`, `packages/netcode/src/transport.ts`, `packages/netcode/test/e2e/websocket.test.ts`, `packages/netcode/package.json`

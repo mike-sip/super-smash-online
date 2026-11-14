@@ -7,3 +7,4 @@ export {
   type RelayOptions,
   type RelayPeer,
 } from './relay.ts';
+export { attachRelay, startRelayServer, type RelayHost } from './host.ts';
