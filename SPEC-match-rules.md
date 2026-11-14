@@ -1,6 +1,6 @@
 # Spec : `match-rules` — règles de match
 
-> Statut : **APPROUVÉE le 2026-11-13.** Plan : [tasks/match-rules/plan.md](tasks/match-rules/plan.md), tâches : [tasks/match-rules/todo.md](tasks/match-rules/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `sim-core` (implémenté). Demande des **ajouts additifs à `sim-core`** (section dédiée plus bas), accordés le 2026-11-13.
+> Statut : **APPROUVÉE le 2026-11-13, implémentée le 2026-11-14** (bilan en fin de document ; le critère 7 attend votre essai). Plan : [tasks/match-rules/plan.md](tasks/match-rules/plan.md), tâches : [tasks/match-rules/todo.md](tasks/match-rules/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `sim-core` (implémenté). Demande des **ajouts additifs à `sim-core`** (section dédiée plus bas), accordés le 2026-11-13.
 
 ## Hypothèses
 
@@ -255,3 +255,39 @@ Tests écrits avant la logique pure, comme dans `sim-core`.
 - **Ajouts à `sim-core`** : tous ceux de la liste sont accordés (équipes et tir allié, invincibilité, `knockOut`, `setDamage`, attaque ultime).
 - **Équipes visibles** : dans le HUD de match seulement ; la recoloration des mannequins par équipe touche des fichiers de `render` modifiés par la session audio, elle viendra après sa fusion.
 - **Valeurs de départ** : celles du tableau « Règles détaillées ».
+
+## Écarts et limites constatés pendant l'implémentation
+
+| Sujet | État actuel | Suite prévue |
+|---|---|---|
+| Convergence avec `fighters` | L'extension E6 de `fighters` définit la même attaque ultime. Ma version a été alignée sur la sienne : `EV_ULTIMATE = 9`, `respawn` remet `ultimateReady` à 0. Seul écart : `MOVE_SLOTS` vaut 21 ici, 23 chez `fighters` | À la fusion, garder l'implémentation de `fighters` ; régénérer `golden.json` |
+| Détection de l'ultime lancée | Par l'événement `EV_ULTIMATE`, et non par le drapeau retombé comme prévu au plan ; le drapeau est relevé à chaque frame tant que la jauge est pleine. La file d'événements est plafonnée à 64 par frame : un dépassement ferait manquer un déclenchement (jauge non vidée) | Négligeable à 8 joueurs ; les KO, eux, sont détectés par l'état |
+| Fréquence des objets | Renommée `'low' \| 'normal' \| 'high'` pour reprendre les noms de l'API approuvée de `stages-items` (`applyItems`, où `'off'` correspond à `enabled: false`) | Brancher `applyItems` dans `createMatchSimConfig` après la fusion des deux branches |
+| Partage des dégâts entre attaquants | Testé en unitaire seulement (`splitShare`) : quand plusieurs projectiles de propriétaires différents touchent la même victime à la même frame, `sim-core` ne signale que le dernier propriétaire, qui reçoit tout | À corriger dans `sim-core` si le cas compte pour le classement |
+| Tests de forme de `sim-core` | `state.test.ts` et `view.test.ts` étendus aux nouveaux champs (rien retiré) | — |
+| Déterminisme hors de Node | Les matchs de référence de `match-rules` ne tournent que dans Node. Les checksums de `sim-core` régénérés passent dans Node et Edge ; WebKit et Firefox ne démarrent pas sur la machine (`spawn UNKNOWN`) | Ajouter `match-rules` au test navigateur de `sim-core`, ou vérifier en intégration continue |
+| Mesure du tas | Médiane de 5 fenêtres de 10 000 frames : la première fenêtre après l'échauffement varie de −10 à +45 Ko d'une exécution à l'autre, les suivantes sont proches de 0 (une allocation systématique de 16 octets par frame ferait 160 Ko par fenêtre) | — |
+| Équipes à l'écran | Couleur d'équipe sur les cartes du HUD de match et dans le panneau ; les mannequins et le HUD de pourcentages gardent la couleur du joueur, qui peut contredire celle de l'équipe (J3 jaune dans l'équipe rouge) | Recoloration après la fusion de la session audio (décision de validation) |
+| Fin de match et rollback | `matchResult` lit l'état courant : pendant une re-simulation, un écran de fin pourrait être montré pour une frame ensuite corrigée | L'application (`netcode`, `app-shell`) n'affichera la fin que sur une frame confirmée |
+| Démo | Changer le nombre de joueurs dans le panneau recharge la page. L'option « Combat libre » (`?rules=free`) garde l'ancien bac à sable avec réapparition automatique | — |
+| Commits | La phase B a été commitée en un bloc (scénarios de T7 à T11 écrits avant le moteur, puis le moteur en une passe), à cause d'une interruption | — |
+| Hors périmètre rappelé | Pas d'éjection réduite en Endurance, mort subite sans limite de temps, pas de compte à rebours de départ | À revoir avec le ressenti |
+
+## Bilan des critères de succès (2026-11-14)
+
+| N° | Critère | État | Mesure |
+|---|---|---|---|
+| 1 | Chaque mode, chaque règle couverte par un scénario | Atteint | 63 tests dans `packages/match-rules` : Stock, Temps, Endurance, équipes, crédit et autodestruction, partage des dégâts, départage, mort subite (simple, répétée, en équipes, en Endurance), jauge d'ultime |
+| 2 | Rollback sur 500 matchs à 8 joueurs | Atteint | `test/determinism/rollback.test.ts` : 500 tirages de 2 à 8 joueurs, tous modes, sans divergence ; sauvegardes en jeu 179, en mort subite 13, après la fin 308, avec une réapparition en attente 218 |
+| 3 | 3 matchs de référence versionnés dans Node | Atteint | `test/determinism/golden.json` : Stock terminé à la frame 4 658, Temps en équipes à 10 800, Endurance à 4 394 ; mêmes résultats avec `sim-core` en sources (Vitest) et compilé (Node) |
+| 4 | Non-régression de `sim-core` | Atteint | 335 tests passent ; mêmes coups et mêmes KO sur les 5 séquences de 36 000 frames, seuls les checksums changent ; benchmark sous ses seuils (`step` 0,006 ms, état 3 852 octets) |
+| 5 | Coût du crochet | Atteint | 0,0003 ms par frame en moyenne à 8 joueurs (seuil 0,02) ; tas stable (médiane de quelques centaines d'octets sur 10 000 frames, seuil 32 Ko) |
+| 6 | Configuration validée | Atteint | `test/config.test.ts` : chaque champ et chaque borne, champs inconnus refusés, toutes les configurations par défaut acceptées, aller-retour JSON |
+| 7 | HUD et démo | **Partiel** | Test Playwright dans Edge (5 tests : HUD, panneau, refus d'une configuration invalide, résultats puis « Rejouer », combat libre) et captures dans le navigateur intégré ; la mesure de performance de la démo passe avec les règles actives (dessin 0,22 ms, aucune image en retard). **Votre essai manette en main reste à faire** |
+
+Commandes ajoutées pendant l'implémentation :
+
+```
+Démo en mode Temps, équipes :  pnpm --filter @game/demo dev   puis ?dummies=3&rules=time&teams=0,1,0,1
+Combat libre (sans règles) :    ?rules=free
+```

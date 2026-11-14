@@ -89,19 +89,21 @@
 
 ## Phase D — Visible
 
-- [ ] **T14 : HUD de match dans `render`**
+- [x] **T14 : HUD de match dans `render`**
   - Acceptation : nouveau fichier `match-hud.ts` ; interface de données propre (compatible avec `MatchView`) ; chronomètre (et « Mort subite »), vies ou PV, score en Temps, jauge avec état « prête », pastille d'équipe ; DOM touché seulement quand une valeur affichée change ; seul `index.ts` est modifié parmi les fichiers existants.
   - Vérification : test unitaire de la mise à jour minimale ; capture d'écran.
   - Fichiers : `packages/render/src/match-hud.ts`, `packages/render/src/index.ts`, `packages/render/test/match-hud.test.ts`
 
-- [ ] **T15 : Démo : choix du match et règles**
+- [x] **T15 : Démo : choix du match et règles**
   - Acceptation : panneau de choix (mode, vies, temps, PV, équipes et équipe de chaque joueur, tir allié, ultime) avant le match et à la réinitialisation, aussi pilotable par paramètres d'URL pour les tests ; simulation créée par `createMatchSimConfig` ; la réapparition automatique de la démo est remplacée par celle des règles ; HUD de match alimenté par `readMatch`.
   - Vérification : test de fumée existant inchangé ; essai manuel de chaque mode.
   - Fichiers : `apps/demo/src/match-setup.ts`, `apps/demo/src/main.ts`, `apps/demo/index.html`, `apps/demo/package.json`
 
-- [ ] **T16 : Écran de résultats et bilan**
+- [x] **T16 : Écran de résultats et bilan**
   - Acceptation : à la fin du match, écran listant classement, gagnants et statistiques ; bouton « Rejouer » (même configuration) et « Changer de règles » ; test Playwright dans Edge : match court en Stock à 1 vie avec adversaires aléatoires, ou en Temps de 30 s, jusqu'à l'écran de résultats ; bilan des critères de succès écrit en fin de spec.
   - Vérification : `pnpm --filter @game/demo test` ; captures du HUD et des résultats.
   - Fichiers : `apps/demo/src/results.ts`, `apps/demo/test/match.test.ts`, `SPEC-match-rules.md`
 
 **Point de contrôle D** : essai de la démo par vous ; module terminé.
+
+> Fait le 2026-11-14, hors votre essai. Les cartes du HUD de match sont placées sous les pourcentages (et non en bas d'écran, où elles recouvraient l'aide et la barre d'outils) ; la ligne de statut de la démo est descendue d'autant. Le test de la démo est `apps/demo/test/match.test.ts` (le test de fumée existant est inchangé et passe). Bilan : fin de [SPEC-match-rules.md](../../SPEC-match-rules.md).
