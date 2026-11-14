@@ -51,9 +51,10 @@ export interface AccountsServer {
 export function createAccountsServer(config: AccountsConfig): AccountsServer {
   const now = config.now ?? Date.now;
   const log = config.log ?? ((line: string) => console.log(line));
+  const hasher = new PasswordHasher(config.hashing ?? PRODUCTION_HASH_PARAMS, config.hasherLimits);
   const service = new AccountService({
     store: config.store,
-    hasher: new PasswordHasher(config.hashing ?? PRODUCTION_HASH_PARAMS, config.hasherLimits),
+    hasher,
     ticketSecrets: config.ticketSecrets,
     now,
     ...(config.limiters === undefined ? {} : { limiters: config.limiters }),
@@ -77,7 +78,8 @@ export function createAccountsServer(config: AccountsConfig): AccountsServer {
 
   return {
     service,
-    listen() {
+    async listen() {
+      await hasher.warmUp();
       return new Promise((resolve, reject) => {
         server.once('error', reject);
         server.listen(config.port, config.host, () => {

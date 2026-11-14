@@ -79,3 +79,15 @@ describe('PasswordHasher', () => {
     await expect(hasher.hash('cinq-mots')).resolves.toMatch(/^scrypt\$/);
   });
 });
+
+describe('empreinte factice', () => {
+  it('se prépare à l’avance, une seule fois', async () => {
+    const hasher = new PasswordHasher({ logN: 10, r: 8, p: 1 });
+    // Préparer deux fois ne recalcule rien, et la vérification d'un compte inexistant reste
+    // fausse ensuite. Que la préparation épargne bien un calcul ne se voit qu'à la durée : non
+    // testé ici, pour ne pas dépendre de la vitesse de la machine.
+    await hasher.warmUp();
+    await hasher.warmUp();
+    await expect(hasher.verify('tartiflette', null)).resolves.toBe(false);
+  });
+});

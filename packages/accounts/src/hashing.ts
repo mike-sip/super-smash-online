@@ -128,6 +128,14 @@ export class PasswordHasher {
     return logN !== this.params.logN || r !== this.params.r || p !== this.params.p;
   }
 
+  /**
+   * Prépare l'empreinte factice. Sans cela, la première connexion à un pseudo inconnu ferait deux
+   * calculs au lieu d'un, et répondrait plus lentement qu'un mauvais mot de passe.
+   */
+  async warmUp(): Promise<void> {
+    await this.#dummyHash();
+  }
+
   #dummyHash(): Promise<string> {
     this.#dummy ??= this.hash(randomBytes(32).toString('base64url'));
     return this.#dummy;

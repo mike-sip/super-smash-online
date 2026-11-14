@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -33,6 +33,32 @@ describe('stockage SQLite', () => {
     expect(await second.findAccountById(a.id)).toEqual(a);
     expect(await second.findSession('d')).not.toBeNull();
     await second.close();
+  });
+
+  it('efface vraiment du fichier les données d’un compte supprimé', async () => {
+    const file = freshFile();
+    const marker = 'Effacezmoi';
+    const a = account({
+      pseudo: marker,
+      pseudoKey: marker.toLowerCase(),
+      passwordHash: 'scrypt$MARQUEUR',
+    });
+    const store = openSqliteStore(file);
+    await store.createAccount(a);
+    // Un autre compte garde la page en vie : sans effacement sécurisé, l'ancien contenu y resterait.
+    await store.createAccount(account());
+    await store.close();
+    expect(readFileSync(file).includes(marker)).toBe(true);
+
+    const again = openSqliteStore(file);
+    await again.deleteAccount(a.id);
+    await again.close();
+    const bytes = Buffer.concat([
+      readFileSync(file),
+      ...(existsSync(`${file}-wal`) ? [readFileSync(`${file}-wal`)] : []),
+    ]);
+    expect(bytes.includes(marker)).toBe(false);
+    expect(bytes.includes('MARQUEUR')).toBe(false);
   });
 
   it('crée le schéma sur une base vide et note sa version', async () => {

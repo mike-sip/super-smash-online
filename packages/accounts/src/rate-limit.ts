@@ -105,3 +105,36 @@ export class MemoryRateLimiter implements RateLimiter {
     }
   }
 }
+
+/** Longueur maximale d'une clé d'adresse : la mémoire des seaux reste bornée. */
+const MAX_ADDRESS_KEY = 64;
+const MAPPED_IPV4 = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/;
+
+/**
+ * Clé de limitation pour une adresse IP. Une adresse IPv6 est ramenée à son bloc /64 : un abonné
+ * en reçoit souvent un entier et peut en parcourir les adresses à volonté. Une adresse IPv4 vue
+ * sous forme IPv6 (`::ffff:1.2.3.4`) est ramenée à sa forme IPv4.
+ */
+export function addressKey(address: string): string {
+  const raw = address.trim().toLowerCase();
+  if (raw === '') return 'inconnue';
+  const mapped = MAPPED_IPV4.exec(raw);
+  if (mapped !== null) return mapped[1]!;
+  const halves = raw.split('::');
+  if (!raw.includes(':') || !/^[0-9a-f:]+$/.test(raw) || halves.length > 2) {
+    return raw.slice(0, MAX_ADDRESS_KEY);
+  }
+  const split = (part: string): string[] => (part === '' ? [] : part.split(':'));
+  const head = split(halves[0]!);
+  const tail = halves.length === 2 ? split(halves[1]!) : null;
+  if (tail !== null && head.length + tail.length > 7) return raw.slice(0, MAX_ADDRESS_KEY);
+  const groups =
+    tail === null
+      ? head
+      : [...head, ...new Array<string>(8 - head.length - tail.length).fill('0'), ...tail];
+  if (groups.length !== 8 || groups.some((group) => group.length > 4)) {
+    return raw.slice(0, MAX_ADDRESS_KEY);
+  }
+  const prefix = groups.slice(0, 4).map((group) => group.replace(/^0+(?=.)/, ''));
+  return `${prefix.join(':')}::/64`;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MemoryRateLimiter, RATE_RULES } from '../src/rate-limit.ts';
+import { MemoryRateLimiter, RATE_RULES, addressKey } from '../src/rate-limit.ts';
 
 function clock(start = 1_000_000) {
   let now = start;
@@ -80,5 +80,30 @@ describe('RATE_RULES', () => {
     expect(RATE_RULES.authPerAddress).toEqual({ capacity: 20, windowSeconds: 60 });
     expect(RATE_RULES.guestPerAddress).toEqual({ capacity: 30, windowSeconds: 3600 });
     expect(RATE_RULES.loginFailuresPerPseudo).toEqual({ capacity: 10, windowSeconds: 900 });
+  });
+});
+
+describe('addressKey', () => {
+  it('garde une adresse IPv4 telle quelle, y compris sous forme IPv6', () => {
+    expect(addressKey('203.0.113.7')).toBe('203.0.113.7');
+    expect(addressKey('::ffff:203.0.113.7')).toBe('203.0.113.7');
+  });
+
+  it('regroupe une adresse IPv6 par bloc /64, que son titulaire peut parcourir à volonté', () => {
+    expect(addressKey('2001:db8:1:2:aaaa:bbbb:cccc:dddd')).toBe('2001:db8:1:2::/64');
+    expect(addressKey('2001:db8:1:2::1')).toBe('2001:db8:1:2::/64');
+    expect(addressKey('2001:DB8:1:2:ffff::')).toBe('2001:db8:1:2::/64');
+    expect(addressKey('2001:db8::1')).toBe('2001:db8:0:0::/64');
+    expect(addressKey('::1')).toBe('0:0:0:0::/64');
+    expect(addressKey('2001:db8:1:3::1')).not.toBe(addressKey('2001:db8:1:2::1'));
+  });
+
+  it('borne la longueur de ce qui n’est pas une adresse', () => {
+    expect(addressKey('x'.repeat(5000)).length).toBeLessThanOrEqual(64);
+    expect(addressKey('')).toBe('inconnue');
+    for (const odd of ['1:2:3:4:5:6:7:8::9', ':::', '1::2::3', '12345::1', 'fe80::1%eth0']) {
+      expect(() => addressKey(odd), odd).not.toThrow();
+      expect(addressKey(odd).length).toBeLessThanOrEqual(64);
+    }
   });
 });

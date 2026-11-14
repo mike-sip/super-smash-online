@@ -4,6 +4,7 @@
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { API_PREFIX, ERROR_MESSAGES, type ErrorCode } from './protocol.ts';
+import { addressKey } from './rate-limit.ts';
 import {
   SESSION_TTL_MS,
   type AccountService,
@@ -298,9 +299,9 @@ export function createHandler(
       const list = (Array.isArray(forwarded) ? forwarded.join(',') : (forwarded ?? '')).split(',');
       // Notre proxy ajoute l'adresse qu'il voit en fin de liste ; le début est écrit par le client.
       const last = list[list.length - 1]!.trim();
-      if (last !== '') return last;
+      if (last !== '') return addressKey(last);
     }
-    return request.socket.remoteAddress ?? 'inconnue';
+    return addressKey(request.socket.remoteAddress ?? '');
   }
 
   function checkOrigin(request: IncomingMessage): void {
