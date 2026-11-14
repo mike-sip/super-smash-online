@@ -60,6 +60,7 @@ import {
 import { createEntityVisuals, isNewEntity } from './entities.ts';
 import { createEventFilter, isNewFrame } from './events.ts';
 import { createMannequins } from './fighters/mannequin.ts';
+import type { FighterVisualsFactory } from './fighters/visual.ts';
 import { createDomSink, createHud, type HudSink } from './hud.ts';
 import {
   createTrack,
@@ -76,6 +77,8 @@ export interface RendererOptions {
   /** Conteneur du HUD et de la vue technique, superposé au canvas. */
   readonly overlay: HTMLElement;
   readonly config: SimConfig;
+  /** Représentation des combattants ; par défaut, le mannequin procédural sans style. */
+  readonly fighterVisuals?: FighterVisualsFactory;
 }
 
 export interface Renderer {
@@ -144,6 +147,7 @@ export function createRenderer(options: RendererOptions): Renderer {
     },
     createDomSink(options.overlay, options.config.fighters.length),
     createDebugLayer(options.overlay),
+    options.fighterVisuals,
   );
 }
 
@@ -166,6 +170,7 @@ export function createRendererWith(
   backend: DrawBackend,
   hudSink: HudSink = silentSink,
   debugLayer?: DebugLayer,
+  fighterVisuals: FighterVisualsFactory = createMannequins,
 ): RendererInternals {
   const players = config.fighters.length;
 
@@ -210,7 +215,7 @@ export function createRendererWith(
   copyFraming(framingTarget, framingPrev);
   copyFraming(framingTarget, framingCurr);
 
-  const visuals = createMannequins(config);
+  const visuals = fighterVisuals(config);
   scene.add(visuals.root);
   const entities = createEntityVisuals(config);
   scene.add(entities.mesh);

@@ -54,7 +54,7 @@
   - Vérification : scénarios — chaque emplacement déclenché par son input touche un adversaire placé devant ; projectile créé ; contre ; ultime avec le drapeau ; retour sur le stage depuis 50 unités au-delà et 30 sous le rebord.
   - Fichiers : `packages/fighters/src/characters/sorel.ts`, `src/roster.ts`, `test/characters/helpers.ts`, `test/characters/sorel.test.ts`, `FRAMEDATA.md`
 
-- [ ] **T9 : Mannequin stylé et poses**
+- [x] **T9 : Mannequin stylé et poses**
   - Acceptation : `createStyledMannequins(styleOf)` dans `render` ; le mannequin par défaut reste identique ; style = couleurs, proportions, pièces ajoutées (dont une à la couleur du joueur), toujours dans les deux maillages instanciés ; poses génériques pour `M_SSPECIAL`, `M_USPECIAL`, `M_DSPECIAL`, `M_ULTIMATE`, `M_EXTRA1/2` et `A_HELPLESS` ; `FighterLook` de Sorel.
   - Vérification : tests de poses (finies, continues) ; test du style (dimensions et couleurs des pièces, pièces masquées sans style) ; capture de Sorel ; compteur d'appels de dessin inchangé.
   - Fichiers : `packages/render/src/fighters/mannequin.ts`, `src/fighters/poses.ts`, `src/index.ts`, `test/poses.test.ts`, `test/scene.test.ts`, `packages/fighters/src/characters/sorel.ts`
