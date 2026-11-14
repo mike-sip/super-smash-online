@@ -35,7 +35,7 @@
   - Vérification : tests d'assemblage — 2 et 8 joueurs, entités de stage en tête, même personnage plusieurs fois (ses projectiles une seule fois dans la liste), `kind` renumérotés pointant vers le bon type ; la `FighterDef` d'origine n'est pas modifiée.
   - Fichiers : `packages/fighters/package.json`, `tsconfig.json`, `tsconfig.build.json`, `vitest.config.ts`, `src/index.ts`, `src/build.ts`, `src/roster.ts`, `src/match.ts`, `test/match.test.ts`
 
-- [ ] **T6 : Validation**
+- [x] **T6 : Validation**
   - Acceptation : `validateCharacter` applique toutes les règles de la spec, chaque problème nommant personnage, coup et champ ; script `pnpm --filter @game/fighters validate` qui liste les problèmes et échoue s'il y en a.
   - Vérification : un test par règle avec une donnée fautive construite pour la déclencher ; le combattant de test de `sim-core` habillé en `Character` ne lève que les problèmes attendus (moveset incomplet).
   - Fichiers : `packages/fighters/src/validate.ts`, `scripts/validate.ts`, `test/validate.test.ts`
