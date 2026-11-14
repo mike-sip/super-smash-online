@@ -38,9 +38,11 @@ export const ERR_INVALID = 5;
 export const ERR_TIMEOUT = 6;
 export const ERR_SERVER_FULL = 7;
 
-/** Plus gros message possible (un `INPUTS` complet à 8 joueurs fait 1 074 octets). */
+/** Plus gros message possible : `INPUTS` complet à 8 joueurs (1 074 octets), `HELLO` avec ticket (1 062). */
 export const MAX_MESSAGE_BYTES = 2048;
 export const MAX_GAME_ID_LENGTH = 32;
+/** Ticket d'authentification opaque (module accounts), transmis par HELLO ; vide en invité. */
+export const MAX_TICKET_BYTES = 1024;
 const MAX_ERROR_TEXT_BYTES = 200;
 const GAME_ID_PATTERN = /^[A-Za-z0-9_-]{1,32}$/;
 /** Plus grand nombre de blocs d'inputs par message : un par joueur. */
@@ -52,6 +54,8 @@ export interface Message {
   // HELLO
   version: number;
   gameId: string;
+  /** HELLO : ticket d'authentification, chaîne vide s'il n'y en a pas. Pas encore vérifié. */
+  ticket: string;
   /** HELLO : joueurs attendus. WAITING : attendus. START, INPUT, DESYNC : joueurs de la partie. */
   players: number;
   localPlayers: number;
@@ -95,6 +99,7 @@ export function createMessage(): Message {
     type: 0,
     version: 0,
     gameId: '',
+    ticket: '',
     players: 0,
     localPlayers: 0,
     joined: 0,
@@ -200,6 +205,14 @@ function putString(buf: Uint8Array, pos: number, s: string, max: number): number
   return pos + 1 + written;
 }
 
+/** Écrit une chaîne précédée de sa longueur en octets sur 16 bits (au plus `max`). */
+function putLongString(buf: Uint8Array, pos: number, s: string, max: number): number {
+  const { written } = encoder.encodeInto(s, buf.subarray(pos + 2, pos + 2 + max));
+  buf[pos] = written;
+  buf[pos + 1] = written >>> 8;
+  return pos + 2 + written;
+}
+
 // ── Encodage ─────────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -213,7 +226,8 @@ export function encode(m: Message, buf: Uint8Array): number {
       p = putU8(buf, p, m.version);
       p = putU8(buf, p, m.players);
       p = putU8(buf, p, m.localPlayers);
-      return putString(buf, p, m.gameId, MAX_GAME_ID_LENGTH);
+      p = putString(buf, p, m.gameId, MAX_GAME_ID_LENGTH);
+      return putLongString(buf, p, m.ticket, MAX_TICKET_BYTES);
     case MSG_WAITING:
       p = putU8(buf, p, m.joined);
       return putU8(buf, p, m.players);
@@ -308,6 +322,8 @@ function decodeBody(r: Cursor, m: Message): string | null {
       m.localPlayers = u8(r);
       const id = readString(r, MAX_GAME_ID_LENGTH);
       if (id === null) return 'identifiant de partie tronqué';
+      const ticket = readLongString(r, MAX_TICKET_BYTES);
+      if (ticket === null) return 'ticket tronqué';
       if (!isValidGameId(id)) return 'identifiant de partie invalide';
       if (m.players < MIN_PLAYERS || m.players > MAX_PLAYERS) return 'nombre de joueurs invalide';
       if (m.localPlayers < 1 || m.localPlayers > MAX_LOCAL_PLAYERS) {
@@ -315,6 +331,7 @@ function decodeBody(r: Cursor, m: Message): string | null {
       }
       if (m.localPlayers > m.players) return 'plus de joueurs locaux que de joueurs';
       m.gameId = id;
+      m.ticket = ticket;
       return null;
     }
     case MSG_WAITING:
@@ -418,6 +435,14 @@ function readString(r: Cursor, max: number): string | null {
   const n = u8(r);
   if (!r.ok || n > max || r.pos + n > r.buf.length) return null;
   const s = decoder.decode(r.buf.subarray(r.pos, r.pos + n));
+  r.pos += n;
+  return s;
+}
+
+function readLongString(r: Cursor, max: number): string | null {
+  const n = u8(r) | (u8(r) << 8);
+  if (!r.ok || n > max || r.pos + n > r.buf.length) return null;
+  const s = n === 0 ? '' : decoder.decode(r.buf.subarray(r.pos, r.pos + n));
   r.pos += n;
   return s;
 }

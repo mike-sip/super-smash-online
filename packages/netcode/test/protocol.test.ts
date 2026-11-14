@@ -69,6 +69,13 @@ describe('protocole : aller-retour', () => {
     expect(out.gameId).toBe('A-z_09-abcdefghijklmnopqrstuvwxy');
     expect(out.players).toBe(8);
     expect(out.localPlayers).toBe(4);
+    expect(out.ticket).toBe('');
+  });
+
+  it('HELLO avec un ticket d’authentification', () => {
+    const m = hello();
+    m.ticket = 'v1.' + 'x'.repeat(1000);
+    expect(roundTrip(m).ticket).toBe(m.ticket);
   });
 
   it('WAITING', () => {

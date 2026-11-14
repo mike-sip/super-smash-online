@@ -72,7 +72,7 @@ Messages binaires (`ArrayBuffer`, entiers petit-boutistes), premier octet = type
 
 | Sens | Message | Contenu |
 |---|---|---|
-| C → S | `HELLO` | version, identifiant de partie (1 à 32 caractères `A-Z a-z 0-9 _ -`), joueurs attendus (2 à 8), joueurs locaux (1 à 4) |
+| C → S | `HELLO` | version, identifiant de partie (1 à 32 caractères `A-Z a-z 0-9 _ -`), joueurs attendus (2 à 8), joueurs locaux (1 à 4), ticket d’authentification optionnel (voir « Écarts ») |
 | S → C | `WAITING` | joueurs présents, joueurs attendus |
 | S → C | `START` | graine, nombre de joueurs, emplacements de ce client, instant de départ (horloge serveur), `D`, `P`, `G`, intervalle de checksum |
 | C → S | `INPUT` | frontière `connu[p]` du client pour chaque joueur (accusé de réception), puis pour chaque joueur local : première frame, nombre, inputs |
@@ -339,3 +339,13 @@ Développement piloté par les tests : chaque comportement du rollback et du ser
 - **Serveur WebSocket** : bibliothèque `ws`, côté serveur seulement (Node.js 26 n'a qu'un client WebSocket intégré).
 - **Réglages par défaut** : délai d'input `D = 2` frames (33 ms), fenêtre de prédiction `P = 15` frames (250 ms), tolérance du serveur `G = 8` frames (133 ms), à ajuster après essai sur le réseau réel.
 - **Inputs en retard** : remplacés par l'input précédent du joueur ; les inputs neutres sont réservés aux joueurs déconnectés.
+
+## Écarts et limites constatés pendant l’implémentation
+
+Mis à jour à chaque tâche.
+
+| Sujet | État actuel | Suite prévue |
+|---|---|---|
+| Ticket d’authentification | `HELLO` porte un ticket opaque optionnel (jusqu’à 1 024 octets), à la demande du module `accounts` (spec en cours) : le relais le reçoit mais ne le vérifie pas. Ajouté dès maintenant pour ne pas changer de version de protocole plus tard. | Vérification par `verifyTicket` de `accounts`, à brancher après sa fusion. |
+| Dépendance à `input` | Aucune : le client reçoit une fonction `sample(out)`, que l’application relie à `Input.sample`. Le paquet ne dépend que de `sim-core`. | — |
+| Bogue trouvé par le test de propriété | Une correction en attente peut viser une frame antérieure à la frontière confirmée, qui a avancé entre-temps : l’anneau d’inputs écrasait alors les données de cette frame (tirage 242 : 8 joueurs, fenêtre de 2 frames). Corrigé : la plus ancienne frame protégée tient compte de la correction en attente. | — |

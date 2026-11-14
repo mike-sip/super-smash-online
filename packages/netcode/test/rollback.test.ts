@@ -129,7 +129,7 @@ describe('moteur de rollback', () => {
       try {
         run(s, rng);
       } catch (error) {
-        const { final: _f, local: _l, ...shape } = s;
+        const shape = { ...s, final: undefined, local: undefined };
         throw new Error(`tirage ${i} : ${JSON.stringify(shape)}\n${String(error)}`, {
           cause: error,
         });
