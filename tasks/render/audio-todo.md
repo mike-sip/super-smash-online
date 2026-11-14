@@ -44,7 +44,7 @@ Les six tâches sont faites et commitées sur la branche `claude/render-audio-8d
 
 | Quoi | Résultat |
 |---|---|
-| Tests du rendu | 183 tests, dont 71 pour l'audio (indices, synthèse, musique, banque, mélangeur, moteur) |
+| Tests du rendu | 183 tests, dont 84 pour l'audio (indices, synthèse, musique, banque, mélangeur, moteur) |
 | Rollback | Frames rejouées après `loadState` sur une vraie simulation : aucun son en double, ni dans les indices ni dans le moteur ; rollback partiel = même suite de sons que sans rollback |
 | Raccord de la boucle | Le début de la boucle rendue coïncide (écart < 0,002) avec le rendu continu de deux boucles à la suite ; le test échoue bien si l'on retire le repli des queues de notes, le préchauffage des filtres ou l'écho circulaire |
 | Coût | Lecture des sons d'une frame à 8 combattants : environ 2 µs (budget 0,1 ms). Synthèse des 14 effets : environ 10 ms. Musique : environ 0,4 s à 44,1 kHz dans Node, découpée en tranches qui rendent la main au navigateur |
