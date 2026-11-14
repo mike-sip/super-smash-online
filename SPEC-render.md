@@ -264,8 +264,12 @@ export interface GameAudio {
   playMusic(track: string | null): void;
   /** Efface la musique en pause, la rétablit ensuite. */
   setPaused(paused: boolean): void;
+  /** Joue le son `sound` (`SND_*`) au centre : planche d'écoute, menus. */
+  play(sound: number): void;
   readonly settings: AudioSettings;
   setSettings(settings: AudioSettings): void;
+  /** Sons d'effets lancés depuis la création : pour les tests et la vue technique. */
+  readonly soundsPlayed: number;
   /** Ferme le contexte audio. */
   dispose(): void;
 }
