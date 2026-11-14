@@ -6,6 +6,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@game/demo", "dev", "--port", "5173", "--strictPort"],
       "port": 5173
+    },
+    {
+      "name": "online",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@game/online", "exec", "vite", "--port", "5174", "--strictPort"],
+      "port": 5174
     }
   ]
 }

@@ -1,0 +1,25 @@
+{
+  "name": "@game/online",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "test": "vitest run",
+    "typecheck": "pnpm --filter @game/render build && pnpm --filter @game/input build && pnpm --filter @game/netcode build && tsc --noEmit"
+  },
+  "dependencies": {
+    "@game/input": "workspace:*",
+    "@game/netcode": "workspace:*",
+    "@game/render": "workspace:*",
+    "@game/sim-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "playwright-core": "^1.65.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.7",
+    "vitest": "^5.1.0"
+  }
+}

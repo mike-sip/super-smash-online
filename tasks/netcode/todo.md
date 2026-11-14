@@ -69,12 +69,12 @@
   - Vérification : `pnpm --filter @game/render test` passe ; proportions consignées dans la spec.
   - Fichiers : `packages/render/test/rollback.test.ts` (nouveau), `packages/netcode/test/session.test.ts`
 
-- [ ] **T12 : Démo en ligne**
+- [x] **T12 : Démo en ligne**
   - Acceptation : application `apps/online` : formulaire minimal (identifiant de partie, joueurs attendus, joueurs locaux), aussi lisible depuis l'adresse (`?game=…&players=…`) ; attente puis compte à rebours ; partie jouée au clavier ou à la manette avec le module `input`, rendue avec `render` (capture des seules frames nouvelles) ; diagnostic affichable (aller-retour, frame confirmée, rollbacks, attentes, inputs remplacés) ; bandeau de désync et de départ d'un joueur ; relais attaché au serveur de développement Vite sur `/net`, accessible depuis le réseau local ; configuration ajoutée à `.claude/launch.json`.
   - Vérification : manuelle dans deux onglets ; `pnpm --filter @game/online typecheck` et build passent ; `apps/demo` et ses tests inchangés et passants.
   - Fichiers : `apps/online/package.json`, `apps/online/index.html`, `apps/online/vite.config.ts`, `apps/online/tsconfig.json`, `apps/online/vitest.config.ts`, `apps/online/src/main.ts`, `apps/online/src/relay-plugin.ts`, `.claude/launch.json`
 
-- [ ] **T13 : Deux onglets d'Edge**
+- [x] **T13 : Deux onglets d'Edge**
   - Acceptation : test Playwright : deux pages d'Edge rejoignent la même partie ; une touche dans la première fait bouger son combattant dans la seconde ; à une même frame confirmée, les empreintes des deux pages sont égales ; aucune erreur de console ni désync.
   - Vérification : `pnpm --filter @game/online test` passe.
   - Fichiers : `apps/online/test/two-tabs.test.ts`, `apps/online/src/main.ts`
