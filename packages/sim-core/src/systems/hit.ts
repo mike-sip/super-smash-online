@@ -186,13 +186,15 @@ export function resolveHits(sim: Sim): void {
     const owner = s.eOwner[e]! - 1;
     const ex = s.ePosX[e]!;
     const ey = s.ePosY[e]!;
+    // Capsule verticale pour une entité qui a une hauteur (jet de geyser), cercle sinon.
+    const eyTop = def.height ?? 0;
     const dir = s.eVelX[e]! >= 0 ? 1 : -1;
 
     for (let j = 0; j < players; j++) {
       if (j === owner || s.action[j] === A_DEAD || s.intangible[j]! > 0) continue;
       const bit = 1 << j;
       if ((s.eHitMask[e]! & bit) !== 0) continue;
-      if (!overlapsHurtboxes(s, j, fighters[j]!, ex, ey, ex, ey, def.radius)) continue;
+      if (!overlapsHurtboxes(s, j, fighters[j]!, ex, ey, ex, ey + eyTop, def.radius)) continue;
 
       s.eHitMask[e] = s.eHitMask[e]! | bit;
       const kb = knockback(

@@ -35,7 +35,7 @@
   - Vérification : tests unitaires de la trajectoire (bornes, période, continuité : jamais plus d'un pas maximal entre deux frames) ; scénarios : porté à l'horizontale et à la verticale, atterrissage sur une plateforme qui monte, chute à travers stick bas, quitter le bord d'une barge ; rollback au milieu d'un trajet.
   - Fichiers : `packages/sim-core/src/systems/stage-motion.ts`, `src/systems/collision.ts`, `src/step.ts`, `src/view.ts`, `test/stage-motion.test.ts`, `test/scenarios/moving.test.ts`
 
-- [ ] **T6 : Dangers périodiques**
+- [x] **T6 : Dangers périodiques**
   - Acceptation : `StageDef.hazards` crée, aux frames prévues, une entité sans propriétaire dont la zone de coup est une capsule verticale (`EntityDef.height`) ; le jet touche chaque combattant une fois ; bouclier et intangibilité s'appliquent comme pour un coup d'entité.
   - Vérification : scénarios : rien pendant le bouillonnement, coup au jet, une seule touche, bouclier, phase et période respectées sur plusieurs cycles.
   - Fichiers : `src/systems/stage-motion.ts`, `src/systems/hit.ts`, `test/scenarios/hazards.test.ts`

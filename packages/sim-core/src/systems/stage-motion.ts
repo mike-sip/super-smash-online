@@ -10,6 +10,7 @@ import type { PlatformMotionDef, StageDef } from '../defs.ts';
 import { G_FRAME, G_PLAYERS } from '../state.ts';
 import type { Sim } from '../step.ts';
 import type { StageGeo } from './collision.ts';
+import { spawnEntity } from './entities.ts';
 
 export interface StageMotion {
   /** Plateformes mobiles : index de la plateforme dans `StageDef.platforms`. */
@@ -139,4 +140,24 @@ export function platformAt(sim: Sim, k: number, out: { x1: number; x2: number; y
   out.x1 = p.x1 + offset.x;
   out.x2 = p.x2 + offset.x;
   out.y = p.y + offset.y;
+}
+
+/**
+ * Dangers : à la frame de début de chaque cycle, crée l'entité du jet, sans propriétaire, pour
+ * `duration` frames exactement (elle frappe dès cette frame). Appelé après `updateEntities`.
+ */
+export function updateHazards(sim: Sim): void {
+  const hazards = sim.config.stage.hazards;
+  if (hazards === undefined) return;
+  const s = sim.state;
+  const now = s.g[G_FRAME]!;
+  for (let h = 0; h < hazards.length; h++) {
+    const hazard = hazards[h]!;
+    if (hazard.kind === 0) continue;
+    const t = (now - hazard.phase) % hazard.period;
+    if (t !== 0) continue;
+    const e = spawnEntity(sim, hazard.kind, -1, hazard.x, hazard.y, 0, 0);
+    // `updateEntities` est déjà passé pour cette frame : la vie s'écoule à partir de la suivante.
+    if (e >= 0) s.eLife[e] = hazard.duration;
+  }
 }

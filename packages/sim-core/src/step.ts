@@ -20,7 +20,12 @@ import { createHitScratch, resolveHits, type HitScratch } from './systems/hit.ts
 import { launch } from './systems/knockback.ts';
 import { resolveLedges } from './systems/ledge.ts';
 import { trackStick, updateMovement } from './systems/movement.ts';
-import { compileMotion, updateStageMotion, type StageMotion } from './systems/stage-motion.ts';
+import {
+  compileMotion,
+  updateHazards,
+  updateStageMotion,
+  type StageMotion,
+} from './systems/stage-motion.ts';
 
 export interface SimConfig {
   readonly stage: StageDef;
@@ -148,6 +153,7 @@ export function step(sim: Sim, inputs: Uint32Array): void {
 
   resolveLedges(sim);
   updateEntities(sim);
+  updateHazards(sim);
 
   // 4. Coups, sur les positions à jour.
   resolveHits(sim);
