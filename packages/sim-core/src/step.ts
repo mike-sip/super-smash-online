@@ -100,6 +100,15 @@ export function respawn(sim: Sim, player: number): void {
 }
 
 /**
+ * Lève ou baisse le drapeau « attaque ultime prête » d'un joueur (SPEC-fighters.md, E6). Comme
+ * `respawn`, à appeler entre deux `step`, de façon identique chez tous les pairs : les règles de
+ * match le lèvent quand leur jauge est pleine ; la simulation le baisse quand l'ultime part.
+ */
+export function setUltimateReady(sim: Sim, player: number, ready: boolean): void {
+  sim.state.ultimateReady[player] = ready ? 1 : 0;
+}
+
+/**
  * Avance la simulation d'une frame. `inputs[i]` est l'InputFrame du joueur i.
  *
  * Contraintes (SPEC-sim-core.md) : aucune allocation, aucune source de non-déterminisme,

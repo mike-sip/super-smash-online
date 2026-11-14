@@ -15,10 +15,26 @@ import {
   BTN_SPECIAL,
   EV_COUNTER,
   EV_HIT,
+  EV_ULTIMATE,
+  STATE_BYTES,
+  createFighterView,
   createSim,
+  loadState,
+  readFighter,
+  respawn,
+  saveState,
+  setUltimateReady,
   type Sim,
 } from '../../src/index.ts';
-import { M_DAIR, M_EXTRA1, M_JAB, M_NSPECIAL, M_SSPECIAL, M_USPECIAL } from '../../src/moves.ts';
+import {
+  M_DAIR,
+  M_EXTRA1,
+  M_JAB,
+  M_NSPECIAL,
+  M_SSPECIAL,
+  M_ULTIMATE,
+  M_USPECIAL,
+} from '../../src/moves.ts';
 import {
   TEST_ENTITIES,
   TEST_FIGHTER,
@@ -348,3 +364,68 @@ function holdUntil2(sim: Sim, until: () => boolean, max: number): void {
   }
   throw new Error(`Condition jamais atteinte en ${max} frames.`);
 }
+
+describe('attaque ultime (E6)', () => {
+  it('remplace le spécial neutre quand le drapeau est levé, puis le baisse', () => {
+    const sim = specialistSim();
+    const s = sim.state;
+    setUltimateReady(sim, 0, true);
+    hold(sim, SPECIAL, 1);
+    expect(s.move[0]).toBe(M_ULTIMATE);
+    expect(countEvents(sim, EV_ULTIMATE)).toBe(1);
+    expect(sim.events.a[0]).toBe(0);
+    expect(s.ultimateReady[0]).toBe(0);
+    hold(sim, NEUTRAL, 1);
+    expect(countEvents(sim, EV_ULTIMATE)).toBe(0);
+  });
+
+  it('laisse le spécial neutre ordinaire sans drapeau', () => {
+    const sim = specialistSim();
+    hold(sim, SPECIAL, 1);
+    expect(sim.state.move[0]).toBe(M_NSPECIAL);
+    expect(countEvents(sim, EV_ULTIMATE)).toBe(0);
+  });
+
+  it('ne détourne pas les autres spéciaux, et garde le drapeau', () => {
+    const sim = specialistSim();
+    setUltimateReady(sim, 0, true);
+    hold(sim, UP_SPECIAL, 1);
+    expect(sim.state.move[0]).toBe(M_USPECIAL);
+    expect(sim.state.ultimateReady[0]).toBe(1);
+  });
+
+  it('se déclenche aussi en l’air', () => {
+    const sim = specialistSim();
+    teleportAir(sim, 0, 0, 50);
+    setUltimateReady(sim, 0, true);
+    hold(sim, SPECIAL, 1);
+    expect(sim.state.move[0]).toBe(M_ULTIMATE);
+  });
+
+  it('laisse le spécial neutre à un combattant sans ultime, drapeau conservé', () => {
+    const sim = specialistSim();
+    setUltimateReady(sim, 1, true);
+    hold2(sim, NEUTRAL, SPECIAL, 1);
+    expect(sim.state.move[1]).toBe(M_NSPECIAL);
+    expect(sim.state.ultimateReady[1]).toBe(1);
+  });
+
+  it('est lu par la vue, sauvegardé par le snapshot et remis à zéro par la réapparition', () => {
+    const sim = specialistSim();
+    const view = createFighterView();
+    setUltimateReady(sim, 0, true);
+    readFighter(sim, 0, view);
+    expect(view.ultimateReady).toBe(true);
+
+    const snap = new Uint8Array(STATE_BYTES);
+    saveState(sim, snap);
+    setUltimateReady(sim, 0, false);
+    readFighter(sim, 0, view);
+    expect(view.ultimateReady).toBe(false);
+    loadState(sim, snap);
+    expect(sim.state.ultimateReady[0]).toBe(1);
+
+    respawn(sim, 0);
+    expect(sim.state.ultimateReady[0]).toBe(0);
+  });
+});

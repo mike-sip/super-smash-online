@@ -91,6 +91,9 @@ export const FIGHTER_FIELDS = [
   'ledgeCooldown',
   'ledgeGrabs',
   'ledgeTimer',
+  // Ajouté pour le module `fighters` (SPEC-fighters.md, E6), en fin de liste.
+  /** 1 si l'attaque ultime est prête : le prochain spécial neutre la lance. Levé par les règles de match. */
+  'ultimateReady',
 ] as const;
 
 /** Un Int32 par entité (projectile, objet). `eKind` à 0 signifie emplacement libre. */

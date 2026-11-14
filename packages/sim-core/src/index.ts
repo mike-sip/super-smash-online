@@ -70,6 +70,7 @@ export {
   EV_PARRY,
   EV_SHIELD,
   EV_SHIELD_BREAK,
+  EV_ULTIMATE,
   MAX_EVENTS,
   type EventQueue,
 } from './events.ts';
@@ -93,7 +94,7 @@ export {
   type InputFrame,
 } from './input.ts';
 export { MAX_PLAYERS, MAX_ENTITIES, STATE_BYTES } from './state.ts';
-export { createSim, respawn, step, type Sim, type SimConfig } from './step.ts';
+export { createSim, respawn, setUltimateReady, step, type Sim, type SimConfig } from './step.ts';
 export {
   createEntityView,
   createFighterView,

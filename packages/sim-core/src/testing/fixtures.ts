@@ -26,6 +26,7 @@ import {
   M_NSPECIAL,
   M_SSPECIAL,
   M_UAIR,
+  M_ULTIMATE,
   M_USMASH,
   M_USPECIAL,
   M_UTILT,
@@ -525,6 +526,12 @@ export const TEST_SPECIALIST: FighterDef = {
       40,
       [{ frames: [3, 40], shape: [2, 2, 3], damage: 9, angle: 280, base: 20, growth: 0.6 }],
       { motion: [{ start: 3, end: 40, velX: fx(1), velY: fx(-2) }], landingLag: 16 },
+    );
+    moves[M_ULTIMATE] = move(
+      'ultimate',
+      60,
+      [{ frames: [20, 24], shape: [0, 8, 20], damage: 35, angle: 50, base: 80, growth: 1 }],
+      { intangible: { start: 1, end: 60 } },
     );
     return moves;
   })(),

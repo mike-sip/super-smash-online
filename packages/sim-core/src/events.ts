@@ -23,6 +23,8 @@ export const EV_GRAB = 6;
 export const EV_LEDGE = 7;
 /** Un coup a été contré (SPEC-fighters.md, E5). `a` = attaquant (-1 : entité sans propriétaire), `b` = défenseur. */
 export const EV_COUNTER = 8;
+/** Une attaque ultime vient de partir (SPEC-fighters.md, E6). `a` = joueur. */
+export const EV_ULTIMATE = 9;
 
 export interface EventQueue {
   count: number;

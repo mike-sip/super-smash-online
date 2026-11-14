@@ -41,6 +41,7 @@ describe('readFighter', () => {
       hitlag: 0,
       intangible: false,
       jumpsLeft: 1,
+      ultimateReady: false,
     });
   });
 

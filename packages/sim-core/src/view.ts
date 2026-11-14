@@ -32,6 +32,8 @@ export interface FighterView {
   intangible: boolean;
   /** Sauts aériens restants. */
   jumpsLeft: number;
+  /** Attaque ultime prête : le prochain spécial neutre la lancera. */
+  ultimateReady: boolean;
 }
 
 export interface EntityView {
@@ -64,6 +66,7 @@ export function createFighterView(): FighterView {
     hitlag: 0,
     intangible: false,
     jumpsLeft: 0,
+    ultimateReady: false,
   };
 }
 
@@ -88,6 +91,7 @@ export function readFighter(sim: Sim, player: number, out: FighterView): void {
   out.hitlag = s.hitlag[player]!;
   out.intangible = s.intangible[player]! > 0;
   out.jumpsLeft = s.jumpsLeft[player]!;
+  out.ultimateReady = s.ultimateReady[player] === 1;
 }
 
 /**
