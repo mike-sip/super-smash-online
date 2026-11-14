@@ -64,7 +64,7 @@
   - Vérification : scénarios par objet avec ses vraies données ; `applyItems` respecte `kinds` et ne renumérote pas les entités existantes ; démo : objets activables par `items=`.
   - Fichiers : `src/systems/items.ts`, `packages/stages-items/src/items.ts`, `src/config.ts`, `test/items.test.ts`, `apps/demo/src/main.ts`
 
-- [ ] **T11 : Déterminisme, rollback et vitesse**
+- [x] **T11 : Déterminisme, rollback et vitesse**
   - Acceptation : sur chaque stage, objets à `high`, 8 joueurs à inputs aléatoires : double exécution identique sur 36 000 frames ; propriété sauvegarde/restauration sur 200 tirages ; benchmark de `sim-core` complété d'un scénario avec objets et plateformes mobiles.
   - Vérification : tests passants ; benchmark sous les seuils de la spec.
   - Fichiers : `packages/stages-items/test/determinism.test.ts`, `packages/sim-core/bench/step.bench.ts`
