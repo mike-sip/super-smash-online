@@ -6,22 +6,22 @@
 
 ## Phase A — Moteur (extensions de `sim-core`)
 
-- [ ] **T1 : Élan et invincibilité d'un coup (E1, E3)**
+- [x] **T1 : Élan et invincibilité d'un coup (E1, E3)**
   - Acceptation : `MotionDef { start, end, velX?, velY? }` et `MoveDef.motion` ; pendant une fenêtre, la vitesse horizontale vaut `regard × velX` et/ou la verticale vaut `velY`, et le contrôle aérien est suspendu ; une vitesse verticale positive au sol fait décoller sans quitter l'attaque ; au sol, un coup qui avance s'arrête au bord du stage (règle existante). `MoveDef.intangible { start, end }` : aucun coup ni saisie ne touche pendant la fenêtre.
   - Vérification : scénarios écrits d'abord — fente au sol (distance parcourue), montée depuis le sol (décollage, hauteur atteinte), plongeon en l'air, coup sans `motion` inchangé, intangibilité qui fait passer une attaque adverse à travers.
   - Fichiers : `packages/sim-core/src/defs.ts`, `src/systems/movement.ts`, `src/index.ts`, `test/scenarios/specials.test.ts`, `src/testing/fixtures.ts` (coups de test supplémentaires dans un combattant de test séparé, `TEST_SPECIALIST`, pour ne pas changer `TEST_FIGHTER`)
 
-- [ ] **T2 : Chute impuissante (E2)**
+- [x] **T2 : Chute impuissante (E2)**
   - Acceptation : `MoveDef.helpless` ; à la fin d'un tel coup en l'air, action `A_HELPLESS` (31) : dérive possible, ni saut, ni attaque, ni esquive ; accroche au rebord possible ; atterrissage avec le lag d'atterrissage du coup ; un coup reçu en fait sortir. Les tests de plage d'actions de `movement.ts`, `collision.ts` et `step.ts` excluent explicitement la nouvelle valeur.
   - Vérification : scénarios — sauts et attaques refusés en chute impuissante, accroche au rebord, lag d'atterrissage, sortie par un coup reçu ; même coup lancé et terminé au sol : retour au repos.
   - Fichiers : `packages/sim-core/src/actions.ts`, `src/defs.ts`, `src/systems/movement.ts`, `src/systems/collision.ts`, `src/systems/ledge.ts`, `src/index.ts`, `test/scenarios/specials.test.ts`
 
-- [ ] **T3 : Armure et contre (E4, E5)**
+- [x] **T3 : Armure et contre (E4, E5)**
   - Acceptation : `MoveDef.armor { start, end, maxKnockback }` : sous le seuil, dégâts et gel subis, attaque non interrompue ; au-dessus, coup normal. `MoveDef.counter { start, end, to }`, emplacements `M_EXTRA1`, `M_EXTRA2`, événement `EV_COUNTER` : frappé pendant la fenêtre, aucun dégât, le défenseur se tourne vers l'attaquant et lance `to` ; l'attaquant reçoit le gel supplémentaire d'une parade ; un projectile déclenche aussi le contre. Priorité dans `hit.ts` : bouclier, parade, contre, armure, coup normal.
   - Vérification : scénarios — armure sous et au-dessus du seuil, contre sur une attaque et sur un projectile, contre hors fenêtre, deux attaquants simultanés.
   - Fichiers : `packages/sim-core/src/defs.ts`, `src/moves.ts`, `src/events.ts`, `src/systems/hit.ts`, `src/systems/movement.ts`, `src/index.ts`, `test/scenarios/specials.test.ts`
 
-- [ ] **T4 : Attaque ultime (E6) et checksums**
+- [x] **T4 : Attaque ultime (E6) et checksums**
   - Acceptation : `M_ULTIMATE` (20), `MOVE_SLOTS` = 23 ; champ d'état `ultimateReady` en fin de liste ; `setUltimateReady(sim, player, ready)` ; `FighterView.ultimateReady` ; spécial neutre avec drapeau levé → ultime, drapeau baissé, `EV_ULTIMATE` émis ; drapeau levé sans ultime définie → spécial neutre normal, drapeau conservé ; `respawn` baisse le drapeau. Checksums de référence régénérés dans un commit dédié.
   - Vérification : scénarios — déclenchement, drapeau baissé, événement, spéciaux de côté et haut non détournés, rollback conserve le drapeau ; tests de déterminisme et de rollback passent avec les nouvelles références ; benchmark sous ses seuils.
   - Fichiers : `packages/sim-core/src/moves.ts`, `src/state.ts`, `src/step.ts`, `src/view.ts`, `src/events.ts`, `src/systems/movement.ts`, `src/index.ts`, `test/scenarios/specials.test.ts`, `test/determinism/golden.json`, `SPEC-sim-core.md` (API publique et tableau des écarts, en mentionnant la spec de `fighters`)
@@ -30,7 +30,7 @@
 
 ## Phase B — Outillage
 
-- [ ] **T5 : Paquet, constructeurs, roster et assemblage du match**
+- [x] **T5 : Paquet, constructeurs, roster et assemblage du match**
   - Acceptation : paquet `@game/fighters` (même organisation que `render` : alias vers les sources de `sim-core` en test, build préalable pour le typecheck) ; constructeurs `hit`, `move`, `moveset` ; type `Character`, `ROSTER` (vide de personnages réels à ce stade, le combattant de test sert aux tests d'outillage), `character(id)` ; `buildMatchConfig` avec renumérotation des projectiles après les entités du stage ; données figées en profondeur.
   - Vérification : tests d'assemblage — 2 et 8 joueurs, entités de stage en tête, même personnage plusieurs fois (ses projectiles une seule fois dans la liste), `kind` renumérotés pointant vers le bon type ; la `FighterDef` d'origine n'est pas modifiée.
   - Fichiers : `packages/fighters/package.json`, `tsconfig.json`, `tsconfig.build.json`, `vitest.config.ts`, `src/index.ts`, `src/build.ts`, `src/roster.ts`, `src/match.ts`, `test/match.test.ts`
