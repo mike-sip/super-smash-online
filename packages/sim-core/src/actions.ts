@@ -56,6 +56,13 @@ export const A_LEDGE_GETUP = 29;
 /** Remontée en roulade, plus loin sur le stage. */
 export const A_LEDGE_ROLL = 30;
 
+// Objets (module stages-items). Numérotés à part : les systèmes existants testent des plages
+// (`action >= A_SHIELD`, `action >= A_LEDGE`) ; ces actions sont aiguillées avant ces tests.
+/** Lance l'objet tenu. */
+export const A_ITEM_THROW = 40;
+/** Coup porté avec un objet à frapper ; la hitbox est celle de l'objet. */
+export const A_ITEM_SWING = 41;
+
 /**
  * Change d'action. `actionFrame` compte les frames passées dans l'action, frame du changement
  * incluse : il vaut 1 à la fin de la frame où l'action a commencé.

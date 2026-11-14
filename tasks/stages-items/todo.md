@@ -25,7 +25,7 @@
 
 ## Phase B — Stages vivants
 
-- [ ] **T4 : Extension de `sim-core`, champs vides et checksums**
+- [x] **T4 : Extension de `sim-core`, champs vides et checksums**
   - Acceptation : tous les ajouts de contrats, d'état, d'actions et d'événements de la spec, sans aucune logique ; `STATE_BYTES` mis à jour ; tests d'état adaptés.
   - Vérification : un script compare, sur les 5 séquences de référence et les séquences rapides, positions, vitesses, actions et dégâts finaux de chaque joueur avant et après (identiques) ; puis `golden:update` dans un commit dédié qui l'explique.
   - Fichiers : `packages/sim-core/src/{defs,state,actions,events,step,index}.ts`, `test/state.test.ts`, `test/determinism/golden.json`

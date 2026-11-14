@@ -100,6 +100,37 @@ export interface EntityDef {
   readonly hit?: EntityHitDef;
   /** Si vrai, l'entité disparaît au premier combattant touché ; sinon elle touche chacun une fois. */
   readonly destroyOnHit: boolean;
+  /**
+   * Absent : la zone de coup est un cercle de rayon `radius`. Présent : une capsule verticale de
+   * cette hauteur, qui part de la position de l'entité vers le haut (jet de geyser).
+   */
+  readonly height?: Fx;
+  /** Présent : l'entité est un objet, qu'on ramasse ou qui soigne au contact. */
+  readonly item?: ItemDef;
+}
+
+/**
+ * Comportement d'un objet. Un objet libre est posé ou tombe ; tenu, il suit son porteur ; lancé,
+ * il frappe avec `EntityDef.hit` jusqu'à toucher quelqu'un ou le décor.
+ *
+ * La durée de vie (`EntityDef.lifetime`) ne s'écoule que lorsque l'objet est libre ou lancé.
+ */
+export interface ItemDef {
+  /** Présent : objet de soin, consommé au contact ; il retire ces dégâts, sans descendre sous 0. */
+  readonly heal?: Fx;
+  /** Présent : objet à frapper ; les attaques normales du porteur deviennent ce coup. */
+  readonly swing?: MoveDef;
+  /** Vitesse donnée par un lancer vers l'avant, l'arrière ou le haut. */
+  readonly throwSpeed: Fx;
+  /** Lancé, il disparaît sur le premier combattant touché (sinon il rebondit et retombe). */
+  readonly breakOnHit: boolean;
+  /** Lancé, il se brise au premier contact, combattant ou décor. */
+  readonly breakOnContact: boolean;
+  /**
+   * Type d'entité créé là où l'objet se brise, ou quand sa durée de vie s'achève (explosion).
+   * Index dans `SimConfig.entities`, plus 1.
+   */
+  readonly burst?: number;
 }
 
 export interface MoveDef {
@@ -234,6 +265,45 @@ export interface PlatformDef {
   readonly x1: Fx;
   readonly x2: Fx;
   readonly y: Fx;
+  /** Présent : la plateforme fait des allers-retours. Ses coordonnées sont alors celles du départ. */
+  readonly motion?: PlatformMotionDef;
+}
+
+/**
+ * Aller-retour d'une plateforme entre sa position de départ et ce départ décalé de (`dx`, `dy`),
+ * adouci aux deux bouts. La position ne dépend que du numéro de frame : rien à sauvegarder.
+ */
+export interface PlatformMotionDef {
+  readonly dx: Fx;
+  readonly dy: Fx;
+  /** Durée d'un aller-retour complet, en frames (au moins 2). */
+  readonly period: number;
+  /** Décalage dans le cycle à la frame 0, en frames. */
+  readonly phase: number;
+}
+
+/** Segment d'où tombent les objets : ils apparaissent à la hauteur `y`, entre `x1` et `x2`. */
+export interface ItemZoneDef {
+  readonly x1: Fx;
+  readonly x2: Fx;
+  readonly y: Fx;
+}
+
+/**
+ * Danger périodique : à chaque cycle, crée en (`x`, `y`) une entité sans propriétaire qui vit
+ * `duration` frames. L'entité frappe comme tout coup d'entité (bouclier, intangibilité compris).
+ */
+export interface HazardDef {
+  readonly x: Fx;
+  readonly y: Fx;
+  /** Type d'entité créé : index dans `SimConfig.entities`, plus 1. 0 : danger inactif. */
+  readonly kind: number;
+  readonly period: number;
+  /** Frame du cycle où le jet commence, comptée depuis la frame 0. */
+  readonly phase: number;
+  readonly duration: number;
+  /** Frames d'annonce avant le jet. La simulation l'ignore : c'est une indication pour le rendu. */
+  readonly warning: number;
 }
 
 export interface StageDef {
@@ -249,4 +319,18 @@ export interface StageDef {
     readonly top: Fx;
     readonly bottom: Fx;
   };
+  /** Zones d'apparition des objets. Sans zone, aucun objet n'apparaît. */
+  readonly itemSpawns?: readonly ItemZoneDef[];
+  readonly hazards?: readonly HazardDef[];
+}
+
+/** Apparition des objets pendant le combat. */
+export interface ItemSpawnDef {
+  /** Objets possibles : type d'entité (index dans `SimConfig.entities` + 1) et poids du tirage. */
+  readonly table: readonly { readonly kind: number; readonly weight: number }[];
+  /** Délai entre deux apparitions, tiré entre ces bornes incluses, en frames. */
+  readonly minInterval: number;
+  readonly maxInterval: number;
+  /** Au-delà de ce nombre d'objets présents, l'apparition est reportée au délai suivant. */
+  readonly maxActive: number;
 }

@@ -1,5 +1,5 @@
 import { A_AIR, A_IDLE, A_SHIELD, A_SHIELD_BREAK, setAction } from './actions.ts';
-import type { EntityDef, FighterDef, StageDef } from './defs.ts';
+import type { EntityDef, FighterDef, ItemSpawnDef, StageDef } from './defs.ts';
 import { createEventQueue, type EventQueue } from './events.ts';
 import { rngSeed } from './rng.ts';
 import {
@@ -27,6 +27,8 @@ export interface SimConfig {
   readonly fighters: readonly FighterDef[];
   /** Types d'entités (projectiles, objets) utilisables pendant le combat. */
   readonly entities?: readonly EntityDef[];
+  /** Apparition des objets ; absent, aucun objet n'apparaît (module stages-items). */
+  readonly items?: ItemSpawnDef;
   readonly seed: number;
 }
 
