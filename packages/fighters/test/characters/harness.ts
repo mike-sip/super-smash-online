@@ -10,11 +10,14 @@
  */
 import {
   A_ATTACK,
+  A_GRABBING,
+  A_THROW,
   A_LEDGE,
   BTN_ATTACK,
   BTN_CSTICK_DOWN,
   BTN_CSTICK_RIGHT,
   BTN_CSTICK_UP,
+  BTN_GRAB,
   BTN_JUMP,
   BTN_SPECIAL,
   EV_COUNTER,
@@ -277,6 +280,30 @@ export function recover(c: Character, out: number, below: number): 'ledge' | 'st
   return 'fell';
 }
 
+/** Directions des projections, dans l'ordre de `FighterDef.throws` : avant, arrière, haut, bas. */
+const THROW_STICKS = [stick(127), stick(-127), stick(0, 127), stick(0, -127)];
+
+/**
+ * Saisit la cible placée au centre de la zone de saisie, puis la projette dans la direction
+ * `direction`. Renvoie les dégâts qu'elle a reçus, ou -1 si la saisie n'a pas pris.
+ */
+export function grabAndThrow(c: Character, direction: number): number {
+  const sim = duel(c);
+  const s = sim.state;
+  const box = c.def.grab.box;
+  placeGround(sim, 0, 0, 1);
+  placeGround(sim, 1, fxToFloat((box.x1 + box.x2) / 2), -1);
+  frameInputs(sim, press(BTN_GRAB));
+  for (let f = 0; f < c.def.grab.end + 2 && s.action[0] !== A_GRABBING; f++)
+    frameInputs(sim, NEUTRAL);
+  if (s.action[0] !== A_GRABBING) return -1;
+  frameInputs(sim, THROW_STICKS[direction]!);
+  expect(s.action[0]).toBe(A_THROW);
+  expect(s.move[0]).toBe(direction);
+  for (let f = 0; f < c.def.throws[direction]!.totalFrames; f++) frameInputs(sim, NEUTRAL);
+  return fxToFloat(s.damage[1]!);
+}
+
 /** Déclare les scénarios communs pour un personnage. */
 export function commonScenarios(c: Character): void {
   for (const slot of TRIGGERS.keys()) {
@@ -295,6 +322,12 @@ export function commonScenarios(c: Character): void {
       expect(counterWorks(c)).toEqual({ countered: true, unhurt: true, riposteHit: true });
     });
   }
+
+  it('saisit, puis projette dans les quatre directions avec les dégâts prévus', () => {
+    for (let d = 0; d < 4; d++) {
+      expect(grabAndThrow(c, d), `projection ${d}`).toBe(fxToFloat(c.def.throws[d]!.damage));
+    }
+  });
 
   it('attaque de rebord : part depuis le rebord et touche', () => {
     expect(ledgeAttackConnects(c)).toBe(true);
