@@ -122,3 +122,62 @@
 | Projection arrière | 14 | — | 30 | 9 | 140 | 50 / 0,65 |
 | Projection haute | 9 | — | 26 | 5 | 90 | 45 / 0,55 |
 | Projection basse | 12 | — | 28 | 5 | 70 | 35 / 0,35 |
+
+## Ferroc — lourd
+
+### Mouvement
+
+| Valeur | |
+|---|---|
+| Poids | 132 |
+| Taille / demi-largeur | 15 / 4,2 |
+| Marche | 0,8 |
+| Dash (vitesse, frames) | 1,6, 14 |
+| Course | 1,35 |
+| Pré-saut | 5 |
+| Saut / petit saut / double saut | 2,45 / 1,55 / 2,3 |
+| Sauts aériens | 1 |
+| Vitesse aérienne | 0,95 |
+| Gravité | 0,11 |
+| Chute max / rapide | 1,8 / 2,8 |
+| Atterrissage (frames) | 4 |
+| Bouclier | 60 |
+| Esquive sur place | 28 (intangible 3–16) |
+| Roulade | 34 (intangible 5–15) |
+| Esquive aérienne | 44 (intangible 4–28) |
+
+### Coups
+
+| Coup | Nom | Démarrage | Actives | Durée | Dégâts (%) | Angle | Éjection (base / croissance) | Atterrissage | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| Jab 1 | Marteau | 5 | 5–7 | 24 | 4 | 70 | 10 / 0,3 | — | suite : Jab 2 (frames 9–24) |
+| Jab 2 | Enclume | 6 | 6–8 | 26 | 4 | 70 | 12 / 0,3 | — | suite : Jab 3 (frames 12–26) |
+| Jab 3 | Coup de boutoir | 8 | 8–10 | 36 | 9 | 40 | 38 / 0,9 | — |  |
+| Tilt avant | Revers de pelle | 9 | 9–12 | 34 | 13 | 38 | 18 / 1 | — |  |
+| Tilt haut | Uppercut | 8 | 8–12 | 34 | 12 | 88 | 26 / 0,95 | — |  |
+| Tilt bas | Coup de pied bas | 7 | 7–9 | 26 | 10 | 70 | 22 / 0,7 | — |  |
+| Attaque de dash | Charge brute | 9 | 9–15 | 42 | 13 | 45 | 38 / 0,8 | — | élan 1–12 (avant 1,6) |
+| Smash avant | Masse d’armes | 20 | 20–23 | 62 | 24 (33,6 chargé) | 38 | 34 / 1,15 | — | chargeable (jusqu'à 60 frames) |
+| Smash haut | Éruption | 16 | 16–20 | 56 | 21 (29,4 chargé) | 88 | 32 / 1,1 | — | chargeable (jusqu'à 60 frames) |
+| Smash bas | Frappe au sol | 12 | 12–15 | 58 | 19 (26,6 chargé) | 35 / 145 | 30 / 1,05 | — | chargeable (jusqu'à 60 frames) |
+| Aérienne neutre | Toupie de fer | 7 | 7–14 | 44 | 12 | 45 | 22 / 0,9 | 12 |  |
+| Aérienne avant | Coup de massue | 13 | 13–16 | 48 | 16 | 40 | 26 / 1 | 16 |  |
+| Aérienne arrière | Coude arrière | 10 | 10–13 | 40 | 15 | 145 | 26 / 1 | 14 |  |
+| Aérienne haute | Tête-bêche | 8 | 8–13 | 40 | 13 | 85 | 24 / 0,95 | 12 |  |
+| Aérienne basse | Enclume tombante | 16 | 16–20 | 50 | 17 | 275 | 25 / 0,95 | 22 |  |
+| Spécial neutre | Bélier | 20 | 20–23 | 60 | 18 (32,4 chargé) | 40 | 40 / 1 | — | chargeable (jusqu'à 90 frames) ; armure 1–22 (éjection ≤ 90) |
+| Spécial côté | Rempart | 10 | 10–22 | 46 | 14 | 40 | 40 / 0,85 | 20 | élan 8–22 (avant 1,9) ; armure 1–20 (éjection ≤ 70) |
+| Spécial haut | Geyser | 6 | 6–10, 12–16, 26–30 | 52 | 4 + 4 + 12 | 85 / 75 | 35 / 0 ; 60 / 1 | 26 | élan 6–24 (haut 2,2) ; élan 25–30 (haut 1) ; chute impuissante ; invincible 1–6 |
+| Spécial bas | Séisme | 8 | 8–40 | 50 | 15 + 14 | 275 / 60 | 25 / 0,9 ; 35 / 0,9 | 24 | élan 8–40 (bas 3,2) |
+| Ultime | Fournaise | 30 | 30–36, 60–66 | 100 | 10 + 30 | 85 / 60 | 50 / 0 ; 95 / 1 | — | invincible 1–100 |
+| Attaque de rebord | Remontée lourde | 22 | 22–26 | 44 | 11 | 45 | 42 / 0,5 | — | invincible 1–20 |
+
+### Saisie et projections
+
+|  | Démarrage | Actives | Durée | Dégâts (%) | Angle | Éjection (base / croissance) |
+|---|---|---|---|---|---|---|
+| Saisie | 9 | 9–10 | 40 | coup pendant la prise : 1,8 toutes les 22 frames | — | — |
+| Projection avant | 16 | — | 36 | 11 | 45 | 55 / 0,7 |
+| Projection arrière | 20 | — | 42 | 13 | 135 | 60 / 0,8 |
+| Projection haute | 14 | — | 36 | 10 | 90 | 60 / 0,75 |
+| Projection basse | 18 | — | 40 | 8 | 70 | 45 / 0,5 |
