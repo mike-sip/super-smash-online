@@ -58,7 +58,7 @@
 
 ## Phase D — Client et démo
 
-- [ ] **T9 : Client navigateur**
+- [x] **T9 : Client navigateur**
   - Acceptation : paquet `@game/accounts-client` ; `createAccountsClient` conforme à la spec ; résultats sans exception, `network` quand le serveur est injoignable ou répond autre chose que du JSON ; messages d'erreur en français ; `retryAfter` lu ; validations réexportées pour vérifier avant l'envoi.
   - Vérification : tests du client contre un vrai serveur (chaque méthode) et contre un serveur éteint.
   - Fichiers : `packages/accounts-client/package.json`, `packages/accounts-client/tsconfig.json`, `packages/accounts-client/tsconfig.build.json`, `packages/accounts-client/vitest.config.ts`, `packages/accounts-client/src/index.ts`, `packages/accounts-client/test/client.test.ts`
