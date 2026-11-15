@@ -82,4 +82,4 @@
   - Vérification : la suite complète au vert ; mesure consignée dans le bilan.
   - Fichiers : `packages/fighters/test/archetypes.test.ts`, `test/match.test.ts`, `bench/step.bench.ts`, `SPEC-fighters.md`
 
-**Point de contrôle D** : vous jouez les quatre, à plusieurs ; relecture du bilan.
+**Point de contrôle D** (validé le 2026-11-15 : « Ressenti OK ») : vous jouez les quatre, à plusieurs ; relecture du bilan.

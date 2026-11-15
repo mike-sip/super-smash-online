@@ -1,6 +1,6 @@
 # Spec : `fighters` — les 4 personnages v1 et l'outillage de leurs données
 
-> Statut : **APPROUVÉE le 2026-11-13, implémentée** (bilan en fin de document ; le ressenti des trois derniers personnages reste à juger par vous). Plan : [tasks/fighters/plan.md](tasks/fighters/plan.md), tâches : [tasks/fighters/todo.md](tasks/fighters/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `sim-core` (contrat `FighterDef`).
+> Statut : **APPROUVÉE le 2026-11-13, implémentée** (bilan en fin de document ; ressenti des quatre personnages validé par vous). Plan : [tasks/fighters/plan.md](tasks/fighters/plan.md), tâches : [tasks/fighters/todo.md](tasks/fighters/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `sim-core` (contrat `FighterDef`).
 
 ## Hypothèses
 
@@ -289,12 +289,12 @@ Les données s'écrivent avec de petits constructeurs lisibles, en unités de je
 |---|---|---|---|
 | 1 | Moveset complet, chaque emplacement déclenché par son input | Atteint | 4 × 21 emplacements, plus la riposte de Sorel ; un scénario par emplacement (cible maintenue sur la première hitbox, `EV_HIT` attendu pendant le coup), contre, attaque de rebord, saisie et 4 projections pour chacun. Le harnais a été vérifié capable d'échouer (hitbox jamais active, retour impossible). |
 | 2 | Données valides, chaque règle testée | Atteint | `validate` : aucun problème pour les 4 ; 41 tests qui déclenchent chacun une règle (44 tests de validation au total). |
-| 3 | Identité des archétypes | Atteint pour les tests ; **à juger par vous** en jeu | Éjection du smash avant sur une cible à 100 % : Ferroc 7,21, Sorel 4,70, Nacre 4,32, Zéphine 3,32. Démarrage moyen et allonge testés ; Sorel n'est ni premier ni dernier sur 7 mesures. Les quatre silhouettes vérifiées à l'écran. |
+| 3 | Identité des archétypes | Atteint | Éjection du smash avant sur une cible à 100 % : Ferroc 7,21, Sorel 4,70, Nacre 4,32, Zéphine 3,32. Démarrage moyen et allonge testés ; Sorel n'est ni premier ni dernier sur 7 mesures. Les quatre silhouettes vérifiées à l'écran. |
 | 4 | Retour sur le stage depuis 50 / 30 | Atteint | Les 4, scénario automatique (voir « Retour sur le stage » ci-dessus). |
 | 5 | Déterminisme et rollback | Atteint | 3 600 frames à 8 joueurs mêlant les 4 : même checksum à deux exécutions ; propriété sauvegarde / restauration sur 200 tirages. |
 | 6 | Performance | Atteint | `step` à 8 joueurs : 0,0021 ms en moyenne, 0,0045 ms au 99ᵉ centile (seuils 0,25 et 1). |
 | 7 | Frame data à jour et lisible | Atteint pour l'outillage | `FRAMEDATA.md` régénéré et vérifié par test ; panneau F dans la démo. Lisibilité : à votre appréciation. |
 | 8 | Démo : choix, ultime, frame data | Atteint | Panneau G et `?p1=…`, bouton U, panneau F ; 4 tests Playwright dans Edge. |
-| 9 | Ressenti | **Partiel** | Sorel validé par vous le 2026-11-14. Zéphine, Ferroc et Nacre pas encore essayés par vous (point de contrôle D). |
+| 9 | Ressenti | Atteint | Sorel validé par vous le 2026-11-14 ; Zéphine, Ferroc et Nacre le 2026-11-15 (point de contrôle D). |
 
 Tests au moment du bilan : `sim-core` 335 (+2 ignorés : Firefox, WebKit), `fighters` 169, `render` 104, `input` 175, démo 13. Typecheck et lint passants.
