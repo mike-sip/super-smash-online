@@ -1,6 +1,6 @@
 # Plan : module `stages-items`
 
-> Statut : **APPROUVÉ le 2026-11-13**. Spec : [SPEC-stages-items.md](../../SPEC-stages-items.md). Tâches détaillées : [todo.md](todo.md).
+> Statut : **APPROUVÉ le 2026-11-13, terminé le 2026-11-15** (bilan en fin de spec). Spec : [SPEC-stages-items.md](../../SPEC-stages-items.md). Tâches détaillées : [todo.md](todo.md).
 
 ## Approche
 

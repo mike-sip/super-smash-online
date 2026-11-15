@@ -1,6 +1,6 @@
 # Spec : `stages-items` — stages et objets de la v1
 
-> Statut : **APPROUVÉE le 2026-11-13**. Plan : [tasks/stages-items/plan.md](tasks/stages-items/plan.md), tâches : [tasks/stages-items/todo.md](tasks/stages-items/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `sim-core` (implémenté). Consommé par : `render`, `match-rules`, `netcode` (indirectement, par l'état de `sim-core`), `app-shell`.
+> Statut : **APPROUVÉE le 2026-11-13, implémentée** (bilan en fin de document ; déterminisme navigateur partiellement vérifié, ressenti à juger). Plan : [tasks/stages-items/plan.md](tasks/stages-items/plan.md), tâches : [tasks/stages-items/todo.md](tasks/stages-items/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `sim-core` (implémenté). Consommé par : `render`, `match-rules`, `netcode` (indirectement, par l'état de `sim-core`), `app-shell`.
 
 ## Hypothèses
 
@@ -76,7 +76,7 @@ Tout est **additif** : de nouveaux champs optionnels dans les contrats, de nouve
 |---|---|
 | `defs.ts` | `PlatformDef.motion?` : déplacement d'aller-retour (décalage `dx`, `dy`, période et phase en frames, départ et arrivée adoucis par un polynôme entier). `StageDef.itemSpawns?` : segments d'apparition des objets. `StageDef.hazards?` : danger périodique (position, période, phase, type d'entité créé pendant le jet). `EntityDef.height?` : la zone de coup d'une entité devient une capsule verticale (le jet de geyser). `EntityDef.item?` : comportement d'objet (`ItemDef` : catégorie lancer, frapper ou soin ; vitesse de lancer ; coup du Bâton sous forme de `MoveDef` ; soin ; se brise au contact ; entité créée en se brisant ou en explosant ; mèche) |
 | `step.ts` | `SimConfig.items?` : table d'apparition (`{ kind, weight }[]`), délai minimal et maximal en frames, nombre maximal d'objets présents. Deux appels insérés dans `step` : mouvement du stage en début de frame, puis système des objets après celui des entités |
-| `state.ts` | Champ de combattant `held` (objet tenu). Champs d'entité `eMode` (libre, tenu, lancé), `eSurface` (surface où l'objet est posé, pour qu'une plateforme mobile le porte), `eTimer` (mèche). Valeur globale `G_ITEM_TIMER`. L'état passe de 2 764 à environ 3 184 octets |
+| `state.ts` | Champ de combattant `held` (objet tenu). Champs d'entité `eMode` (libre, tenu, lancé), `eSurface` (surface où l'objet est posé, pour qu'une plateforme mobile le porte). Valeur globale `G_ITEM_TIMER`. L'état passe de 2 764 à 3 056 octets (`eTimer`, prévu d'abord, s'est révélé inutile : voir les écarts) |
 | `actions.ts` | Deux actions : `A_ITEM_THROW` (40) et `A_ITEM_SWING` (41), numérotées hors des plages annoncées par `fighters` ; routées explicitement avant les tests de plage existants (`action >= A_SHIELD`, `action >= A_LEDGE`) |
 | `events.ts` | `EV_ITEM_SPAWN` à `EV_ITEM_BREAK` (20 à 24), hors des numéros annoncés par `fighters` et `match-rules` |
 | `systems/collision.ts` | Les surfaces mobiles sont recalculées à chaque frame à partir du numéro de frame. L'atterrissage compare les pieds à la hauteur de la surface **à la frame précédente** (identique pour une surface fixe), pour qu'une plateforme qui monte ne laisse pas passer un combattant qui tombe |
@@ -253,7 +253,41 @@ Développement piloté par les tests pour toute la logique de `sim-core` et la v
 
 ## Écarts et limites constatés pendant l'implémentation
 
-Mis à jour à chaque phase.
+Chaque point est soit une simplification assumée, soit une décision en attente.
 
 | Sujet | État actuel | Suite prévue |
 |---|---|---|
+| Numéros des ajouts | `A_ITEM_THROW` = 40, `A_ITEM_SWING` = 41, `EV_ITEM_SPAWN` à `EV_ITEM_BREAK` = 20 à 24 (et non 31, 32, 8 à 12 comme d'abord écrit) : les branches `fighters` (`A_HELPLESS` = 31, `EV_COUNTER` = 8) et `match-rules` (`EV_ULTIMATE` = 9) avaient annoncé ces numéros. Les deux actions sont aiguillées avant les tests de plage existants ; `integrate` exclut désormais les seules actions de rebord (`A_LEDGE` à `A_LEDGE_ROLL`) au lieu de tout ce qui suit `A_LEDGE`. | À la fusion : vérifier ces deux tests de plage avec `A_HELPLESS` de `fighters`. Liste dans le dossier de notes partagé. |
+| État | `eTimer` n'a pas été ajouté : la mèche du pétard est sa durée de vie (`EntityDef.lifetime`), qui ne s'écoule pas tant qu'il est tenu. L'état passe de 2 764 à **3 056 octets** (et non 3 184). | — |
+| `ItemDef` | Champs réels : `heal`, `swing`, `throwSpeed`, `breakOnHit`, `breakOnContact`, `burst`. Pas de champ « catégorie » : la catégorie se déduit (soin si `heal`, à frapper si `swing`, sinon à lancer). Le coup lancé d'un objet est `EntityDef.hit`, actif seulement quand l'objet est lancé. | — |
+| Types d'entités ajoutés | `applyStage` et `applyItems` ajoutent le jet de geyser, l'explosion et les objets **après** les entités de la configuration et réutilisent une entité déjà présente : les deux fonctions se composent dans n'importe quel ordre. Le `StageDef` du registre a des dangers de type 0 (inactifs) : passer par `applyStage`. | — |
+| Ramassage et lancer | Ramassage immédiat, sans animation propre. Pas de ramassage ni de rattrapage en l'air, pas de lancer « smash », pas d'objet qu'on renvoie en le frappant (simplifications annoncées). Le lancer dure 16 frames, l'objet part à la 5ᵉ. | Votre avis manette en main. |
+| Coup de bâton | Une seule attaque, quelle que soit la direction ; elle reprend la pose de l'attaque avant inclinée. Le rendu suppose un seul objet à frapper dans la configuration (vrai pour la v1) pour rythmer la pose et la vue technique. | À revoir si un deuxième objet à frapper arrive. |
+| Objet tenu à l'écran | Il suit un point devant le combattant, à mi-hauteur, sans s'attacher à la main du mannequin (qui n'a pas d'os). | Avec les vrais modèles animés. |
+| Ombres | Les ombres des combattants se posent sur les surfaces à leur position de départ : sur une plateforme mobile, l'ombre ne suit pas la plateforme. | Lire les plateformes mobiles dans `stage.ts` du rendu, si c'est gênant. |
+| Pertes d'objet | L'objet tombe à l'accroche au rebord, disparaît au KO ; il reste en main quand on est frappé ou saisi. Une réapparition imposée par les règles (`respawn`) le fait tomber là où il était. | — |
+| Benchmark de `sim-core` | Il enchaîne désormais deux scénarios dans une fonction. Le premier passage y montrait un surcoût unique de compilation (38 Ko de tas au premier scénario, 544 octets au second, 15 Ko pour l'ancien script sur le même code) : la mesure du tas est précédée d'une passe non mesurée. Le seuil de 32 Ko n'a pas été touché. | — |
+| Déterminisme entre navigateurs | Les séquences de référence de `sim-core` (sans objets) concordent dans Node et Edge avec les nouveaux checksums. **WebKit non vérifié** sur cette branche : il n'ouvre plus aucune page sur la machine de développement, même vide (il fonctionnait au début de la session). Firefox, toujours non vérifié (voir la spec de `sim-core`). Les mécanismes de ce module (objets, plateformes mobiles, dangers) ne sont vérifiés que dans Node, par double exécution et rollback ; ils suivent les mêmes règles d'arithmétique entière et la même règle de lint. | Relancer le test navigateur avec WebKit (`SIM_BROWSERS=chromium,webkit`) sur une machine où il démarre ; ajouter une séquence avec objets aux références à la fusion. |
+| Test de fumée de la démo | Deux tests (remappage, réglage de la gravité) ont échoué une fois, puis passé trois fois de suite. Une manette réelle branchée sur la machine rejoint J1 dans les captures ; c'est l'explication probable, non confirmée. | À surveiller. |
+| Dépendances | Aucune dépendance externe ajoutée. `render` et la démo dépendent de `@game/stages-items` (paquet du dépôt, prévu par la carte). | — |
+
+## Bilan des critères de succès (2026-11-15)
+
+| N° | Critère | État | Mesure |
+|---|---|---|---|
+| 1 | Contenu : 4 stages, 5 objets, décors et formes procéduraux | Atteint | Belvédère, Récif, Canal, Geysers ; Galet, Bâton, Pétard, Baie, Fiole de sève, plus l'explosion et le jet de geyser ; captures relues à chaque phase |
+| 2 | `validateStage` ne signale rien, de 2 à 8 joueurs | Atteint | `packages/stages-items/test/stages.test.ts` |
+| 3 | Un test par scénario de la stratégie de test | Atteint | Plateformes mobiles (6), dangers (5), objets (21), apparition (5), trajectoire (5) dans `sim-core` ; objets réels et `applyItems` dans `stages-items` |
+| 4 | Déterminisme et rollback sur chaque stage, objets à `high`, 8 joueurs ; séquences de référence inchangées | Atteint dans Node | 36 000 frames rejouées au bit près sur chaque stage ; rollback sur 200 tirages ; positions, actions et dégâts des séquences de référence identiques avant et après l'extension, checksums régénérés. Navigateurs : voir les écarts (Edge oui, WebKit et Firefox non vérifiés) |
+| 5 | Vitesse de la simulation | Atteint | Stage vivant avec objets : `step` 0,004 ms en moyenne, 0,008 ms au 99ᵉ centile ; snapshot 0,00003 ms ; état de 3 056 octets |
+| 6 | Performance du rendu sur les 4 stages, objets à `high` | Atteint | Rendu matériel (RTX 4060 Ti), sans fenêtre : production 95ᵉ centile 0,6 à 0,8 ms, dessin moyen 0,34 à 0,41 ms, 15,9 à 20,8 appels de dessin, tas +44 à +98 Ko sur 600 images |
+| 7 | Démo : stage, fréquence des objets, dangers ; fumée passante | Atteint | Barre d'outils et adresse (`?stage=geysers&items=high&hazards=off`) ; 11 tests de fumée |
+| 8 | `applyItems` et `applyStage` suffisent à `match-rules` | Atteint côté module | La session `match-rules` a aligné son réglage sur `ItemSettings` ; l'appel sera branché après fusion des deux branches |
+| 9 | Ressenti, stages et objets en main | Non vérifiable par moi | Votre essai dans la démo |
+
+Commandes ajoutées pendant l'implémentation :
+
+```
+Démo, objets et dangers :  pnpm --filter @game/demo dev   puis ?stage=canal&items=high&hazards=off
+Stage de test :            ?stage=test
+```

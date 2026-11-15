@@ -1,6 +1,6 @@
 # Tâches : module `stages-items`
 
-> Statut : **APPROUVÉ le 2026-11-13**. Plan : [plan.md](plan.md).
+> Statut : **APPROUVÉ le 2026-11-13, terminé le 2026-11-15** (bilan en fin de spec). Plan : [plan.md](plan.md).
 >
 > Vérification commune à chaque tâche : `pnpm --filter @game/stages-items test`, `pnpm --filter @game/sim-core test`, les typechecks des paquets touchés et `pnpm lint` passent.
 
@@ -88,7 +88,7 @@
   - Vérification : `pnpm --filter @game/demo test` et `pnpm --filter @game/demo perf` passent ; captures.
   - Fichiers : `apps/demo/src/stage-select.ts`, `apps/demo/src/main.ts`, `apps/demo/test/{smoke,perf}.test.ts`
 
-- [ ] **T15 : Bilan**
+- [x] **T15 : Bilan**
   - Acceptation : bilan des critères de succès et tableau des écarts en fin de spec ; statut de ce plan mis à jour ; note de fusion dans le dossier partagé (numéros à renuméroter, checksums à régénérer).
   - Fichiers : `SPEC-stages-items.md`, `tasks/stages-items/*.md`
 
