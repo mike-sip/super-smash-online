@@ -27,7 +27,7 @@ export function memoryNetwork(lobby: Lobby, address = '10.0.0.1'): MemoryNetwork
     onerror: ((event: unknown) => void) | null = null;
     private peer: LobbyPeer | null = null;
 
-    constructor(_url: string) {
+    constructor() {
       queueMicrotask(() => {
         if (down) {
           this.finish();
