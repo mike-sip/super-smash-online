@@ -2,7 +2,9 @@
  * Mesure de performance (critères « fluide » et « économe » de SPEC-render.md).
  *
  * Scénario : 8 combattants à inputs aléatoires et 16 entités, démo compilée comme en production,
- * dans Microsoft Edge, pendant 10 secondes. Lancement : `pnpm --filter @game/demo perf`.
+ * dans Microsoft Edge, pendant 10 secondes, sur le stage de test puis sur chacun des 4 stages de
+ * la v1 avec leur décor, objets à « high » (critère n° 6 de SPEC-stages-items.md ; les objets
+ * comptent parmi les 16 entités). Lancement : `pnpm --filter @game/demo perf`.
  *
  * Ce qui est mesuré, et comment :
  * - temps de production d'une image : simulation puis dessin, côté processeur, dans la page ;
@@ -26,6 +28,10 @@ declare global {
 }
 
 const SCENARIO = '?dummies=7&mode=random&entities=16';
+/** Stages mesurés : le stage de test d'origine, puis ceux de la v1, objets à « high ». */
+const STAGES = ['test', 'belvedere', 'recif', 'canal', 'geysers'] as const;
+const query = (stage: (typeof STAGES)[number]): string =>
+  stage === 'test' ? `${SCENARIO}&stage=test` : `${SCENARIO}&stage=${stage}&items=high`;
 const MEASURE_MS = 10_000;
 const WARMUP_FRAMES = 300;
 const HEAP_FRAMES = 600;
@@ -94,7 +100,7 @@ describe('performance de la démo', () => {
     if (address === null || typeof address === 'string') {
       throw new Error('Le serveur de la démo ne donne pas son port.');
     }
-    url = `http://127.0.0.1:${address.port}/${SCENARIO}`;
+    url = `http://127.0.0.1:${address.port}/`;
   }, 120_000);
 
   afterAll(async () => {
@@ -103,13 +109,14 @@ describe('performance de la démo', () => {
   });
 
   /** Ouvre la démo ; sans fenêtre d'abord, puis dans une fenêtre si le rendu est logiciel. */
-  async function open(): Promise<{ page: Page; gpu: string; windowed: boolean }> {
+  async function open(search: string): Promise<{ page: Page; gpu: string; windowed: boolean }> {
+    await browser?.close();
     for (const headless of [true, false]) {
       browser = await chromium.launch({ channel: 'msedge', headless });
       const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
       await context.addInitScript(countDrawCalls);
       const page = await context.newPage();
-      await page.goto(url);
+      await page.goto(url + search);
       const gpu = await gpuName(page);
       if (!SOFTWARE.test(gpu) || !headless) return { page, gpu, windowed: !headless };
       await browser.close();
@@ -117,62 +124,68 @@ describe('performance de la démo', () => {
     throw new Error('Inatteignable.');
   }
 
-  it('tient les seuils de la spec à 8 combattants et 16 entités', async () => {
-    const { page, gpu, windowed } = await open();
-    const errors: string[] = [];
-    page.on('pageerror', (error) => errors.push(error.message));
-    await page.waitForFunction(() => globalThis.__demo !== undefined);
-    expect(await page.evaluate(() => __demo.players)).toBe(8);
-    await waitFrames(page, WARMUP_FRAMES);
+  it.each(STAGES)(
+    'tient les seuils de la spec à 8 combattants et 16 entités : %s',
+    async (stage) => {
+      const { page, gpu, windowed } = await open(query(stage));
+      const errors: string[] = [];
+      page.on('pageerror', (error) => errors.push(error.message));
+      await page.waitForFunction(() => globalThis.__demo !== undefined);
+      expect(await page.evaluate(() => __demo.players)).toBe(8);
+      expect(await page.evaluate(() => __demo.stage())).toBe(stage);
+      await waitFrames(page, WARMUP_FRAMES);
 
-    // Temps par image, sur 10 secondes.
-    await page.evaluate(() => {
-      __drawCalls = 0;
-      __demo.perfStart();
-    });
-    await page.waitForTimeout(MEASURE_MS);
-    const { report, drawCalls } = await page.evaluate(() => ({
-      report: __demo.perfStop(),
-      drawCalls: __drawCalls,
-    }));
-    const images = report.intervals.length;
-    const work = report.simulate.map((ms, i) => ms + report.draw[i]!);
+      // Temps par image, sur 10 secondes.
+      await page.evaluate(() => {
+        __drawCalls = 0;
+        __demo.perfStart();
+      });
+      await page.waitForTimeout(MEASURE_MS);
+      const { report, drawCalls } = await page.evaluate(() => ({
+        report: __demo.perfStop(),
+        drawCalls: __drawCalls,
+      }));
+      const images = report.intervals.length;
+      const work = report.simulate.map((ms, i) => ms + report.draw[i]!);
 
-    // Croissance du tas en régime établi, ramasse-miettes forcé avant chaque lecture.
-    const cdp = await page.context().newCDPSession(page);
-    const heap = async (): Promise<number> => {
-      await cdp.send('HeapProfiler.collectGarbage');
-      return (await cdp.send('Runtime.getHeapUsage')).usedSize;
-    };
-    const heapBefore = await heap();
-    await waitFrames(page, HEAP_FRAMES);
-    const heapGrowth = (await heap()) - heapBefore;
+      // Croissance du tas en régime établi, ramasse-miettes forcé avant chaque lecture.
+      const cdp = await page.context().newCDPSession(page);
+      const heap = async (): Promise<number> => {
+        await cdp.send('HeapProfiler.collectGarbage');
+        return (await cdp.send('Runtime.getHeapUsage')).usedSize;
+      };
+      const heapBefore = await heap();
+      await waitFrames(page, HEAP_FRAMES);
+      const heapGrowth = (await heap()) - heapBefore;
 
-    const result = {
-      rendu: `${SOFTWARE.test(gpu) ? 'LOGICIEL' : 'matériel'} — ${gpu}`,
-      fenetre: windowed ? 'visible' : 'sans fenêtre',
-      images,
-      productionMoyenneMs: +mean(work).toFixed(3),
-      production95Ms: +percentile(work, 0.95).toFixed(3),
-      productionMaxMs: +Math.max(...work).toFixed(3),
-      simulationMoyenneMs: +mean(report.simulate).toFixed(3),
-      dessinMoyenMs: +mean(report.draw).toFixed(3),
-      dessin95Ms: +percentile(report.draw, 0.95).toFixed(3),
-      ecartMoyenMs: +mean(report.intervals).toFixed(2),
-      ecart95Ms: +percentile(report.intervals, 0.95).toFixed(2),
-      imagesEnRetard: report.intervals.filter((ms) => ms > 25).length,
-      appelsDeDessinParImage: +(drawCalls / Math.max(1, images)).toFixed(1),
-      croissanceDuTasKo: +(heapGrowth / 1024).toFixed(1),
-    };
-    // Écrit directement sur la sortie : le rapport doit s'afficher même quand le test passe.
-    process.stdout.write(`\nPerformance de la démo\n${JSON.stringify(result, null, 2)}\n\n`);
+      const result = {
+        stage,
+        rendu: `${SOFTWARE.test(gpu) ? 'LOGICIEL' : 'matériel'} — ${gpu}`,
+        fenetre: windowed ? 'visible' : 'sans fenêtre',
+        images,
+        productionMoyenneMs: +mean(work).toFixed(3),
+        production95Ms: +percentile(work, 0.95).toFixed(3),
+        productionMaxMs: +Math.max(...work).toFixed(3),
+        simulationMoyenneMs: +mean(report.simulate).toFixed(3),
+        dessinMoyenMs: +mean(report.draw).toFixed(3),
+        dessin95Ms: +percentile(report.draw, 0.95).toFixed(3),
+        ecartMoyenMs: +mean(report.intervals).toFixed(2),
+        ecart95Ms: +percentile(report.intervals, 0.95).toFixed(2),
+        imagesEnRetard: report.intervals.filter((ms) => ms > 25).length,
+        appelsDeDessinParImage: +(drawCalls / Math.max(1, images)).toFixed(1),
+        croissanceDuTasKo: +(heapGrowth / 1024).toFixed(1),
+      };
+      // Écrit directement sur la sortie : le rapport doit s'afficher même quand le test passe.
+      process.stdout.write(`\nPerformance de la démo\n${JSON.stringify(result, null, 2)}\n\n`);
 
-    expect(errors).toEqual([]);
-    // Dix secondes à 60 Hz font 600 images ; nettement moins, c'est que l'affichage ne suit pas.
-    expect(images).toBeGreaterThan(500);
-    expect(result.production95Ms).toBeLessThan(MAX_FRAME_MS);
-    expect(result.dessinMoyenMs).toBeLessThan(MAX_DRAW_MS);
-    expect(result.appelsDeDessinParImage).toBeLessThan(MAX_DRAW_CALLS);
-    expect(heapGrowth).toBeLessThan(MAX_HEAP_GROWTH);
-  }, 120_000);
+      expect(errors).toEqual([]);
+      // Dix secondes à 60 Hz font 600 images ; nettement moins, c'est que l'affichage ne suit pas.
+      expect(images).toBeGreaterThan(500);
+      expect(result.production95Ms).toBeLessThan(MAX_FRAME_MS);
+      expect(result.dessinMoyenMs).toBeLessThan(MAX_DRAW_MS);
+      expect(result.appelsDeDessinParImage).toBeLessThan(MAX_DRAW_CALLS);
+      expect(heapGrowth).toBeLessThan(MAX_HEAP_GROWTH);
+    },
+    120_000,
+  );
 });

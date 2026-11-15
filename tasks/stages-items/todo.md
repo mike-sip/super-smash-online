@@ -83,7 +83,7 @@
   - Vérification : captures de chaque stage ; compteur d'appels de dessin dans la vue technique.
   - Fichiers : `packages/render/src/stages/{palette,belvedere,recif,canal,geysers}.ts`
 
-- [ ] **T14 : Démo et performance**
+- [x] **T14 : Démo et performance**
   - Acceptation : barre d'outils : stage, fréquence des objets, dangers ; mesure de performance lancée sur les 4 stages, objets à `high`.
   - Vérification : `pnpm --filter @game/demo test` et `pnpm --filter @game/demo perf` passent ; captures.
   - Fichiers : `apps/demo/src/stage-select.ts`, `apps/demo/src/main.ts`, `apps/demo/test/{smoke,perf}.test.ts`
