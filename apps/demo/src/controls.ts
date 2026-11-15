@@ -1,9 +1,10 @@
-/** Contrôles de la démo : pause, image par image, ralenti, réinitialisation, vue technique. */
+/** Contrôles de la démo : pause, image par image, ralenti, réinitialisation, vue technique, son. */
 
 export interface ControlHandlers {
   onReset(): void;
   onTuning(): void;
   onRemap(): void;
+  onSound(): void;
   onDebug(enabled: boolean): void;
 }
 
@@ -103,6 +104,7 @@ export function createControls(
   );
   button('KeyT', 'T', 'Réglages', () => handlers.onTuning());
   button('KeyM', 'M', 'Commandes', () => handlers.onRemap());
+  button('KeyS', 'S', 'Son', () => handlers.onSound());
   const keys: ReadonlySet<string> = new Set(actions.keys());
   refresh();
 

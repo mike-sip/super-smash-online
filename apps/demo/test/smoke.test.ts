@@ -362,4 +362,54 @@ describe('démo', () => {
     expect(errors).toEqual([]);
     await page.close();
   }, 60_000);
+
+  it('attend une action pour le son, puis joue effets et planche d’écoute', async () => {
+    const { page, errors } = await open('');
+    // Les réglages enregistrés d'un essai précédent ne doivent pas couper le son.
+    await page.evaluate(() => localStorage.removeItem('demo.audio'));
+    expect(await page.evaluate(() => __demo.audio().state)).toBe('locked');
+    expect(await page.evaluate(() => __demo.audio().played)).toBe(0);
+
+    // Un clic dans la page est une action de l'utilisateur : le son démarre.
+    await page.mouse.click(640, 360);
+    await page.waitForFunction(() => __demo.audio().state === 'running');
+
+    // Un saut fait entendre le saut puis l'atterrissage.
+    await page.waitForFunction(() => __demo.fighter(0).grounded);
+    const before = await page.evaluate(() => __demo.audio().played);
+    await page.keyboard.press('KeyZ');
+    await page.waitForFunction((n) => __demo.audio().played >= n + 2, before);
+
+    // Panneau son : coupure, curseurs, planche d'écoute.
+    const panel = page.locator('#sound');
+    expect(await panel.isVisible()).toBe(false);
+    await page.keyboard.press('KeyS');
+    expect(await panel.isVisible()).toBe(true);
+    expect(await page.locator('[data-sound="status"]').textContent()).toBe('Son actif.');
+    expect(await page.locator('[data-sound-play]').count()).toBe(14);
+    const heard = await page.evaluate(() => __demo.audio().played);
+    await page.locator('[data-sound-play="6"]').click();
+    expect(await page.evaluate(() => __demo.audio().played)).toBe(heard + 1);
+
+    // Coupé : plus aucun son, et le réglage survit au rechargement.
+    await page.locator('[data-sound="enabled"]').uncheck();
+    await page.locator('[data-sound="effects"]').fill('40');
+    const muted = await page.evaluate(() => __demo.audio().played);
+    await page.waitForFunction(() => __demo.fighter(0).grounded);
+    await page.keyboard.press('KeyZ');
+    await page.waitForTimeout(800);
+    expect(await page.evaluate(() => __demo.audio().played)).toBe(muted);
+    await page.reload();
+    await page.waitForFunction(() => globalThis.__demo !== undefined);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('demo.audio')!))).toEqual({
+      enabled: false,
+      effects: 0.4,
+      music: 0.6,
+    });
+    await page.keyboard.press('KeyS');
+    expect(await page.locator('[data-sound="enabled"]').isChecked()).toBe(false);
+    expect(await page.locator('[data-sound="effects"]').inputValue()).toBe('40');
+    expect(errors).toEqual([]);
+    await page.close();
+  }, 60_000);
 });

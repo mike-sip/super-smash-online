@@ -1,8 +1,8 @@
 /**
  * Mesure de performance (critères « fluide » et « économe » de SPEC-render.md).
  *
- * Scénario : 8 combattants à inputs aléatoires et 16 entités, démo compilée comme en production,
- * dans Microsoft Edge, pendant 10 secondes. Lancement : `pnpm --filter @game/demo perf`.
+ * Scénario : 8 combattants à inputs aléatoires et 16 entités, son actif, démo compilée comme en
+ * production, dans Microsoft Edge, pendant 10 secondes. Lancement : `pnpm --filter @game/demo perf`.
  *
  * Ce qui est mesuré, et comment :
  * - temps de production d'une image : simulation puis dessin, côté processeur, dans la page ;
@@ -123,7 +123,11 @@ describe('performance de la démo', () => {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.waitForFunction(() => globalThis.__demo !== undefined);
     expect(await page.evaluate(() => __demo.players)).toBe(8);
+    // Son actif pendant toute la mesure : un clic compte comme action de l'utilisateur.
+    await page.mouse.click(640, 200);
+    await page.waitForFunction(() => __demo.audio().state === 'running');
     await waitFrames(page, WARMUP_FRAMES);
+    const playedBefore = await page.evaluate(() => __demo.audio().played);
 
     // Temps par image, sur 10 secondes.
     await page.evaluate(() => {
@@ -131,8 +135,9 @@ describe('performance de la démo', () => {
       __demo.perfStart();
     });
     await page.waitForTimeout(MEASURE_MS);
-    const { report, drawCalls } = await page.evaluate(() => ({
+    const { report, drawCalls, audio } = await page.evaluate(() => ({
       report: __demo.perfStop(),
+      audio: __demo.audio(),
       drawCalls: __drawCalls,
     }));
     const images = report.intervals.length;
@@ -163,11 +168,15 @@ describe('performance de la démo', () => {
       imagesEnRetard: report.intervals.filter((ms) => ms > 25).length,
       appelsDeDessinParImage: +(drawCalls / Math.max(1, images)).toFixed(1),
       croissanceDuTasKo: +(heapGrowth / 1024).toFixed(1),
+      son: audio.state,
+      effetsSonoresJoues: audio.played - playedBefore,
     };
     // Écrit directement sur la sortie : le rapport doit s'afficher même quand le test passe.
     process.stdout.write(`\nPerformance de la démo\n${JSON.stringify(result, null, 2)}\n\n`);
 
     expect(errors).toEqual([]);
+    expect(result.son).toBe('running');
+    expect(result.effetsSonoresJoues).toBeGreaterThan(0);
     // Dix secondes à 60 Hz font 600 images ; nettement moins, c'est que l'affichage ne suit pas.
     expect(images).toBeGreaterThan(500);
     expect(result.production95Ms).toBeLessThan(MAX_FRAME_MS);

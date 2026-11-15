@@ -1,6 +1,6 @@
-/** Démo jouable : boucle à pas fixe, assemblage de la simulation et du rendu. */
+/** Démo jouable : boucle à pas fixe, assemblage de la simulation, du rendu et du son. */
 import { KEYBOARD_ID, MAX_LOCAL_PLAYERS, createInput, type Device } from '@game/input';
-import { createRenderer, type Renderer } from '@game/render';
+import { createGameAudio, createRenderer, type Renderer } from '@game/render';
 import {
   A_DEAD,
   checksum,
@@ -18,6 +18,7 @@ import { createControls } from './controls.ts';
 import { createDummies, type Dummies, type DummyMode } from './dummies.ts';
 import { createEntityFeeder, createPerfProbe, type EntityFeeder } from './perf.ts';
 import { createRemap, type Remap } from './remap.ts';
+import { createSoundPanel, loadAudioSettings } from './sound.ts';
 import { createTuning } from './tuning.ts';
 
 const STEP_MS = 1000 / 60;
@@ -125,6 +126,21 @@ let dummies: Dummies;
 let feeder: EntityFeeder;
 const probe = createPerfProbe();
 
+// Le son vit aussi longtemps que la page : le navigateur ne l'autorise qu'après une action de
+// l'utilisateur, une seule fois. Une nouvelle simulation est reconnue d'elle-même.
+const MUSIC = 'arena';
+const audio = createGameAudio({ settings: loadAudioSettings(safeStorage()) });
+audio.playMusic(MUSIC);
+const unlockAudio = (): void => audio.unlock();
+window.addEventListener('pointerdown', unlockAudio, { capture: true });
+window.addEventListener('keydown', unlockAudio, { capture: true });
+const soundPanel = createSoundPanel({
+  panel: element('sound'),
+  audio,
+  storage: safeStorage(),
+  track: MUSIC,
+});
+
 const tuning = createTuning(element('tuning'), baseConfig, (tuned) => {
   config = tuned;
   start();
@@ -134,6 +150,7 @@ const controls = createControls(window, element('toolbar'), {
   onReset: () => start(),
   onTuning: () => tuning.toggle(),
   onRemap: () => remap.screen?.toggle(),
+  onSound: () => soundPanel.toggle(),
   onDebug: (enabled) => renderer.setDebug(enabled),
 });
 
@@ -161,6 +178,7 @@ function start(): void {
   renderer.setDebug(controls.debug);
   resize();
   renderer.capture(sim);
+  audio.capture(sim);
 }
 start();
 
@@ -188,6 +206,7 @@ function simulateFrame(): void {
     }
   }
   renderer.capture(sim);
+  audio.capture(sim);
 }
 
 let last = performance.now();
@@ -215,6 +234,8 @@ function tick(now: number): void {
     alpha = accumulator / STEP_MS;
   }
   const simulated = performance.now();
+  audio.setPaused(controls.paused);
+  soundPanel.refresh();
   renderer.draw(alpha);
   probe.record(now, simulated - began, performance.now() - simulated);
   requestAnimationFrame(tick);
@@ -232,6 +253,8 @@ const testHook = {
   status: () => status.textContent ?? '',
   perfStart: () => probe.start(),
   perfStop: () => probe.stop(),
+  /** État du son et nombre d'effets lancés. */
+  audio: () => ({ state: audio.state, played: audio.soundsPlayed }),
   fighter(player: number) {
     const v = createFighterView();
     readFighter(sim, player, v);
