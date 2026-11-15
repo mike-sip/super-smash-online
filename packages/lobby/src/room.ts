@@ -24,6 +24,8 @@ export interface LobbyContent {
 }
 
 export interface Member extends Identity {
+  /** Pseudo à jour (il peut changer entre deux connexions). */
+  name: string;
   fighter: string | null;
   team: number;
   ready: boolean;

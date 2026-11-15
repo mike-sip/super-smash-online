@@ -49,12 +49,12 @@
 
 ## Phase C — Service et client, simulés
 
-- [ ] **T8 : Service — identité, connexions, salons**
+- [x] **T8 : Service — identité, connexions, salons**
   - Acceptation : `createLobby` ; `hello` dans les 5 s avec ticket vérifié (fonction injectée) et rejeu refusé ; connexion remplacée (`bye replaced`) qui reprend la place ; ping/pong et aller-retour ; messages invalides (trois de suite : fermeture), débit, connexions par adresse, plafonds ; création, arrivée par code, départ, sélection, règles, prêt, expulsion, verrou ; délai de grâce de 30 s puis départ ; passation d'hôte ; salon vide supprimé ; instantané envoyé à chaque changement ; silence de 30 s.
   - Vérification : tests du service avec connexions factices et horloge virtuelle, un par parcours et par protection.
   - Fichiers : `packages/lobby/src/service.ts`, `packages/lobby/src/index.ts`, `packages/lobby/test/service.test.ts`, `packages/lobby/test/fakes.ts`
 
-- [ ] **T9 : Service — lancement, partie, fin, partie rapide**
+- [x] **T9 : Service — lancement, partie, fin, partie rapide**
   - Acceptation : compte à rebours ; réservation dans le relais puis `matchStart` à chacun ; annulation si une place n'est pas prise en 20 s (message, retour au salon) ; phase « partie » ; reconnexion au lobby pendant la partie (`matchStart` renvoyé) ; événements du relais (`left`, `rejoined`, `closed`) ; déclarations et concordance ; abandon (tous partis, durée maximale) ; fermeture de la partie au relais, retour au salon, « prêt » remis à zéro, dernier résultat gardé ; `onMatchResult` ; partie rapide : file, salon rapide, lancement automatique, revanche quand tous sont prêts.
   - Vérification : tests du service avec un vrai relais en mode réservé (sans réseau) et horloge virtuelle.
   - Fichiers : `packages/lobby/src/service.ts`, `packages/lobby/test/service-match.test.ts`

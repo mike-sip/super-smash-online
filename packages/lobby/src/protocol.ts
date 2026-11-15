@@ -76,7 +76,8 @@ export type LobbyErrorCode =
 
 export type ClientMessage =
   | { readonly t: 'hello'; readonly version: number; readonly ticket: string }
-  | { readonly t: 'ping'; readonly time: number }
+  /** `rtt` : aller-retour mesuré par le client sur ses pings (médiane), en ms. */
+  | { readonly t: 'ping'; readonly time: number; readonly rtt?: number }
   | { readonly t: 'createRoom'; readonly capacity?: number }
   | { readonly t: 'joinRoom'; readonly code: string }
   | { readonly t: 'leaveRoom' }
@@ -337,9 +338,13 @@ function readClient(value: unknown): ClientMessage {
         version: int(o.version, 0, 1_000_000, 'version'),
         ticket: str(o.ticket, MAX_TICKET_CHARS, 'ticket'),
       };
-    case 'ping':
-      keys('time');
-      return { t, time: finite(o.time, 'time') };
+    case 'ping': {
+      keys('time', 'rtt');
+      const rtt = optional(o, 'rtt', (v) => int(v, 0, 60_000, 'rtt'));
+      return rtt === undefined
+        ? { t, time: finite(o.time, 'time') }
+        : { t, time: finite(o.time, 'time'), rtt };
+    }
     case 'createRoom': {
       keys('capacity');
       const capacity = optional(o, 'capacity', (v) =>

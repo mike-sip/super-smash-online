@@ -38,6 +38,7 @@ export const RESULT: DeclaredResult = {
 const VALID: ClientMessage[] = [
   { t: 'hello', version: 1, ticket: 'v1.abc.def' },
   { t: 'ping', time: 1234.5 },
+  { t: 'ping', time: 1, rtt: 42 },
   { t: 'createRoom' },
   { t: 'createRoom', capacity: 4 },
   { t: 'joinRoom', code: 'abc-def' },
