@@ -39,7 +39,14 @@ describe('démo', () => {
 
   async function open(query: string, init?: () => void): Promise<{ page: Page; errors: string[] }> {
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-    if (init !== undefined) await page.addInitScript(init);
+    // Sans scénario de manette, aucune manette : une vraie manette branchée sur la machine (et
+    // actionnée pendant le test) prendrait la place de J1 et fausserait les tests au clavier.
+    await page.addInitScript(
+      init ??
+        (() => {
+          navigator.getGamepads = () => [];
+        }),
+    );
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => {
