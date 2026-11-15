@@ -1,6 +1,6 @@
 # Spec : `ranking` — classement, historique des matchs, statistiques de profil
 
-> Statut : **APPROUVÉE le 2026-11-15** (décisions par défaut validées telles quelles). Plan : [tasks/ranking/plan.md](tasks/ranking/plan.md), tâches : [tasks/ranking/todo.md](tasks/ranking/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `accounts` (identité, sessions, statistiques du profil), `match-rules` (forme des résultats). Alimenté par : `lobby` (en cours en parallèle), qui lance les parties et transmet leurs résultats. Utilisé par : la démo aujourd'hui, `app-shell` demain.
+> Statut : **APPROUVÉE le 2026-11-15, implémentée le 2026-11-15** (relecture de sécurité et bilan en fin de document ; votre essai du panneau reste à faire). Plan : [tasks/ranking/plan.md](tasks/ranking/plan.md), tâches : [tasks/ranking/todo.md](tasks/ranking/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `accounts` (identité, sessions, statistiques du profil), `match-rules` (forme des résultats). Alimenté par : `lobby` (en cours en parallèle), qui lance les parties et transmet leurs résultats. Utilisé par : la démo aujourd'hui, `app-shell` demain.
 
 ## Hypothèses
 
@@ -31,7 +31,7 @@ Donner à chaque joueur inscrit une cote qui reflète son niveau face aux autres
 
 **Hors périmètre** : production du résultat officiel (rejoue du journal : `lobby`/`netcode`), matchmaking par niveau (`lobby` pourra lire la cote par `getRating`), saisons et remise à zéro, classements par mode ou par personnage, profils publics d'autres joueurs, détection de triche ou de collusion (deux comptes qui s'arrangent), écran final (`app-shell`).
 
-## Formule de la cote (proposée)
+## Formule de la cote
 
 Notations : `R` la cote avant le match, `K = 32`, cote de départ `1000`.
 
@@ -48,7 +48,7 @@ Notations : `R` la cote avant le match, `K = 32`, cote de départ `1000`.
 
 Exemples (calculés, repris tels quels dans les tests) : à 2 joueurs de 1000, le gagnant prend +16, le perdant −16. À 8 joueurs de 1000, places 1 à 8 : `Δ = 32/7 × (nb battus − nb devant)/2`, soit +16, +11, +7, +2, −2, −7, −11, −16. Égalité parfaite entre deux joueurs de même cote : 0 et 0.
 
-## Ce qui compte, ou non (proposé)
+## Ce qui compte, ou non
 
 | Situation | Historique et statistiques | Cote |
 |---|---|---|
@@ -81,7 +81,7 @@ Exemples (calculés, repris tels quels dans les tests) : à 2 joueurs de 1000, l
    - Les deux sont additifs ; aucun comportement existant ne change ; tests ajoutés dans `accounts`.
 9. **Lecture de la cote par `lobby`** : `ranking.getRating(accountId)` en mémoire, pour un futur appariement par niveau. Pas de route HTTP pour cela en v1.
 
-## Interface avec `lobby` (à valider avec la session `lobby`)
+## Interface avec `lobby`
 
 ```ts
 // @game/ranking/protocol — sans import Node.
@@ -302,3 +302,82 @@ Approuvées telles quelles le 2026-11-15 :
 5. **Seuil d'apparition au classement** : 5 matchs classés.
 6. **Un seul classement** tous modes confondus.
 7. **Historique** visible par le joueur seul ; classement public.
+
+## Écarts et limites constatés pendant l'implémentation
+
+- **Empreinte du rapport sans `reportedAt`** : la spec calculait l'empreinte sur le rapport entier. Or `lobby` renvoie un rapport après un échec réseau, forcément avec une nouvelle date : il aurait été refusé comme conflit. L'empreinte (JSON canonique) exclut donc `reportedAt`, qui ne sert qu'au contrôle de fraîcheur de la route HTTP. Un test le vérifie.
+- **Rapport trop ancien** : code d'erreur `stale_report` (400), absent du tableau de la spec. La fraîcheur n'est contrôlée que sur la route HTTP : `submitMatch` en mémoire ne vient pas du réseau.
+- **« Un partant ne gagne jamais »** : c'est vrai pour un partant seul, quelles que soient les cotes (propriété testée sur 3 000 tirages, en chacun pour soi et en équipes). Avec plusieurs partants, celui qui est parti le plus tard bat ceux partis avant lui et peut donc gagner des points contre eux. En chacun pour soi, partir n'est jamais mieux que rester à la même place (propriété testée). Face à des adversaires bien mieux cotés, la perte d'un partant peut s'arrondir à 0.
+- **Compte inconnu des comptes** : traité en invité, comme prévu, et sa participation est enregistrée sans identifiant : rien n'est gardé au nom d'un compte qui n'existe pas.
+- **Invité selon les comptes** : si le rapport dit « inscrit » mais que les comptes disent « invité », le joueur est traité en invité. Le serveur des comptes fait foi.
+- **Suppressions sans écouteur** : `accounts` n'appelle `onAccountDeleted` ni pour la purge des invités inactifs, ni quand un invité est effacé à la déconnexion. Un balayage (au démarrage, puis toutes les 10 minutes, avec la reprise de synchronisation) efface les données des identifiants que `publicNames` ne connaît plus.
+- **Extension d'`accounts`** : `HttpExtension.handle` renvoie le nom de la route pour le journal, et le contexte expose `originAllowed()` en plus d'`auth()`, `address` et des en-têtes de sécurité. Les préfixes sont vérifiés au démarrage (`/api/<module>/v<n>`, jamais sous `/api/accounts/`).
+- **`GET /me`** renvoie aussi `guest`, pour que l'écran sache dire « invité : non classé ».
+- **Assemblage** : `createGameServer(configDesComptes, optionsDuClassement)` crée les deux dans un même processus. `pnpm --filter @game/ranking dev` et `start` compilent d'abord `@game/accounts`, importé par son point d'entrée compilé.
+- **Tests du service** : faits avec un faux `AccountsPort` (pannes à la demande) plutôt qu'avec un vrai `AccountService`. Le vrai sert aux tests de bout en bout, du client et de la démo.
+- **Touche du panneau** : `O` (« Classement »), libre dans la démo et dans les commandes par défaut.
+- **Personnages semés** : `seed` invente des identifiants (`vanguard`, `striker`, `bastion`, `arcanist`) en attendant ceux de `fighters`.
+
+## Relecture de sécurité (2026-11-15)
+
+Relecture de tout le module et des ajouts à `accounts`, faite par moi (Claude), pas par un relecteur indépendant. Axes : origine des résultats, idempotence, injections, exposition de données, déni de service, journaux.
+
+### Constats corrigés
+
+| Constat | Risque | Correction | Preuve |
+|---|---|---|---|
+| Empreinte calculée avec `reportedAt` | Un renvoi légitime de `lobby` refusé en conflit, et le match perdu | Empreinte sans `reportedAt` | `protocol.test.ts`, `service.test.ts` (« même renvoyé plus tard ») |
+| Signature base64url acceptée sous plusieurs écritures (bits de fin du dernier caractère) | Aucun impact direct (l'idempotence repose sur `matchId`), mais une signature ne doit avoir qu'une forme | Réencodage comparé au texte reçu | `report.test.ts` |
+| Historique SQLite lu en parcourant tous les matchs | Lenteur, puis déni de service, quand la base grossit | Lecture par l'index des participations (plan vérifié : `SEARCH p USING INDEX participants_account`) | Contrat du stockage inchangé et passant |
+| Données d'un compte supprimé lisibles dans le fichier SQLite | Identifiant d'un compte supprimé retrouvable dans le fichier | `PRAGMA secure_delete = ON` | `store-sqlite.test.ts`, qui échoue sans le réglage |
+
+### Points vérifiés sans constat
+
+- **Origine** : aucune route ne permet à un client de soumettre. `POST /matches` refuse tout `Origin` ou `Sec-Fetch-Site` (un navigateur en envoie toujours), exige le JSON, borne le corps à 32 Ko, et vérifie le HMAC sur le corps brut **avant** de le lire, en temps constant, en essayant toutes les clés. La clé de rapport doit être distincte des clés de ticket (vérifié au démarrage). Tests : `api.test.ts`.
+- **Une seule fois** : clé primaire `matchId` en base, file d'écriture unique dans le processus, et doublon reconnu aussi si l'insertion échoue sur la clé (seconde instance). Soumissions simultanées testées en mémoire et par HTTP.
+- **Atomicité** : match, participants, cotes et statistiques dans une transaction ; une panne simulée au milieu (déclencheur SQLite) ne laisse rien. Les compteurs d'`accounts` sont mis à jour après, avec reprise.
+- **Somme nulle vérifiée à l'exécution** : `roundPreservingSum` lève si la somme n'est pas nulle, ce qui interrompt l'enregistrement plutôt que de laisser dériver le total.
+- **Injections** : SQL uniquement préparé ; validation stricte des rapports (clés exactes, `__proto__` refusé, types, bornes) ; démo écrite par `textContent` uniquement.
+- **Journaux** : méthode, route connue (ou `?`), statut, durée ; ni pseudo, ni identifiant, ni paramètre (test).
+- **Lectures** : `GET` seulement, `Cache-Control: no-store`, `nosniff`, `Cross-Origin-Resource-Policy: same-origin`, aucun en-tête CORS ; l'historique exige la session ; paramètres bornés (`limit` jusqu'à 100 ou 50, curseur strict).
+- **Données personnelles** : aucun pseudo en base ; identifiants de compte, personnage, place, compteurs, dates. Seule l'empreinte du rapport est gardée, pas le rapport.
+
+### Risques acceptés ou laissés à d'autres modules
+
+- **Confiance dans `lobby`** : `ranking` croit tout rapport bien signé. Pour la v1, `lobby` annonce un résultat « accepté » quand les déclarations de tous les clients restés jusqu'au bout concordent et qu'aucune désynchronisation n'a été signalée : sans le contenu des personnages, il ne peut pas rejouer le journal. Une coalition de tous les clients restés pourrait donc imposer un faux résultat. La rejoue côté serveur après la fusion de `fighters` fermerait ce risque ; c'est à trancher avec `lobby`.
+- **Collusion et comptes multiples** : deux comptes qui s'arrangent, ou un joueur qui recrée un compte pour repartir de 1000, ne sont pas détectés (hors périmètre).
+- **Identifiants publics** : le classement public expose l'identifiant de compte de chaque joueur classé. Ce n'est pas un secret (les tickets sont signés), mais on pourra le retirer si aucun écran n'en a besoin.
+- **Lectures sans limitation de débit** : classement et profil ne sont pas limités par adresse ; à confier au proxy inverse. Le rang est calculé par une sous-requête par ligne (100 lignes au plus) : suffisant pour la v1, un index ou un cache sera utile au-delà de quelques dizaines de milliers de joueurs.
+- **Empreinte et compte supprimé** : l'empreinte SHA-256 d'un rapport inclut les identifiants de ses joueurs, même supprimés. Elle ne permet que de confirmer un rapport complet déjà connu.
+- **Fuite de clé** : une clé de rapport volée permet d'inventer des matchs. La rotation sans coupure est prévue (plusieurs clés acceptées) ; la clé ne doit vivre que sur les serveurs de `lobby` et du classement.
+
+## Bilan des critères de succès (2026-11-15)
+
+| N° | Critère | État | Preuve |
+|---|---|---|---|
+| 1 | Formule juste | Vérifié automatiquement | `rating.test.ts` : 2 joueurs (±16 ; +3/−3 et +29/−29 à 400 d'écart ; égalités 0 et ±13), 8 joueurs (+16 … −16), 8 joueurs avec ex æquo (+14, +14, +2, +2, +2, −7, −11, −16), 2 contre 2, moyenne d'équipe, 3 contre 1 (+32, −10, −11, −11), 4 équipes de 2 ; valeurs calculées à la main avant le code |
+| 2 | Sans dérive | Vérifié automatiquement | `rating-properties.test.ts` : 10 000 matchs aléatoires sur 200 joueurs (2 à 8 joueurs, équipes, ex æquo, invités, abandons) ; chaque match à somme nulle en entiers, total final de 1000 × 200 exactement |
+| 3 | Abandons | Vérifié automatiquement | `rating.test.ts` (partant classé premier par `match-rules` ramené dernier, plusieurs partants, même frame, en équipes, dernier présent) ; `rating-properties.test.ts` (un partant seul ne gagne jamais) ; `service.test.ts` (place effective, pas de victoire). Nuance pour plusieurs partants : voir « Écarts » |
+| 4 | Une seule fois | Vérifié automatiquement | `service.test.ts` et `api.test.ts` : doublon en série (200 `duplicate`), 5 et 6 soumissions simultanées (une seule prise en compte, compteurs des comptes à 1), conflit 409 sans effet |
+| 5 | Origine vérifiée | Vérifié automatiquement | `api.test.ts` : sans signature, autre clé, corps modifié (401) ; `Origin` ou `Sec-Fetch-Site` (403) ; trop ancien ou daté dans le futur (400) ; client avec cookie de session refusé ; `report.test.ts` |
+| 6 | Prise en compte | Vérifié automatiquement | `service.test.ts` : salon privé, invités (y compris selon les comptes), un seul inscrit ; `api.test.ts` : invité avec statistiques et sans cote |
+| 7 | Profil et compteurs | Vérifié automatiquement | Contrat du stockage (statistiques par personnage) ; `service.test.ts` (panne des comptes puis reprise) ; `api.test.ts` (`AccountView.stats` mis à jour) |
+| 8 | Effaçable | Vérifié automatiquement | `api.test.ts` (suppression par l'API des comptes : cote effacée, « Joueur supprimé » chez l'autre joueur, dont la cote ne change pas) ; `service.test.ts` (balayage des invités purgés) ; `store-sqlite.test.ts` (identifiant absent du fichier) |
+| 9 | Remplaçable | Vérifié automatiquement | Suite de contrat jouée sur la mémoire, SQLite en mémoire et SQLite sur fichier |
+| 10 | Intégré | Vérifié automatiquement, dans Edge | `apps/demo/test/leaderboard.test.ts` : classement, cote, statistiques et historique contre un vrai serveur semé ; sans serveur, message clair et jeu jouable ; les 18 tests existants de la démo passent inchangés ; capture d'écran relue |
+| 11 | Branchable | Fait, pas encore branché | `reportFromResult`, `signReport` et `submitMatch` documentés et testés ; note `ranking-interface-for-lobby.md` dans le dossier partagé, acceptée sur la forme par `lobby`. Le branchement réel se fera à la fusion des deux branches |
+
+Vérifié à la main le 2026-11-15 : `pnpm --filter @game/ranking dev`, puis `pnpm --filter @game/ranking seed -- --count 25`, puis `curl` sur `/api/ranking/v1/leaderboard` (8 joueurs classés) et un `POST /matches` sans signature (refusé avec `bad_signature`).
+
+**Non vérifié** : un vrai match envoyé par `lobby` (pas encore fusionné) ; le panneau dans Firefox et Safari (absents de la machine) ; votre essai du panneau Classement dans la démo ; un déploiement derrière le proxy inverse.
+
+État des commandes le 2026-11-15 : tests de `ranking` (138), `accounts` (168, dont 7 nouveaux pour les extensions), `accounts-client` (7) et de la démo (20, dans Edge) passants. Typecheck de tout le dépôt (`pnpm -r typecheck`) et lint passants.
+
+Pour essayer le panneau dans la démo, deux terminaux :
+
+```
+pnpm --filter @game/ranking dev
+pnpm --filter @game/demo dev
+```
+
+Ensuite, `pnpm --filter @game/ranking seed -- --with <votre identifiant de compte>` remplit votre historique (l'identifiant figure dans la réponse de `/api/accounts/v1/session`). Dans la démo, la touche `O` (ou le bouton « Classement ») ouvre le panneau.
