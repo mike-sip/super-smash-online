@@ -1,6 +1,6 @@
 # Spec : `lobby` — salons, matchmaking et lancement des parties en ligne
 
-> Statut : **APPROUVÉE le 2026-11-15** (décisions par défaut retenues ; résultats par concordance en v1). Plan : [tasks/lobby/plan.md](tasks/lobby/plan.md), tâches : [tasks/lobby/todo.md](tasks/lobby/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `netcode` (implémenté), `match-rules` (implémenté), `accounts` (implémenté). `fighters` et `stages-items` ne sont pas encore fusionnés : le lobby manipule des **identifiants** de personnage et de stage, dont la liste lui est donnée par sa configuration.
+> Statut : **APPROUVÉE le 2026-11-15, implémentée le 2026-11-15** (décisions par défaut retenues ; résultats par concordance en v1 ; bilan en fin de document ; votre essai de la démo reste à faire). Plan : [tasks/lobby/plan.md](tasks/lobby/plan.md), tâches : [tasks/lobby/todo.md](tasks/lobby/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `netcode` (implémenté), `match-rules` (implémenté), `accounts` (implémenté). `fighters` et `stages-items` ne sont pas encore fusionnés : le lobby manipule des **identifiants** de personnage et de stage, dont la liste lui est donnée par sa configuration.
 
 ## Hypothèses
 
@@ -385,3 +385,71 @@ Choix par défaut approuvés le 2026-11-15 :
 6. **Délai de grâce** de 30 s dans un salon ; aucun délai pendant une partie (on reste membre jusqu'à la fin du match).
 7. **Invités** : admis partout, y compris en partie rapide ; le marqueur invité est transmis au classement, qui décidera de les compter ou non.
 8. **Dépendance** : `ws` dans le nouveau paquet `@game/lobby`.
+
+## Écarts et limites constatés pendant l'implémentation
+
+| Sujet | État actuel | Suite prévue |
+|---|---|---|
+| Aller-retour mesuré | Le client mesure l'aller-retour sur ses pings au lobby et en envoie la médiane dans `ping` (champ `rtt`, ajouté au protocole) ; le serveur s'en sert pour le refus de la partie rapide et l'affichage. Un client peut mentir, mais il ne nuit qu'à lui-même (ses inputs arriveraient en retard). | — |
+| Détection de la fin | Le client déclare le résultat quand `matchResult` n'est plus `null` **et** que la frontière confirmée dépasse `endFrame` : toutes les frames jusqu'à la fin ont leurs inputs définitifs, et le crochet de règles ne change plus rien ensuite. Attendre que toutes les frames simulées soient confirmées, comme d'abord écrit, n'arrive presque jamais en jeu. | — |
+| Forme du résultat | `match-rules` produit `team = -1` sans équipes, `stocksLeft = -1` en mode Temps et des dégâts fractionnaires (`/ FX_ONE`) : la validation des déclarations l'accepte. Trouvé par le bout en bout simulé. | — |
+| Égalité au temps | Des joueurs qui ne se battent pas finissent à égalité, puis en mort subite sans limite de temps, qui ne s'arrête que sur un KO (règle de `match-rules`). Le test d'Edge fait sortir deux joueurs du stage peu avant la fin. La durée maximale (30 min sans limite, plus 5 min) clôt de toute façon un match qui ne finit jamais. | — |
+| Relais (modifications de `netcode`) | Comme prévu : mode réservé, `reserve`, `cancel`, `onGameEvent`, codes `ERR_AUTH` et `ERR_CLOSED`, message `REJOINED` (protocole en version 2), `NetClient.onPlayerRejoined`. En plus : une partie réservée commencée dont tout le monde est parti reste ouverte 30 s (sinon le dernier joueur qui recharge sa page la fermerait) ; une seconde connexion du même compte remplace la première ; `HISTORY_FRAMES` passe de 128 à 512 pour le débit du rattrapage. Consigné dans les « Écarts » de `SPEC-netcode.md`. | — |
+| Rattrapage | Mesuré dans le réseau simulé : 5 min de jeu rattrapées en 3,9 s à 4 joueurs (critère : 20 s), empreintes égales à la rejoue hors ligne du relais. Dans Edge : une page rechargée à 5 s de jeu revient dans le match et finit avec le même résultat que les autres. | — |
+| Messages en plus | `unqueued` (sortie de file confirmée) ; statut `cancelled` dans `matchEnd` (lancement annulé, rien n'est transmis au classement). L'instantané d'un membre ne porte pas sa place en partie : elle est dans `matchStart`. | — |
+| Enregistrement pour le classement | `MatchRecord` porte aussi `endFrame` (pour le `MatchReport` de `ranking`). L'envoi à `ranking` (en mémoire ou POST signé) n'est **pas branché** : `ranking` n'est pas fusionné ; `main.ts` journalise les résultats en attendant. | Brancher `reportFromResult` et l'envoi signé dans `main.ts` à la fusion de `ranking` (recalculer `reportedAt` à chaque essai). |
+| Règles de la partie rapide | Réglables par `LobbyOptions.quick.rules` (utilisé par les tests pour des matchs de 30 s). | — |
+| Démo en ligne | Le serveur de Vite héberge aussi un serveur des comptes en mémoire (ou relaie vers `ACCOUNTS_URL`) : une seule commande pour jouer. L'ancien formulaire par identifiant est retiré. Contenu : `mannequin` et `colosse` (combattants de test de `sim-core`) et `arene-test`, derrière un registre (`apps/online/src/content.ts`) à compléter à la fusion de `fighters` et `stages-items`. Le panneau n'est reconstruit que quand son contenu change : un rendu entre l'appui et le relâchement d'un bouton faisait perdre le clic (trouvé par le test d'Edge). | Écrans définitifs : `app-shell`. |
+| Mémoire du relais | Historique complet de chaque partie réservée : 115 Ko par minute de jeu à 8 joueurs, 3,4 Mo pour un match de 30 min. Au plafond par défaut du relais (1 000 parties), le pire cas approche 3,4 Go. | Dimensionner `maxGames` avec le serveur (`app-shell`). |
+
+## Relecture de sécurité (2026-11-15)
+
+Relecture de tout le module et des changements du relais, selon les axes de la spec : authentification, rejeu, autorisation par rôle et par phase, validation, déni de service, journaux, données personnelles, DOM. Faite par moi (Claude), pas par un relecteur indépendant.
+
+### Constat corrigé
+
+| Constat | Risque | Correction | Preuve |
+|---|---|---|---|
+| La limite des codes faux par adresse utilisait l'adresse brute | Un abonné IPv6 avec un bloc /64 obtient de nouveaux essais en changeant d'adresse | Clé d'adresse regroupée par /64, comme pour les connexions | `service.test.ts` (« codes faux et IPv6 ») : échoue sans la correction, passe avec |
+
+### Points vérifiés sans constat
+
+- **Authentification** : lobby et relais vérifient le ticket de `accounts` (`verifyTicket`, audience propre à chaque porte, clés tournantes) ; rejeu d'un `jti` refusé aux deux portes (mémoire de 70 s, plus que la durée de vie d'un ticket). Preuves : `admission.test.ts`, `service.test.ts`, `relay-reserved.test.ts`, bout en bout réel (ticket d'une autre audience refusé au lobby et au relais).
+- **Pas de détournement de WebSocket intersite** : le lobby n'utilise pas de cookie, seulement un ticket envoyé dans `hello` ; une page d'un autre site ne peut pas obtenir de ticket (cookie `SameSite=Strict`, JSON exigé, pas de CORS chez `accounts`).
+- **Autorisation** : chaque action vérifie le rôle (hôte) et la phase (salon, compte à rebours, partie) ; au relais, un compte n'obtient que sa propre place, et seulement dans une partie réservée. Une déclaration de résultat n'est acceptée que d'un joueur du match, une fois, avec le bon nombre de places et les bonnes équipes.
+- **Validation** : tout message est validé avant usage (taille, JSON, type, champs connus seulement, `__proto__` compris, bornes) ; 10 000 entrées aléatoires ou tronquées sans exception ; trois messages invalides de suite ferment la connexion ; sur vrai WebSocket, un message trop gros, binaire ou invalide ferme la connexion sans gêner le serveur.
+- **Codes** : `crypto.randomInt`, alphabet de 30 symboles, 6 caractères ; limite vérifiée avant la recherche (un essai de trop ne dit pas si le code existe) ; verrou et expulsion.
+- **Déni de service** : débit par connexion, connexions par adresse (16) et au total (5 000), salons (2 000), créations, entrées en file ; délai de présentation (5 s) et de silence (30 s) ; un compte n'a qu'une connexion et qu'un salon ; durée maximale des matchs.
+- **Journaux** : type d'événement, deux caractères du code, nombres ; ni ticket, ni pseudo, ni adresse.
+- **Données personnelles** : rien n'est écrit sur disque ; les adresses IP ne vivent que dans les compteurs et seaux en mémoire.
+- **DOM de la démo** : pseudos et codes affichés par `textContent` seulement.
+
+### Risques acceptés ou laissés à d'autres modules
+
+- **Résultats déclarés** (décision de la validation) : des joueurs tous d'accord peuvent imposer un faux résultat ; un seul joueur peut rendre un match « contesté » en déclarant autre chose. Parade : la rejoue serveur du journal du relais, à décider après la fusion du contenu (`ranking` l'a noté de son côté).
+- **Identifiants de compte visibles** : les membres d'un salon et d'un match voient les identifiants (UUID) des autres, nécessaires à l'expulsion et aux places. Ce sont des identifiants stables, pas des données personnelles ; à reconsidérer avec `app-shell` si des profils publics apparaissent.
+- **Mémoire du relais** : voir « Écarts » ; à dimensionner au déploiement.
+- **Codes devinables par force brute distribuée** : des milliers d'adresses passent sous les limites ; l'hôte peut verrouiller son salon.
+- **Limites en mémoire** : remises à zéro au redémarrage, propres à une instance ; suffisant pour un seul processus.
+- **`X-Forwarded-For`** : lu seulement avec `LOBBY_TRUST_PROXY`, dernière adresse retenue (un seul proxy de confiance), comme `accounts`.
+
+## Bilan des critères de succès (2026-11-15)
+
+| N° | Critère | État | Preuve |
+|---|---|---|---|
+| 1 | Salons privés | Atteint | `room.test.ts` (19 tests : chaque règle et chaque refus), `service.test.ts` (créer, rejoindre par code en minuscules avec tiret, sélection, règles, verrou, expulsion, grâce, hôte), `client.test.ts` |
+| 2 | Matchmaking | Atteint | `matchmaking.test.ts` (4 tout de suite, au moins 2 après 20 s, région inconnue, aller-retour au-delà de 250 ms) ; `service-match.test.ts` et bout en bout simulé (salon rapide, lancement automatique, partie classée, région `eu` dans l'enregistrement) |
+| 3 | Authentifié | Atteint | `relay-reserved.test.ts` (sans ticket, ticket refusé, partie non réservée, compte sans place, place imposée quel que soit l'ordre) ; `admission.test.ts` (expiré, falsifié, rejoué, autre audience) ; bout en bout réel ; la démo en ligne passe par le lobby et le relais réservé, le formulaire par identifiant est retiré |
+| 4 | Partie complète | Atteint | Bout en bout simulé : 8 joueurs complets passent par le salon, jouent un vrai match `match-rules` jusqu'au bout sur le relais, reçoivent le même résultat, égal à la rejoue hors ligne du journal du relais, reviennent au salon et jouent une revanche ; `onMatchResult` reçoit des enregistrements `agreed`. Idem en partie rapide à 4 |
+| 5 | Robuste | Atteint | Membre coupé qui revient seul (simulé) ; plus de 30 s : retiré (`service.test.ts`) ; page rechargée en pleine partie : revient, rattrape, résultat concordant (simulé et Edge) ; 5 min rattrapées en 3,9 s simulées (`session-rejoin.test.ts`) ; hôte parti ou déconnecté remplacé ; salon vide supprimé ; joueur absent du relais : lancement annulé ; partie abandonnée close et signalée ; durée maximale |
+| 6 | Résistant aux abus | Atteint | `protocol.test.ts` (10 000 entrées), `service.test.ts` (débit, codes faux par compte, par adresse et par bloc /64, créations, connexions par adresse, plafond des salons), `service-match.test.ts` (déclarations d'un intrus, en double, discordantes), `codes.test.ts` ; vrai WebSocket : message trop gros, binaire ou invalide |
+| 7 | Réel | Atteint | `test:e2e` : vrai serveur des comptes, vrai serveur de jeu, 3 clients Node invités font tout le parcours avec un match de 30 s. Edge : trois onglets font le parcours de l'objectif, rechargement compris, mêmes résultats, retour au salon, aucune erreur de console (`apps/online/test/lobby.test.ts`) ; deux onglets restent synchronisés en passant par le lobby (`two-tabs.test.ts`). Capture des résultats vérifiée à la main |
+| 8 | Non-régression | Atteint | Tests d'origine de `netcode` inchangés et passants (96 avec les nouveaux), banc (0,07 ms, tas +9,7 Ko), bouts en bout réels ; `accounts` (161), `accounts-client` (7), `match-rules` (63), `input` (175), `render` (192), démo locale (18) passants ; relais sans `authenticate` : chemin d'origine |
+| 9 | Relu | Fait | Section « Relecture de sécurité » : un constat corrigé avec son test, risques restants consignés ; relecture faite par moi seul |
+| 10 | Jouable | **Non vérifié** | En attente de votre essai de la démo en ligne (plusieurs onglets ou deux machines) et de votre avis sur les écrans |
+
+**Vérifié seulement à la main** : le serveur `pnpm --filter @game/lobby dev` démarre et répond sur `/health` ; la capture d'écran du salon après un match. **Non vérifié** : Firefox et Safari (absents de la machine) ; deux machines du réseau local ; un déploiement derrière un proxy inverse en https ; l'envoi au module `ranking` (pas encore fusionné).
+
+État des commandes le 2026-11-15 : tests de `lobby` (110), `netcode` (96), bouts en bout réels de `lobby` et `netcode` (3 et 3), banc de `netcode`, `accounts`, `accounts-client`, `match-rules`, `input`, `render`, démo locale (18) et démo en ligne dans Edge (3) passants ; typecheck de tous les paquets et lint passants. `sim-core` : ses deux tests de déterminisme dans Firefox et WebKit échouent faute de ces navigateurs, comme avant ce module (aucun fichier de `sim-core` modifié).
+
+Fichiers ajoutés en plus de la structure prévue : `src/dev.ts`, `test/fakes.ts`, `test/memory-socket.ts`, `test/harness.ts`, `test/admission.test.ts`, `test/config.test.ts` (lobby) ; `test/relay-fake.ts`, `test/rejoin-match.ts`, `test/relay-reserved.test.ts`, `test/session-rejoin.test.ts` (netcode) ; `src/content-ids.ts`, `test/helpers.ts` (démo en ligne).

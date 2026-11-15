@@ -238,3 +238,18 @@ describe('service : salons', () => {
     expect(a.last('matchStart')).toBeUndefined();
   });
 });
+
+describe('service : codes faux et IPv6', () => {
+  it('compte les essais d’un même bloc /64 ensemble', () => {
+    const env = setup({ limits: { maxConnectionsPerAddress: 20 } });
+    for (let i = 0; i < 10; i++) {
+      env.client(`v6bot${i}`, `2001:db8:1:2::${i + 1}`).send({ t: 'joinRoom', code: 'ZZZZZZ' });
+    }
+    const next = env.client('v6bot99', '2001:db8:1:2:ffff::9');
+    next.send({ t: 'joinRoom', code: 'ZZZZZZ' });
+    expect(next.lastError()?.code).toBe('rate_limited');
+    const elsewhere = env.client('v6other', '2001:db8:9:9::1');
+    elsewhere.send({ t: 'joinRoom', code: 'ZZZZZZ' });
+    expect(elsewhere.lastError()?.code).toBe('not_found');
+  });
+});

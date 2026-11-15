@@ -12,6 +12,7 @@ import { defaultMatchConfig } from '@game/match-rules';
 import type { Relay, RelayGameEvent } from '@game/netcode/server';
 import { drawCode, normalizeCode } from './codes.ts';
 import {
+  addressKey,
   createAddressCounter,
   createBuckets,
   createReplayGuard,
@@ -343,8 +344,9 @@ export function createLobby(options: LobbyOptions): Lobby {
       error(session, 'already_in_room', 'Quittez d’abord votre salon.');
       return;
     }
-    const addressKey = `@${session.address}`;
-    const keys = [who.id, addressKey];
+    // Adresse regroupée comme pour les connexions (IPv6 par /64) : changer d'adresse dans son
+    // bloc ne donne pas de nouveaux essais.
+    const keys = [who.id, `@${addressKey(session.address)}`];
     // Limite vérifiée avant de chercher : un essai de trop ne dit pas si le code existe.
     if (keys.some((k) => !joinsMinute.peek(k) || !joinsHour.peek(k))) {
       error(session, 'rate_limited', 'Trop de codes faux : attendez avant de réessayer.');

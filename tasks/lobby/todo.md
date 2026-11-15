@@ -87,7 +87,7 @@
 
 ## Phase E — Bilan
 
-- [ ] **T14 : Relecture de sécurité et bilan**
+- [x] **T14 : Relecture de sécurité et bilan**
   - Acceptation : relecture de tout le module et des changements du relais (authentification, rejeu, autorisation par rôle et par phase, validation, déni de service, journaux, données personnelles, DOM) ; constats corrigés avec un test chacun, ou expliqués ; section « Relecture de sécurité » et « Bilan des critères de succès » en fin de spec, avec ce qui n'a été vérifié qu'à la main ; « Écarts » de `SPEC-netcode.md` à jour ; note pour `ranking` et `app-shell` dans le dossier partagé.
   - Vérification : tests, typecheck et lint de `lobby`, `netcode`, `accounts`, `match-rules`, `online` et de la démo locale passants.
   - Fichiers : `SPEC-lobby.md`, `SPEC-netcode.md`, corrections éventuelles
