@@ -59,7 +59,7 @@
   - Vérification : tests du service avec un vrai relais en mode réservé (sans réseau) et horloge virtuelle.
   - Fichiers : `packages/lobby/src/service.ts`, `packages/lobby/test/service-match.test.ts`
 
-- [ ] **T10 : Client du lobby**
+- [x] **T10 : Client du lobby**
   - Acceptation : `createLobbyClient` : `hello` avec ticket frais, état observable, commandes, `onMatchStart`, reconnexion automatique (0,5 à 8 s, nouveau ticket), `matchStart` réémis au retour, jamais d'exception ; fonctionne avec le `WebSocket` du navigateur, de Node et un transport injecté (tests).
   - Vérification : client contre le service sur des connexions en mémoire : parcours, coupure et reprise, refus affichés, serveur fermé.
   - Fichiers : `packages/lobby/src/client.ts`, `packages/lobby/test/client.test.ts`
