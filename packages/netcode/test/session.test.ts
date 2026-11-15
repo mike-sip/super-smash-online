@@ -51,9 +51,8 @@ function expectInSync(result: MatchResult, frames: number): string {
  * vers ce client, la gigue des deux trajets, l'attente de la prochaine image de l'auteur et de
  * celle du destinataire (une demi-frame chacune en moyenne) et le pas du relais (2 ms en
  * moyenne) ; le délai d'input en retranche `D`. Chaque client est borné par cette valeur
- * attendue plus une frame de marge. La moyenne globale est affichée : la spec visait moins de
- * 4 frames, ce que la physique ne permet pas pour des allers-retours de 40 à 120 ms (voir le
- * bilan de la spec).
+ * attendue plus une frame de marge : c'est le critère tel que reformulé le 2026-11-15. La
+ * moyenne globale est seulement affichée.
  */
 function expectResponsive(
   result: MatchResult,
