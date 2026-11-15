@@ -30,17 +30,17 @@
   - Vérification : tests unitaires avec horloge factice (épuisement, remplissage, oubli, clés d'adresse, jti rejoué puis oublié).
   - Fichiers : `packages/lobby/src/limits.ts`, `packages/lobby/test/limits.test.ts`
 
-- [ ] **T5 : Règles d'un salon**
+- [x] **T5 : Règles d'un salon**
   - Acceptation : salon privé et salon rapide ; arrivée (capacité, verrou, expulsé refusé, équipe la moins remplie), départ, passation d'hôte au plus ancien connecté, personnage (liste ou `random`), équipe, prêt, règles et stage par l'hôte avec `validateMatchConfig` et remise à zéro des « prêt », capacité jamais sous le nombre de membres, expulsion hors partie, conditions de lancement, construction de la `MatchConfig` finale et tirage des `random`, instantané `room`.
   - Vérification : un test par règle et par refus.
   - Fichiers : `packages/lobby/src/room.ts`, `packages/lobby/test/room.test.ts`
 
-- [ ] **T6 : File d'attente**
+- [x] **T6 : File d'attente**
   - Acceptation : file par région ; région inconnue refusée ; aller-retour au-delà du seuil refusé ; groupe de 4 tout de suite, ou tous (au moins 2) quand le plus ancien attend depuis 20 s ; ordre d'arrivée ; sortie de file.
   - Vérification : tests unitaires avec horloge factice.
   - Fichiers : `packages/lobby/src/matchmaking.ts`, `packages/lobby/test/matchmaking.test.ts`
 
-- [ ] **T7 : Concordance des résultats**
+- [x] **T7 : Concordance des résultats**
   - Acceptation : validation d'une déclaration (forme, nombre de places, bornes) ; une par membre de la partie ; `agreed` si toutes les déclarations des clients encore connectés au relais sont identiques et sans désync signalée ; `contested` sinon, ou après 15 s sans toutes les déclarations ; `abandoned` ; construction du `MatchRecord` (`matchId`, `ranked`, `leftAtFrame`, résultats par place).
   - Vérification : unanime, désaccord, désync, intrus, doublon, déclaration mal formée, délai écoulé, joueur parti puis revenu (`leftAtFrame` à `null`).
   - Fichiers : `packages/lobby/src/results.ts`, `packages/lobby/test/results.test.ts`
