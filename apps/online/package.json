@@ -4,13 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host",
+    "dev": "pnpm --filter @game/lobby build && vite --host",
     "build": "vite build",
-    "test": "vitest run",
-    "typecheck": "pnpm --filter @game/render build && pnpm --filter @game/input build && pnpm --filter @game/netcode build && tsc --noEmit"
+    "test": "pnpm --filter @game/lobby build && vitest run",
+    "typecheck": "pnpm --filter @game/render build && pnpm --filter @game/input build && pnpm --filter @game/lobby build && tsc --noEmit"
   },
   "dependencies": {
+    "@game/accounts": "workspace:*",
+    "@game/accounts-client": "workspace:*",
     "@game/input": "workspace:*",
+    "@game/lobby": "workspace:*",
+    "@game/match-rules": "workspace:*",
     "@game/netcode": "workspace:*",
     "@game/render": "workspace:*",
     "@game/sim-core": "workspace:*"

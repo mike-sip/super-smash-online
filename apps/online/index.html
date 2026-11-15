@@ -29,35 +29,46 @@
       #overlay {
         pointer-events: none;
       }
-      #join {
+      #lobby {
         position: absolute;
         left: 50%;
         top: 50%;
         transform: translate(-50%, -50%);
         display: grid;
         gap: 10px;
-        width: min(340px, calc(100% - 32px));
+        width: min(560px, calc(100% - 32px));
+        max-height: calc(100% - 32px);
+        overflow: auto;
+        box-sizing: border-box;
         padding: 20px;
         border: 1px solid #475569;
         border-radius: 8px;
-        background: rgba(15, 23, 42, 0.92);
+        background: rgba(15, 23, 42, 0.94);
       }
-      #join[hidden] {
+      #lobby[hidden] {
         display: none;
       }
-      #join h1 {
-        margin: 0 0 4px;
+      #lobby h1 {
+        margin: 0;
         font-size: 18px;
       }
-      #join label {
-        display: grid;
-        gap: 4px;
-        font-size: 13px;
-        color: #cbd5e1;
+      #lobby h2 {
+        margin: 0;
+        font-size: 15px;
       }
-      #join input,
-      #join select,
-      #join button {
+      #lobby .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      #lobby .who {
+        font-size: 13px;
+        color: #94a3b8;
+      }
+      #lobby input,
+      #lobby select,
+      #lobby button {
         padding: 6px 8px;
         border: 1px solid #64748b;
         border-radius: 4px;
@@ -65,15 +76,48 @@
         color: #e2e8f0;
         font: inherit;
       }
-      #join button {
+      #lobby input[type='number'] {
+        width: 5em;
+      }
+      #lobby button {
         border-color: #facc15;
         color: #facc15;
         cursor: pointer;
       }
-      #join p {
+      #lobby fieldset {
+        display: grid;
+        gap: 8px;
+        border: 1px solid #334155;
+        border-radius: 6px;
+      }
+      #lobby ul,
+      #lobby ol {
         margin: 0;
-        font-size: 12px;
+        padding-left: 18px;
+      }
+      #lobby li {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        padding: 2px 0;
+      }
+      #lobby .tags,
+      #lobby p {
+        margin: 0;
+        font-size: 13px;
         color: #94a3b8;
+      }
+      #lobby .ready {
+        color: #86efac;
+      }
+      #lobby .error {
+        color: #fca5a5;
+      }
+      #room-code {
+        font-family: ui-monospace, monospace;
+        color: #facc15;
+        letter-spacing: 0.08em;
       }
       #status {
         position: absolute;
@@ -135,39 +179,7 @@
   <body>
     <canvas id="game"></canvas>
     <div id="overlay"></div>
-    <form id="join" hidden>
-      <h1>Combat en ligne</h1>
-      <label>
-        Identifiant de la partie
-        <input name="game" required maxlength="32" pattern="[A-Za-z0-9_\-]{1,32}" value="salon" />
-      </label>
-      <label>
-        Joueurs attendus
-        <select name="players">
-          <option>2</option>
-          <option>3</option>
-          <option>4</option>
-          <option>5</option>
-          <option>6</option>
-          <option>7</option>
-          <option>8</option>
-        </select>
-      </label>
-      <label>
-        Joueurs sur cette machine
-        <select name="local">
-          <option>1</option>
-          <option>2</option>
-          <option>3</option>
-          <option>4</option>
-        </select>
-      </label>
-      <button type="submit">Rejoindre</button>
-      <p>
-        Ouvrez la même adresse dans d'autres onglets ou sur d'autres machines du réseau local, avec
-        le même identifiant et le même nombre de joueurs.
-      </p>
-    </form>
+    <section id="lobby" aria-label="Lobby"></section>
     <div id="status"></div>
     <div id="banner" role="alert"></div>
     <pre id="diagnostics" hidden></pre>

@@ -1,18 +1,14 @@
 /**
- * Deux onglets de Microsoft Edge jouent ensemble dans la démo en ligne (critère n° 5) : chacun
- * dans son propre contexte de navigation, sur le serveur de développement Vite qui héberge aussi
- * le relais. Une touche dans le premier fait bouger son combattant dans le second ; aux mêmes
- * frames confirmées, les deux onglets envoient les mêmes empreintes.
+ * Deux onglets de Microsoft Edge jouent ensemble dans la démo en ligne (SPEC-netcode.md, critère
+ * n° 5), désormais par le lobby (SPEC-lobby.md) : le premier crée un salon, le second le rejoint
+ * par son code, chacun choisit son personnage et l'hôte lance. Une touche dans le premier fait
+ * bouger son combattant dans le second ; aux mêmes frames confirmées, les deux onglets envoient
+ * les mêmes empreintes au relais.
  */
-import { fileURLToPath } from 'node:url';
-import { chromium, type Browser, type Page } from 'playwright-core';
-import { createServer, type ViteDevServer } from 'vite';
+import type { Browser } from 'playwright-core';
+import type { ViteDevServer } from 'vite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { OnlineTestHook } from '../src/main.ts';
-
-declare global {
-  var __online: OnlineTestHook;
-}
+import { gather, openTab, pickReadyStart, startDemo, unexpected, waitRunning } from './helpers.ts';
 
 describe('démo en ligne', () => {
   let server: ViteDevServer;
@@ -20,18 +16,7 @@ describe('démo en ligne', () => {
   let url: string;
 
   beforeAll(async () => {
-    server = await createServer({
-      root: fileURLToPath(new URL('..', import.meta.url)),
-      logLevel: 'silent',
-      server: { port: 0, host: '127.0.0.1' },
-    });
-    await server.listen();
-    const address = server.httpServer?.address();
-    if (address === null || address === undefined || typeof address === 'string') {
-      throw new Error('Le serveur de la démo ne donne pas son port.');
-    }
-    url = `http://127.0.0.1:${address.port}/`;
-    browser = await chromium.launch({ channel: 'msedge' });
+    ({ server, browser, url } = await startDemo());
   }, 60_000);
 
   afterAll(async () => {
@@ -39,42 +24,24 @@ describe('démo en ligne', () => {
     await server?.close();
   });
 
-  async function open(query: string): Promise<{ page: Page; errors: string[] }> {
-    // Un contexte par onglet : chacun se comporte comme une fenêtre au premier plan.
-    const context = await browser.newContext({ viewport: { width: 960, height: 540 } });
-    const page = await context.newPage();
-    const errors: string[] = [];
-    page.on('pageerror', (error) => errors.push(error.message));
-    page.on('console', (message) => {
-      if (message.type() === 'error') errors.push(message.text());
-    });
-    await page.goto(url + query);
-    return { page, errors };
-  }
-
-  it('affiche le formulaire sans partie dans l’adresse', async () => {
-    const { page, errors } = await open('');
-    await expect.poll(() => page.locator('#join').isVisible()).toBe(true);
-    await page.locator('input[name="game"]').fill('formulaire');
-    await page.locator('button[type="submit"]').click();
-    await page.waitForURL(/game=formulaire&players=2&local=1/);
-    await page.waitForFunction(() => globalThis.__online?.status() === 'waiting');
-    expect(errors).toEqual([]);
-    await page.context().close();
+  it('ouvre une session invité et affiche le menu du lobby', async () => {
+    const tab = await openTab(browser, url);
+    expect(await tab.page.locator('#create-room').isVisible()).toBe(true);
+    expect(await tab.page.evaluate(() => __online.lobby().you?.guest)).toBe(true);
+    // Un code inconnu est refusé avec un message.
+    await tab.page.fill('input[name="code"]', 'ZZZ-ZZZ');
+    await tab.page.click('#join-room button[type="submit"]');
+    await tab.page.locator('.error[data-code="not_found"]').waitFor();
+    expect(unexpected(tab.errors)).toEqual([]);
+    await tab.page.context().close();
   }, 60_000);
 
   it('deux onglets jouent la même partie et restent synchronisés', async () => {
-    const a = await open('?game=duel&players=2');
-    const b = await open('?game=duel&players=2');
-    for (const { page } of [a, b]) {
-      await page.waitForFunction(
-        () => __online.status() === 'running' && __online.stats().frame > 60,
-        null,
-        {
-          timeout: 20_000,
-        },
-      );
-    }
+    const a = await openTab(browser, url);
+    const b = await openTab(browser, url);
+    await gather(a, [b]);
+    await pickReadyStart(a, [b]);
+    for (const t of [a, b]) await waitRunning(t);
     const slotA = (await a.page.evaluate(() => __online.localSlots()))[0]!;
     const slotB = (await b.page.evaluate(() => __online.localSlots()))[0]!;
     expect(new Set([slotA, slotB])).toEqual(new Set([0, 1]));
@@ -102,9 +69,9 @@ describe('démo en ligne', () => {
 
     for (const { page, errors } of [a, b]) {
       expect(await page.evaluate(() => __online.desyncs())).toBe(0);
-      expect(errors).toEqual([]);
+      expect(unexpected(errors)).toEqual([]);
     }
-    const stats = await a.page.evaluate(() => __online.stats());
+    const stats = (await a.page.evaluate(() => __online.stats()))!;
     console.log(
       `deux onglets : frame ${stats.frame}, aller-retour ${stats.rttMs.toFixed(1)} ms, ` +
         `${stats.rollbacks} rollbacks, ${stats.stalls} attentes, ${common.length} empreintes comparées`,

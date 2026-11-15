@@ -218,9 +218,21 @@ importers:
 
   apps/online:
     dependencies:
+      '@game/accounts':
+        specifier: workspace:*
+        version: link:../../packages/accounts
+      '@game/accounts-client':
+        specifier: workspace:*
+        version: link:../../packages/accounts-client
       '@game/input':
         specifier: workspace:*
         version: link:../../packages/input
+      '@game/lobby':
+        specifier: workspace:*
+        version: link:../../packages/lobby
+      '@game/match-rules':
+        specifier: workspace:*
+        version: link:../../packages/match-rules
       '@game/netcode':
         specifier: workspace:*
         version: link:../../packages/netcode

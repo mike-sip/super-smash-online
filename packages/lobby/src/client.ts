@@ -234,6 +234,8 @@ export function createLobbyClient(options: LobbyClientOptions): LobbyClient {
           countdown: m.room.phase === 'countdown' ? state.countdown : null,
           match: m.room.phase === 'playing' ? state.match : null,
           lastEnd: m.room.lastEnd ?? state.lastEnd,
+          // Entrée dans un salon : l'erreur précédente (code faux…) n'a plus lieu d'être.
+          error: state.room === null ? null : state.error,
         });
         break;
       case 'roomClosed':
@@ -253,7 +255,7 @@ export function createLobbyClient(options: LobbyClientOptions): LobbyClient {
         });
         break;
       case 'queued':
-        update({ queue: { region: m.region, waiting: m.waiting } });
+        update({ queue: { region: m.region, waiting: m.waiting }, error: null });
         break;
       case 'unqueued':
         update({ queue: null });
