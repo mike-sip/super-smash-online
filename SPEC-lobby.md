@@ -108,10 +108,10 @@ Le détail (messages, version du protocole) sera dans le plan ; toute modificati
 - Les membres restent connectés au lobby pendant la partie : le lobby sait qui est là. Le salon passe en phase « partie ».
 - **Déconnexion du relais** : le relais confirme des inputs neutres (comportement actuel) et annonce le départ. Le joueur peut revenir tant que la partie dure (rechargement de page : il se reconnecte au lobby, qui lui renvoie `matchStart`, puis au relais).
 - **Fin** : chaque client détecte la fin par `matchResult(sim)` **sur un état confirmé** (toutes les frames jusqu'à la fin ont leurs inputs définitifs), et déclare au lobby `{ gameId, résultat }` (classement, gagnants, raison, frame de fin, statistiques par place).
-- **Concordance** : le lobby accepte le résultat quand les déclarations de tous les clients encore connectés au relais sont identiques, ou, 15 s après la première déclaration, quand une majorité stricte des déclarants concorde. Sinon le match est « contesté ». Une déclaration n'est acceptée que d'un membre de la partie, une fois, et doit avoir la forme attendue (bornes, nombre de places).
+- **Concordance** : le lobby accepte le résultat (`agreed`) quand les déclarations de tous les clients encore connectés au relais à la fin sont identiques **et** que le relais n'a signalé aucune désynchronisation dans cette partie. Désaccord, désync, ou déclarations manquantes 15 s après la première : le match est « contesté » et n'est pas transmis comme résultat officiel. Une déclaration n'est acceptée que d'un membre de la partie, une fois, et doit avoir la forme attendue (bornes, nombre de places).
 - **Abandon** : si le relais annonce `closed` (tout le monde parti) sans résultat, ou si le match dépasse sa durée maximale (limite de temps, ou 30 min sans limite, plus 5 min de marge), le match est « abandonné ».
 - Dans tous les cas, le relais ferme la partie (`cancel`), le salon revient en phase « salon », les états « prêt » sont remis à zéro, et le dernier résultat (ou le motif d'abandon) est gardé dans le salon et affiché.
-- **Transmis au classement** par `LobbyOptions.onMatchResult(record)` : identifiant de partie, type de salon (`private` ou `quick`), région, `MatchConfig`, stage, horodatages, statut (`agreed`, `contested`, `abandoned`), et par place : identifiant de compte, pseudo, invité, personnage, résultat (`PlayerResult` de `match-rules`) ou `null`. Le lobby n'écrit rien lui-même dans les comptes : c'est à `ranking` de décider quoi compter (les invités, les matchs contestés…).
+- **Transmis au classement** par `LobbyOptions.onMatchResult(record)`, construit côté serveur et jamais par un client : `matchId` (UUID tiré à la création de la partie, clé d'idempotence pour `ranking`, distinct de l'identifiant de partie du relais), `ranked` (vrai en partie rapide, faux en salon privé), identifiant de partie, type de salon (`private` ou `quick`), région, `MatchConfig`, stage, horodatages, statut (`agreed`, `contested`, `abandoned`), et par place : identifiant de compte, pseudo, invité, personnage, résultat (`PlayerResult` de `match-rules`) ou `null`, `leftAtFrame` (frame de départ annoncée par le relais si le joueur est parti sans revenir avant la fin, sinon `null`). Ces champs couvrent le `MatchReport` v1 proposé par `ranking` (note `ranking-interface-for-lobby.md`) : la conversion (`reportFromResult`) et l'envoi (`ranking.submitMatch` en mémoire, ou `POST /api/ranking/v1/matches` signé) se brancheront sur ce point d'extension dans `main.ts` quand `ranking` sera fusionné, sans toucher au service. Le lobby n'écrit rien lui-même dans les comptes : c'est à `ranking` de décider quoi compter (les invités, les matchs contestés…).
 
 ### Protocole du lobby
 
@@ -260,6 +260,8 @@ export interface Lobby {
 }
 
 export interface MatchRecord {
+  readonly matchId: string;                 // UUID, clé d'idempotence pour ranking
+  readonly ranked: boolean;                 // partie rapide : vrai ; salon privé : faux
   readonly gameId: string;
   readonly kind: 'private' | 'quick';
   readonly region: string;
@@ -274,6 +276,7 @@ export interface MatchRecord {
     readonly guest: boolean;
     readonly fighter: string;
     readonly result: PlayerResult | null;   // null si contesté ou abandonné
+    readonly leftAtFrame: number | null;    // parti sans revenir avant la fin
   }[];
   readonly winners: readonly number[];      // places ; vide si contesté ou abandonné
 }
@@ -375,7 +378,7 @@ Développement piloté par les tests : chaque règle pure et chaque comportement
 Choix par défaut proposés ; dites-moi ceux à changer.
 
 1. **Lobby et relais dans un même processus** (hypothèse 1), avec réservation directe. Alternative : processus séparés et un « laissez-passer » signé par le lobby pour le relais ; plus extensible, plus de code, inutile pour une seule machine.
-2. **Résultats déclarés par les clients, acceptés par concordance** (hypothèse 5). Alternative pour un classement à enjeu : le serveur rejoue la partie à partir des inputs du relais (coût : un processeur pendant quelques secondes par match ; il faudrait le contenu des personnages côté serveur). Je propose de garder la concordance en v1 et de laisser la rejoue à `ranking` s'il la juge nécessaire.
+2. **Résultats déclarés par les clients, acceptés par concordance** (hypothèse 5). Alternative pour un classement à enjeu : le serveur rejoue la partie à partir des inputs du relais (coût : un processeur pendant quelques secondes par match ; il faudrait le contenu des personnages côté serveur). Je propose de garder la concordance en v1 (déclarations identiques et aucune désync signalée par le relais), que `ranking` accepte comme minimum dans sa proposition, et d'ajouter la rejoue serveur après la fusion de `fighters` et `stages-items` si vous la jugez nécessaire. `ranking` préfère la rejoue : c'est à vous de trancher.
 3. **Reconnexion en pleine partie** par rejeu de l'historique des inputs (ni instantané d'état transmis d'un pair, ni serveur qui simule). Coût : l'historique de chaque partie en mémoire du relais, jusqu'à la fin du match.
 4. **Codes de 6 caractères** (729 millions) avec limitation des essais, plutôt que 8 (plus sûrs, moins pratiques à dicter).
 5. **Partie rapide** : règles fixes (Stock 3 vies, 7 min, chacun pour soi, ultime et objets), groupes de 2 à 4 joueurs, 20 s d'attente avant de partir à moins de 4, refus au-delà de 250 ms d'aller-retour.
