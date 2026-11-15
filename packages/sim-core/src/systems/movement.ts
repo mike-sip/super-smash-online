@@ -23,6 +23,7 @@ import {
   setAction,
 } from '../actions.ts';
 import type { FighterDef } from '../defs.ts';
+import { EV_ULTIMATE, emit } from '../events.ts';
 import { fx } from '../fixed.ts';
 import {
   BTN_ATTACK,
@@ -52,6 +53,7 @@ import {
   M_UAIR,
   M_USMASH,
   M_USPECIAL,
+  M_ULTIMATE,
   M_UTILT,
 } from '../moves.ts';
 import type { SimState } from '../state.ts';
@@ -191,7 +193,7 @@ export function forceMove(s: SimState, i: number, slot: number): void {
 
 /** Lance l'attaque demandée si le combattant en possède une. Renvoie vrai si elle est partie. */
 function tryAttack(
-  s: SimState,
+  sim: Sim,
   def: FighterDef,
   i: number,
   grounded: boolean,
@@ -199,7 +201,14 @@ function tryAttack(
   stickX: number,
   stickY: number,
 ): boolean {
+  const s = sim.state;
   selectMove(s, i, grounded, running, stickX, stickY);
+  if (wantSlot === M_NSPECIAL && s.ultimateReady[i] === 1 && def.moves[M_ULTIMATE] !== undefined) {
+    // Attaque ultime autorisée par les règles de match : elle remplace le spécial neutre.
+    wantSlot = M_ULTIMATE;
+    s.ultimateReady[i] = 0;
+    emit(sim.events, EV_ULTIMATE, i, 0);
+  }
   if (wantSlot < 0 || def.moves[wantSlot] === undefined) return false;
   startMove(s, i, wantSlot);
   return true;
@@ -349,7 +358,7 @@ export function updateMovement(sim: Sim, i: number): void {
       // Le double saut permet de repartir franchement dans la direction du stick.
       if (dir !== 0) s.velX[i] = Math.trunc((def.airSpeed * stickX) / STICK_MAX);
       if (action === A_TUMBLE) setAction(s, i, A_AIR);
-    } else if (tryAttack(s, def, i, false, false, stickX, stickY)) {
+    } else if (tryAttack(sim, def, i, false, false, stickX, stickY)) {
       // L'attaque aérienne démarre : le contrôle aérien reste actif ci-dessous.
     } else if (action === A_AIR && tryAirDodge(sim, i, stickX, stickY)) {
       // En chute désordonnée, le bouton bouclier est réservé au rétablissement : il faut d'abord
@@ -387,7 +396,7 @@ export function updateMovement(sim: Sim, i: number): void {
     setAction(s, i, A_JUMPSQUAT);
     return;
   }
-  if (tryAttack(s, def, i, true, action === A_DASH || action === A_RUN, stickX, stickY)) {
+  if (tryAttack(sim, def, i, true, action === A_DASH || action === A_RUN, stickX, stickY)) {
     return;
   }
   if (tryGroundDefense(sim, i)) return;

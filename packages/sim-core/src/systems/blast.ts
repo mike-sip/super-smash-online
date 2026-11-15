@@ -13,7 +13,16 @@ export function checkBlast(sim: Sim, i: number): void {
   // La limite haute ne tue qu'un combattant éjecté : sauter très haut n'est pas un KO.
   const overTop = y > blast.top && (action === A_HITSTUN || action === A_TUMBLE);
   if (x >= blast.left && x <= blast.right && y >= blast.bottom && !overTop) return;
+  koFighter(sim, i);
+}
 
+/**
+ * Met le joueur KO là où il est : figé, en `A_DEAD` jusqu'à sa réapparition. Émet `EV_KO`.
+ * Sans effet sur un joueur déjà KO.
+ */
+export function koFighter(sim: Sim, i: number): void {
+  const s = sim.state;
+  if (s.action[i] === A_DEAD) return;
   s.velX[i] = 0;
   s.velY[i] = 0;
   s.grounded[i] = 0;

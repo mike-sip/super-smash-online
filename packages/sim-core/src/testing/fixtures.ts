@@ -24,6 +24,7 @@ import {
   M_NSPECIAL,
   M_UAIR,
   M_USMASH,
+  M_ULTIMATE,
   M_UTILT,
 } from '../moves.ts';
 import type { SimConfig } from '../step.ts';
@@ -104,6 +105,13 @@ export const TEST_ENTITIES: EntityDef[] = [
 ];
 
 const TEST_MOVES = moveset([
+  [
+    // Ultime provisoire (règles de match) : large balayage lent et puissant.
+    M_ULTIMATE,
+    move('ultimate', 60, [
+      { frames: [18, 24], shape: [-14, 6, 18, 6, 8], damage: 30, angle: 50, base: 60, growth: 1 },
+    ]),
+  ],
   [
     M_NSPECIAL,
     move('shot', 40, [], {

@@ -21,6 +21,18 @@ import { launch } from './systems/knockback.ts';
 import { resolveLedges } from './systems/ledge.ts';
 import { trackStick, updateMovement } from './systems/movement.ts';
 
+/**
+ * Règles de match branchées sur la simulation (module `match-rules`). Elles tournent dans
+ * `step`, donc aussi pendant une re-simulation après rollback, et ne gardent leur état que dans
+ * `rulesState(sim)`. Mêmes contraintes que `step` : aucune allocation, aucun non-déterminisme.
+ */
+export interface SimRules {
+  /** Appelée une fois, à la fin de `createSim`, combattants placés. */
+  init(sim: Sim): void;
+  /** Appelée à la fin de chaque `step`, frame déjà avancée, événements de la frame lisibles. */
+  afterStep(sim: Sim): void;
+}
+
 export interface SimConfig {
   readonly stage: StageDef;
   /** Un combattant par joueur, de 2 à 8. */
@@ -28,6 +40,15 @@ export interface SimConfig {
   /** Types d'entités (projectiles, objets) utilisables pendant le combat. */
   readonly entities?: readonly EntityDef[];
   readonly seed: number;
+  /**
+   * Équipe de chaque joueur (entier positif ou nul), un par joueur. Absent : chacun pour soi.
+   * Ajout demandé par `match-rules`.
+   */
+  readonly teams?: readonly number[];
+  /** Tir allié : les coéquipiers se blessent et se saisissent. Vrai par défaut. */
+  readonly teamAttack?: boolean;
+  /** Règles de match. Absentes : combat sans fin, comme avant leur ajout. */
+  readonly rules?: SimRules;
 }
 
 export interface Sim {
@@ -42,12 +63,18 @@ export interface Sim {
   readonly events: EventQueue;
   /** Tableaux de travail internes à une frame. Hors snapshot. */
   readonly scratch: HitScratch;
+  /** Équipe de chaque joueur, figée à la création (chacun la sienne sans équipes). */
+  readonly team: Int32Array;
+  /** Faux si les coéquipiers ne peuvent pas se toucher. */
+  readonly teamAttack: boolean;
 }
 
 /** Pose le joueur sur son point d'apparition, dans un état neuf. */
 function placeAtSpawn(sim: Sim, i: number): void {
   const s = sim.state;
   // L'input est conservé : sinon un bouton tenu pendant la réapparition compterait comme un appui.
+  // L'autorisation de l'ultime est remise à 0 comme le reste (même choix que l'extension E6 de
+  // `fighters`) : les règles de match la relèvent si la jauge est encore pleine.
   const input = s.input[i]!;
   const prevInput = s.prevInput[i]!;
   for (let f = 0; f < FIGHTER_FIELDS.length; f++) s[FIGHTER_FIELDS[f]!][i] = 0;
@@ -76,6 +103,18 @@ export function createSim(config: SimConfig): Sim {
       `Le stage « ${config.stage.name} » n'a que ${config.stage.spawns.length} points d'apparition pour ${players} joueurs.`,
     );
   }
+  const team = new Int32Array(MAX_PLAYERS);
+  for (let i = 0; i < MAX_PLAYERS; i++) team[i] = i;
+  if (config.teams !== undefined) {
+    if (config.teams.length !== players) {
+      throw new Error(`Il faut une équipe par joueur : ${config.teams.length} pour ${players}.`);
+    }
+    for (let i = 0; i < players; i++) {
+      const t = config.teams[i]!;
+      if (!Number.isInteger(t) || t < 0) throw new Error(`Joueur ${i} : équipe invalide (${t}).`);
+      team[i] = t;
+    }
+  }
   const sim: Sim = {
     config,
     state: createState(),
@@ -83,19 +122,24 @@ export function createSim(config: SimConfig): Sim {
     geo: compileStage(config.stage),
     events: createEventQueue(),
     scratch: createHitScratch(),
+    team,
+    teamAttack: config.teamAttack ?? true,
   };
   sim.state.g[G_PLAYERS] = players;
   rngSeed(sim.state, config.seed);
   for (let i = 0; i < players; i++) placeAtSpawn(sim, i);
+  config.rules?.init(sim);
   return sim;
 }
 
 /**
- * Fait réapparaître un joueur. À appeler entre deux `step`, par les règles de match, de façon
- * identique chez tous les pairs : c'est une modification de l'état comme une autre.
+ * Fait réapparaître un joueur. À appeler entre deux `step` ou depuis `SimRules.afterStep`, de
+ * façon identique chez tous les pairs : c'est une modification de l'état comme une autre.
+ * `invincibleFrames` : durée de l'invincibilité de réapparition (0 = aucune, comme avant).
  */
-export function respawn(sim: Sim, player: number): void {
+export function respawn(sim: Sim, player: number, invincibleFrames = 0): void {
   placeAtSpawn(sim, player);
+  sim.state.invincible[player] = invincibleFrames;
 }
 
 /**
@@ -148,6 +192,8 @@ export function step(sim: Sim, inputs: Uint32Array): void {
 
   // 6. Compteurs et avance des actions. Une attaque en cours de charge reste sur sa frame.
   for (let i = 0; i < players; i++) {
+    // L'invincibilité de réapparition se compte en temps réel, hitlag compris.
+    if (s.invincible[i]! > 0) s.invincible[i] = s.invincible[i]! - 1;
     if (frozen[i] === 1) continue;
     tickDodgeStale(sim, i);
     if (s.intangible[i]! > 0) s.intangible[i] = s.intangible[i]! - 1;
@@ -162,4 +208,8 @@ export function step(sim: Sim, inputs: Uint32Array): void {
     else s.actionFrame[i] = s.actionFrame[i]! + 1;
   }
   s.g[G_FRAME] = s.g[G_FRAME]! + 1;
+
+  // 7. Règles de match.
+  const rules = sim.config.rules;
+  if (rules !== undefined) rules.afterStep(sim);
 }

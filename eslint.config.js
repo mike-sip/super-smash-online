@@ -27,7 +27,8 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     // La simulation doit être reproductible au bit près : voir SPEC-sim-core.md, « Limites ».
-    files: ['packages/sim-core/src/**/*.ts'],
+    // Même exigence pour les règles de match, qui tournent dans `step` (SPEC-match-rules.md).
+    files: ['packages/sim-core/src/**/*.ts', 'packages/match-rules/src/**/*.ts'],
     rules: {
       'no-restricted-properties': [
         'error',

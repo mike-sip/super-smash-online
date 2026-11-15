@@ -22,6 +22,12 @@ export const EV_GRAB = 6;
 /** Un joueur s'est accroché à un rebord. `a` = joueur, `b` = index du rebord. */
 export const EV_LEDGE = 7;
 
+/**
+ * Une attaque ultime a été lancée. `a` = joueur. Même valeur que l'extension E6 de `fighters`
+ * (qui prend 8 pour `EV_COUNTER`) : une seule des deux implémentations restera à la fusion.
+ */
+export const EV_ULTIMATE = 9;
+
 export interface EventQueue {
   count: number;
   readonly type: Int32Array;

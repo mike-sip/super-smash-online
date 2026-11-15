@@ -7,14 +7,15 @@
     "dev": "vite",
     "build": "vite build",
     "test": "vitest run",
-    "typecheck": "pnpm --filter @game/render build && pnpm --filter @game/input build && pnpm --filter @game/accounts-client build && tsc --noEmit",
+    "typecheck": "pnpm --filter @game/render build && pnpm --filter @game/input build && pnpm --filter @game/accounts-client build && pnpm --filter @game/match-rules build && tsc --noEmit",
     "perf": "vitest run --config vitest.perf.config.ts"
   },
   "dependencies": {
     "@game/accounts-client": "workspace:*",
     "@game/input": "workspace:*",
     "@game/render": "workspace:*",
-    "@game/sim-core": "workspace:*"
+    "@game/sim-core": "workspace:*",
+    "@game/match-rules": "workspace:*"
   },
   "devDependencies": {
     "@game/accounts": "workspace:*",

@@ -23,6 +23,10 @@ export default defineConfig({
         find: /^@game\/accounts\/protocol$/,
         replacement: source('../../packages/accounts/src/protocol.ts'),
       },
+      {
+        find: /^@game\/match-rules$/,
+        replacement: source('../../packages/match-rules/src/index.ts'),
+      },
     ],
   },
   server: {

@@ -251,6 +251,86 @@
       #account [data-account$='-hint'] {
         color: #94a3b8;
       }
+      #rules,
+      #results {
+        position: absolute;
+        top: 130px;
+        left: 50%;
+        transform: translateX(-50%);
+        max-height: calc(100% - 150px);
+        overflow-y: auto;
+        padding: 10px 16px;
+        border: 1px solid #475569;
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.94);
+        color: #cbd5e1;
+        font-size: 13px;
+      }
+      #rules {
+        width: 300px;
+      }
+      #rules h2,
+      #results h2 {
+        margin: 4px 0 8px;
+        font-size: 16px;
+        color: #f8fafc;
+      }
+      #rules label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        margin: 4px 0;
+      }
+      #rules label[hidden],
+      #rules div[hidden] {
+        display: none;
+      }
+      #rules input[type='number'] {
+        width: 72px;
+      }
+      #rules .message {
+        min-height: 1.2em;
+        color: #fca5a5;
+      }
+      #rules .note {
+        margin: 8px 0 0;
+        color: #94a3b8;
+        font-size: 11px;
+      }
+      #rules .buttons,
+      #results .buttons {
+        display: flex;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      #rules button,
+      #results button {
+        padding: 4px 10px;
+        border: 1px solid #64748b;
+        border-radius: 4px;
+        background: #1e293b;
+        color: #f8fafc;
+        font: inherit;
+        cursor: pointer;
+      }
+      #results table {
+        border-collapse: collapse;
+        font-variant-numeric: tabular-nums;
+      }
+      #results th,
+      #results td {
+        padding: 3px 8px;
+        text-align: right;
+      }
+      #results th:nth-child(2),
+      #results td:nth-child(2) {
+        text-align: left;
+      }
+      #results tr.winner td {
+        color: #fde047;
+        font-weight: 700;
+      }
       #help {
         max-width: 48%;
         position: absolute;
@@ -278,13 +358,16 @@
       <kbd>X</kbd> attaque · <kbd>C</kbd> spécial · <kbd>V</kbd> bouclier · <kbd>B</kbd> saisie ·
       <kbd>I</kbd> <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> stick droit · <kbd>Maj</kbd> marcher<br />
       Son : cliquez ou appuyez sur une touche pour l’activer, <kbd>S</kbd> pour les réglages.<br />
-      Manette : appuyez sur un bouton pour rejoindre, jusqu'à 4 joueurs. Adresse :
-      <code>?dummies=1…7&amp;mode=idle|random</code>
+      Manette : appuyez sur un bouton pour rejoindre, jusqu'à 4 joueurs. <kbd>G</kbd> règles du
+      match. Adresse :
+      <code>?dummies=1…7&amp;mode=idle|random&amp;rules=stock|time|stamina|free</code>
     </p>
     <div id="tuning" hidden></div>
     <div id="remap" hidden></div>
     <div id="sound" hidden></div>
     <div id="account" hidden></div>
+    <div id="rules" hidden></div>
+    <div id="results" hidden></div>
     <div id="status" role="status"></div>
     <div id="toolbar"></div>
     <script type="module" src="/src/main.ts"></script>

@@ -169,7 +169,8 @@ function grabbable(s: SimState, j: number): boolean {
     action !== A_GRABBED &&
     action !== A_GRABBING &&
     action !== A_THROW &&
-    s.intangible[j] === 0
+    s.intangible[j] === 0 &&
+    s.invincible[j] === 0
   );
 }
 
@@ -234,6 +235,7 @@ export function resolveGrabs(sim: Sim): void {
     let bestGap = 0;
     for (let j = 0; j < players; j++) {
       if (j === i || !grabbable(s, j)) continue;
+      if (!sim.teamAttack && sim.team[i] === sim.team[j]) continue;
       if (!touches(s, i, grab.box, j, fighters[j]!)) continue;
       const dx = s.posX[j]! - s.posX[i]!;
       const gap = dx < 0 ? -dx : dx;

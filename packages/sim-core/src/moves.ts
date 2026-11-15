@@ -24,4 +24,9 @@ export const M_USPECIAL = 17;
 export const M_DSPECIAL = 18;
 /** Attaque de remontée depuis un rebord. */
 export const M_LEDGE_ATTACK = 19;
-export const MOVE_SLOTS = 20;
+/**
+ * Attaque ultime : lancée par un spécial neutre quand les règles de match l'autorisent
+ * (`setUltimateReady`). Ajout demandé par `match-rules` ; le coup est fourni par `fighters`.
+ */
+export const M_ULTIMATE = 20;
+export const MOVE_SLOTS = 21;

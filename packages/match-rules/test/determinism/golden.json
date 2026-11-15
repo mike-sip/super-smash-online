@@ -1,0 +1,32 @@
+[
+  {
+    "name": "stock-ffa",
+    "checksum": 3479519943,
+    "phase": "over",
+    "reason": "last-standing",
+    "endFrame": 4658,
+    "winners": [3],
+    "placements": [5, 6, 4, 1, 7, 8, 3, 2],
+    "kos": [2, 0, 4, 3, 1, 0, 2, 1]
+  },
+  {
+    "name": "time-teams",
+    "checksum": 3708176760,
+    "phase": "over",
+    "reason": "time",
+    "endFrame": 10800,
+    "winners": [2, 6],
+    "placements": [3, 4, 1, 2, 3, 4, 1, 2],
+    "kos": [1, 2, 4, 9, 4, 2, 10, 5]
+  },
+  {
+    "name": "stamina-ffa",
+    "checksum": 90412387,
+    "phase": "over",
+    "reason": "last-standing",
+    "endFrame": 4394,
+    "winners": [7],
+    "placements": [6, 5, 4, 2, 7, 8, 3, 1],
+    "kos": [0, 1, 0, 4, 0, 0, 3, 1]
+  }
+]

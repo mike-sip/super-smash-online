@@ -30,6 +30,10 @@ export interface FighterView {
   /** Frames de gel restantes après un coup : le rendu doit figer l'animation. */
   hitlag: number;
   intangible: boolean;
+  /** Invincibilité de réapparition en cours (règles de match). */
+  invincible: boolean;
+  /** Attaque ultime autorisée (règles de match). */
+  ultimateReady: boolean;
   /** Sauts aériens restants. */
   jumpsLeft: number;
 }
@@ -63,6 +67,8 @@ export function createFighterView(): FighterView {
     shield: 1,
     hitlag: 0,
     intangible: false,
+    invincible: false,
+    ultimateReady: false,
     jumpsLeft: 0,
   };
 }
@@ -87,6 +93,8 @@ export function readFighter(sim: Sim, player: number, out: FighterView): void {
   out.shield = s.shield[player]! / sim.config.fighters[player]!.shieldMax;
   out.hitlag = s.hitlag[player]!;
   out.intangible = s.intangible[player]! > 0;
+  out.invincible = s.invincible[player]! > 0;
+  out.ultimateReady = s.ultimateReady[player] === 1;
   out.jumpsLeft = s.jumpsLeft[player]!;
 }
 

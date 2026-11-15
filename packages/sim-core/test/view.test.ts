@@ -40,6 +40,8 @@ describe('readFighter', () => {
       shield: 1,
       hitlag: 0,
       intangible: false,
+      invincible: false,
+      ultimateReady: false,
       jumpsLeft: 1,
     });
   });

@@ -91,6 +91,11 @@ export const FIGHTER_FIELDS = [
   'ledgeCooldown',
   'ledgeGrabs',
   'ledgeTimer',
+  // Ajouts demandés par `match-rules`, en fin de liste pour ne pas déplacer les champs existants.
+  /** Frames d'invincibilité de réapparition : comme `intangible`, mais aucune action ne l'écrase. */
+  'invincible',
+  /** 1 si l'attaque ultime est autorisée : le prochain spécial neutre la lance. */
+  'ultimateReady',
 ] as const;
 
 /** Un Int32 par entité (projectile, objet). `eKind` à 0 signifie emplacement libre. */
@@ -106,11 +111,21 @@ export const ENTITY_FIELDS = [
   'eHitMask',
 ] as const;
 
+/**
+ * Zone réservée aux règles de match (`SimConfig.rules`), à la fin du tampon. La simulation ne
+ * l'interprète jamais ; elle est sauvegardée et comptée par le checksum comme le reste.
+ * Ajout demandé par `match-rules` (SPEC-match-rules.md).
+ */
+export const RULES_WORDS = 256;
+
 export type FighterField = (typeof FIGHTER_FIELDS)[number];
 export type EntityField = (typeof ENTITY_FIELDS)[number];
 
 export const STATE_WORDS =
-  GLOBAL_COUNT + FIGHTER_FIELDS.length * MAX_PLAYERS + ENTITY_FIELDS.length * MAX_ENTITIES;
+  GLOBAL_COUNT +
+  FIGHTER_FIELDS.length * MAX_PLAYERS +
+  ENTITY_FIELDS.length * MAX_ENTITIES +
+  RULES_WORDS;
 export const STATE_BYTES = STATE_WORDS * 4;
 
 export type SimState = {
@@ -121,6 +136,8 @@ export type SimState = {
   readonly words: Int32Array;
   /** Valeurs globales, indexées par les constantes `G_*`. */
   readonly g: Int32Array;
+  /** Zone réservée aux règles de match. */
+  readonly rules: Int32Array;
 } & { readonly [K in FighterField | EntityField]: Int32Array };
 
 export function createState(): SimState {
@@ -135,11 +152,13 @@ export function createState(): SimState {
     fields[name] = new Int32Array(buffer, offset, MAX_ENTITIES);
     offset += MAX_ENTITIES * 4;
   }
+  const rules = new Int32Array(buffer, offset, RULES_WORDS);
   return {
     buffer,
     bytes: new Uint8Array(buffer),
     words: new Int32Array(buffer),
     g: new Int32Array(buffer, 0, GLOBAL_COUNT),
+    rules,
     ...fields,
   } as SimState;
 }

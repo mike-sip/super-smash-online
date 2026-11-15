@@ -35,3 +35,12 @@ export {
   SOUND_NAMES,
 } from './audio/cues.ts';
 export { ARENA_STYLE, DORIAN, NATURAL_MINOR, type TrackStyle } from './audio/music.ts';
+export {
+  TEAM_COLORS,
+  createMatchDomSink,
+  createMatchHud,
+  formatClock,
+  type MatchHud,
+  type MatchHudData,
+  type MatchHudSink,
+} from './match-hud.ts';
