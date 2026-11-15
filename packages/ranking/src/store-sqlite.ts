@@ -379,23 +379,18 @@ export function openRankingSqliteStore(path: string): RankingStore {
     },
 
     async history(accountId, before, limit) {
-      const rows = (before === null
-        ? sql(
-            `SELECT m.* FROM matches m
-               WHERE EXISTS (SELECT 1 FROM participants p WHERE p.match_id = m.match_id AND p.account_id = :id)
-               ORDER BY m.ended_at DESC, m.match_id DESC LIMIT :limit`,
-          ).all({ id: accountId, limit })
-        : sql(
-            `SELECT m.* FROM matches m
-               WHERE EXISTS (SELECT 1 FROM participants p WHERE p.match_id = m.match_id AND p.account_id = :id)
-                 AND (m.ended_at, m.match_id) < (:endedAt, :matchId)
-               ORDER BY m.ended_at DESC, m.match_id DESC LIMIT :limit`,
-          ).all({
-            id: accountId,
-            limit,
-            endedAt: before.endedAt,
-            matchId: before.matchId,
-          })) as unknown as MatchRow[];
+      // Par l'index des participations du joueur, pas par un parcours de tous les matchs.
+      const rows = sql(
+        `SELECT m.* FROM participants p JOIN matches m ON m.match_id = p.match_id
+         WHERE p.account_id = :id
+           AND (:endedAt IS NULL OR (m.ended_at, m.match_id) < (:endedAt, :matchId))
+         ORDER BY m.ended_at DESC, m.match_id DESC LIMIT :limit`,
+      ).all({
+        id: accountId,
+        limit,
+        endedAt: before?.endedAt ?? null,
+        matchId: before?.matchId ?? null,
+      }) as unknown as MatchRow[];
       const participants = participantsOf(rows.map((r) => r.match_id));
       return rows.map((r) => toMatch(r, participants.get(r.match_id)!));
     },
