@@ -1,6 +1,6 @@
 # Spec : `lobby` — salons, matchmaking et lancement des parties en ligne
 
-> Statut : **PROPOSÉE le 2026-11-15, en attente de votre validation.** Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `netcode` (implémenté), `match-rules` (implémenté), `accounts` (implémenté). `fighters` et `stages-items` ne sont pas encore fusionnés : le lobby manipule des **identifiants** de personnage et de stage, dont la liste lui est donnée par sa configuration.
+> Statut : **APPROUVÉE le 2026-11-15** (décisions par défaut retenues ; résultats par concordance en v1). Plan : [tasks/lobby/plan.md](tasks/lobby/plan.md), tâches : [tasks/lobby/todo.md](tasks/lobby/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `netcode` (implémenté), `match-rules` (implémenté), `accounts` (implémenté). `fighters` et `stages-items` ne sont pas encore fusionnés : le lobby manipule des **identifiants** de personnage et de stage, dont la liste lui est donnée par sa configuration.
 
 ## Hypothèses
 
@@ -373,9 +373,9 @@ Développement piloté par les tests : chaque règle pure et chaque comportement
 9. **Relu** : une relecture de sécurité est faite et consignée, ses constats corrigés ou expliqués.
 10. **Jouable** : vous avez fait le parcours dans la démo en ligne et donné votre avis sur les écrans.
 
-## Décisions à valider
+## Décisions prises à la validation
 
-Choix par défaut proposés ; dites-moi ceux à changer.
+Choix par défaut approuvés le 2026-11-15 :
 
 1. **Lobby et relais dans un même processus** (hypothèse 1), avec réservation directe. Alternative : processus séparés et un « laissez-passer » signé par le lobby pour le relais ; plus extensible, plus de code, inutile pour une seule machine.
 2. **Résultats déclarés par les clients, acceptés par concordance** (hypothèse 5). Alternative pour un classement à enjeu : le serveur rejoue la partie à partir des inputs du relais (coût : un processeur pendant quelques secondes par match ; il faudrait le contenu des personnages côté serveur). Je propose de garder la concordance en v1 (déclarations identiques et aucune désync signalée par le relais), que `ranking` accepte comme minimum dans sa proposition, et d'ajouter la rejoue serveur après la fusion de `fighters` et `stages-items` si vous la jugez nécessaire. `ranking` préfère la rejoue. **Tranché le 2026-11-15 : concordance en v1.**
