@@ -1,6 +1,6 @@
 # Spec : `fighters` — les 4 personnages v1 et l'outillage de leurs données
 
-> Statut : **APPROUVÉE le 2026-11-13.** Plan : [tasks/fighters/plan.md](tasks/fighters/plan.md), tâches : [tasks/fighters/todo.md](tasks/fighters/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `sim-core` (contrat `FighterDef`).
+> Statut : **APPROUVÉE le 2026-11-13, implémentée** (bilan en fin de document ; le ressenti des trois derniers personnages reste à juger par vous). Plan : [tasks/fighters/plan.md](tasks/fighters/plan.md), tâches : [tasks/fighters/todo.md](tasks/fighters/todo.md). Module de la [carte des capacités](CAPABILITY-MAP.md). Dépend de : `sim-core` (contrat `FighterDef`).
 
 ## Hypothèses
 
@@ -113,6 +113,7 @@ Validation seule :   pnpm --filter @game/fighters validate
 Frame data :         pnpm --filter @game/fighters framedata      (régénère FRAMEDATA.md)
 Types :              pnpm --filter @game/fighters typecheck
 Lint :               pnpm lint
+Benchmark :          pnpm --filter @game/fighters bench
 Démo :               pnpm --filter @game/demo dev                 (?p1=sorel&p2=ferroc…)
 ```
 
@@ -263,3 +264,37 @@ Les données s'écrivent avec de petits constructeurs lisibles, en unités de je
 - **Noms et identités** : Sorel, Zéphine, Ferroc et Nacre, tels que proposés.
 - **Extensions de `sim-core`** : E1 à E6 acceptées telles que décrites. Si `match-rules` prévoit son propre mécanisme d'ultime, on choisira l'un des deux à la fusion.
 - **Déclenchement de l'ultime** : spécial neutre quand le drapeau `ultimateReady` est levé.
+
+## Écarts et limites constatés pendant l'implémentation
+
+| Sujet | État actuel | Suite prévue |
+|---|---|---|
+| Trait de vent de Sorel | Durée de vie ramenée de 50 à 27 frames (portée 110 → 59 unités) **après** votre validation du ressenti de Sorel, pour respecter la règle d'identité « seuls les projectiles du zoneur portent au-delà de 60 unités ». | À rejuger en jeu ; si vous préférez l'ancienne portée, c'est la règle d'identité qu'il faut assouplir. |
+| Spéciaux de côté | La Ruée (Sorel), la Fente (Zéphine) et le Rempart (Ferroc) ne mettent pas en chute impuissante : la gravité continue d'agir pendant leur élan, ce qui suffit à empêcher le vol plané. La spec disait que la chute impuissante en l'air « en tient lieu ». | À revoir si l'enchaînement côté puis haut rend le retour trop facile. |
+| Retour sur le stage | Les quatre reviennent depuis 50 unités au-delà et 30 en dessous (critère), mais aussi depuis 90 et 50 (Sorel et Ferroc par le rebord). C'est généreux, surtout pour un lourd. | Point d'équilibrage à surveiller en ligne. |
+| Accroche pendant un spécial | Un combattant ne peut pas s'accrocher au rebord pendant son spécial de retour, seulement pendant la chute impuissante qui suit. | À ajouter (fenêtre d'accroche dans `MoveDef`) si le ressenti l'exige ; ce serait une extension de `sim-core`. |
+| Poses | Une pose générique par emplacement (spéciaux, ultime, riposte, chute impuissante), commune aux quatre personnages ; seules silhouettes et couleurs diffèrent. | Poses propres à chaque personnage : demande à part. |
+| Projectiles à l'écran | Sphères de `render`, colorées par numéro de type et non par personnage. | Visuels propres aux projectiles : demande à part, côté `render`. |
+| `renderer.ts` | Option `fighterVisuals` ajoutée à `RendererOptions`, avec votre accord (fichier hors de ma liste autorisée). | Conflit de fusion éventuel, trivial, avec la session audio. |
+| Panneau de réglage de la démo | Ne modifie plus que le personnage de J1 (et les joueurs qui ont le même personnage), au lieu de tous les combattants. | — |
+| Test de la démo et manettes réelles | Une vraie manette actionnée pendant les tests prenait la place de J1 ; les pages de test ne voient plus aucune manette, sauf scénario qui en simule une. | — |
+| Validation | Elle ne détecte pas un projectile qui apparaît sous la surface du sol : le piège de Nacre le faisait, c'est un scénario qui l'a révélé (corrigé). | — |
+| Frame data | Pas d'avantage sur bouclier : ses constantes sont internes à `sim-core`. | À ajouter si `sim-core` les expose. |
+| Fusion avec `match-rules` | Les deux branches ont écrit la même interface d'ultime ; `match-rules` s'est aligné (`EV_ULTIMATE` = 9, drapeau remis à zéro par `respawn`). À la fusion, garder celle de `fighters` (`MOVE_SLOTS` = 23). L'ultime provisoire que `match-rules` donne au combattant de test changerait deux tests de `fighters` (voir la note du dossier partagé). | Checksums de référence à régénérer à la fusion. |
+| Déterminisme navigateur | Hérité de `sim-core` : vérifié dans Node et Edge ; Firefox et WebKit ne démarrent pas sur cette machine. | Intégration continue. |
+
+## Bilan des critères de succès (2026-11-15)
+
+| N° | Critère | État | Mesure |
+|---|---|---|---|
+| 1 | Moveset complet, chaque emplacement déclenché par son input | Atteint | 4 × 21 emplacements, plus la riposte de Sorel ; un scénario par emplacement (cible maintenue sur la première hitbox, `EV_HIT` attendu pendant le coup), contre, attaque de rebord, saisie et 4 projections pour chacun. Le harnais a été vérifié capable d'échouer (hitbox jamais active, retour impossible). |
+| 2 | Données valides, chaque règle testée | Atteint | `validate` : aucun problème pour les 4 ; 41 tests qui déclenchent chacun une règle (44 tests de validation au total). |
+| 3 | Identité des archétypes | Atteint pour les tests ; **à juger par vous** en jeu | Éjection du smash avant sur une cible à 100 % : Ferroc 7,21, Sorel 4,70, Nacre 4,32, Zéphine 3,32. Démarrage moyen et allonge testés ; Sorel n'est ni premier ni dernier sur 7 mesures. Les quatre silhouettes vérifiées à l'écran. |
+| 4 | Retour sur le stage depuis 50 / 30 | Atteint | Les 4, scénario automatique (voir « Retour sur le stage » ci-dessus). |
+| 5 | Déterminisme et rollback | Atteint | 3 600 frames à 8 joueurs mêlant les 4 : même checksum à deux exécutions ; propriété sauvegarde / restauration sur 200 tirages. |
+| 6 | Performance | Atteint | `step` à 8 joueurs : 0,0021 ms en moyenne, 0,0045 ms au 99ᵉ centile (seuils 0,25 et 1). |
+| 7 | Frame data à jour et lisible | Atteint pour l'outillage | `FRAMEDATA.md` régénéré et vérifié par test ; panneau F dans la démo. Lisibilité : à votre appréciation. |
+| 8 | Démo : choix, ultime, frame data | Atteint | Panneau G et `?p1=…`, bouton U, panneau F ; 4 tests Playwright dans Edge. |
+| 9 | Ressenti | **Partiel** | Sorel validé par vous le 2026-11-14. Zéphine, Ferroc et Nacre pas encore essayés par vous (point de contrôle D). |
+
+Tests au moment du bilan : `sim-core` 335 (+2 ignorés : Firefox, WebKit), `fighters` 169, `render` 104, `input` 175, démo 13. Typecheck et lint passants.

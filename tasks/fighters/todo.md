@@ -64,7 +64,7 @@
   - Vérification : test Playwright dans Edge (choisir Sorel pour J1 : nom et taille lus dans la simulation ; lancer l'ultime après le bouton) ; essai manuel.
   - Fichiers : `apps/demo/package.json`, `apps/demo/vite.config.ts`, `apps/demo/index.html`, `apps/demo/src/main.ts`, `apps/demo/src/roster-panel.ts`, `apps/demo/test/smoke.test.ts`
 
-**Point de contrôle C** : **vous jouez Sorel dans la démo et donnez votre avis sur le ressenti.** J'applique les réglages demandés, puis je n'engage la phase D qu'avec votre accord.
+**Point de contrôle C** (validé le 2026-11-14 : « Ressenti OK ») : **vous jouez Sorel dans la démo et donnez votre avis sur le ressenti.** J'applique les réglages demandés, puis je n'engage la phase D qu'avec votre accord.
 
 ## Phase D — Les trois autres et le bilan
 
@@ -77,7 +77,7 @@
 - [x] **T13 : Nacre** — données, projectiles *Perle*, *Galet*, *Corail* et *Grande perle*, `FighterLook`, scénarios (pièges, projectile en cloche) ; frame data régénéré.
   - Fichiers : `packages/fighters/src/characters/nacre.ts`, `src/roster.ts`, `test/characters/nacre.test.ts`, `FRAMEDATA.md`
 
-- [ ] **T14 : Identité, 8 joueurs, performance et bilan**
+- [x] **T14 : Identité, 8 joueurs, performance et bilan**
   - Acceptation : tests d'identité des archétypes ; séquence de 3 600 frames à 8 joueurs mêlant les quatre (déterminisme sur deux exécutions, propriété de rollback) ; mesure d'un `step` à 8 joueurs avec ces personnages ; bilan des critères de succès en fin de spec ; écarts constatés consignés.
   - Vérification : la suite complète au vert ; mesure consignée dans le bilan.
   - Fichiers : `packages/fighters/test/archetypes.test.ts`, `test/match.test.ts`, `bench/step.bench.ts`, `SPEC-fighters.md`
