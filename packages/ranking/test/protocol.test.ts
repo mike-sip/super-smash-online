@@ -252,5 +252,6 @@ describe('canonicalReport', () => {
     expect(Object.keys(shuffled)[0]).not.toBe('version');
     expect(canonicalReport(shuffled)).toBe(canonicalReport(a));
     expect(canonicalReport({ ...a, ranked: !a.ranked })).not.toBe(canonicalReport(a));
+    expect(canonicalReport({ ...a, reportedAt: a.reportedAt + 60_000 })).toBe(canonicalReport(a));
   });
 });

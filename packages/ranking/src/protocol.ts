@@ -205,12 +205,14 @@ export function validateReport(value: unknown): ReportValidation {
   return { ok: true, report: value as unknown as MatchReport };
 }
 
-/** JSON canonique d'un rapport validé (ordre de clés fixe) : base de son empreinte. */
+/**
+ * JSON canonique d'un rapport validé (ordre de clés fixe) : base de son empreinte. `reportedAt`
+ * n'en fait pas partie : un même match renvoyé plus tard reste un doublon, pas un conflit.
+ */
 export function canonicalReport(report: MatchReport): string {
   return JSON.stringify([
     report.version,
     report.matchId,
-    report.reportedAt,
     report.endedAt,
     report.ranked,
     report.mode,
