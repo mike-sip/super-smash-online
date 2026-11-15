@@ -219,6 +219,13 @@ function finite(value: unknown, what: string): number {
   return value;
 }
 
+function bounded(value: unknown, min: number, max: number, what: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) {
+    fail(`${what} : nombre de ${min} à ${max} attendu`);
+  }
+  return value;
+}
+
 function bool(value: unknown, what: string): boolean {
   if (typeof value !== 'boolean') fail(`${what} : booléen attendu`);
   return value;
@@ -286,15 +293,16 @@ function playerResult(value: unknown, i: number): PlayerResult {
   const o = object(value, what);
   only(o, PLAYER_RESULT_KEYS, what);
   return {
-    team: int(o.team, 0, MAX_TEAMS - 1, `${what}.team`),
+    team: int(o.team, -1, MAX_TEAMS - 1, `${what}.team`), // -1 sans équipes (match-rules)
     placement: int(o.placement, 1, MAX_CAPACITY, `${what}.placement`),
     kos: int(o.kos, 0, BIG, `${what}.kos`),
     falls: int(o.falls, 0, BIG, `${what}.falls`),
     selfDestructs: int(o.selfDestructs, 0, BIG, `${what}.selfDestructs`),
     score: int(o.score, -BIG, BIG, `${what}.score`),
-    damageDealt: int(o.damageDealt, 0, BIG, `${what}.damageDealt`),
-    damageTaken: int(o.damageTaken, 0, BIG, `${what}.damageTaken`),
-    stocksLeft: int(o.stocksLeft, 0, BIG, `${what}.stocksLeft`),
+    // Dégâts en pourcentage, fractionnaires (virgule fixe divisée par `FX_ONE`).
+    damageDealt: bounded(o.damageDealt, 0, BIG, `${what}.damageDealt`),
+    damageTaken: bounded(o.damageTaken, 0, BIG, `${what}.damageTaken`),
+    stocksLeft: int(o.stocksLeft, -1, BIG, `${what}.stocksLeft`), // -1 en mode Temps
     ultimatesUsed: int(o.ultimatesUsed, 0, BIG, `${what}.ultimatesUsed`),
     eliminatedAt: int(o.eliminatedAt, -1, BIG, `${what}.eliminatedAt`),
   };

@@ -158,3 +158,21 @@ describe('protocole : messages du serveur', () => {
     expect(parseServerMessage('null').ok).toBe(false);
   });
 });
+
+describe('protocole : résultat tel que match-rules le produit', () => {
+  it('accepte une équipe à -1 sans équipes, des vies à -1 en mode Temps, des dégâts fractionnaires', () => {
+    const p = {
+      ...RESULT.players[0]!,
+      team: -1,
+      stocksLeft: -1,
+      damageDealt: 12.375,
+      damageTaken: 0.5,
+    };
+    const result = { ...RESULT, players: [p, RESULT.players[1]] };
+    expect(parseClientMessage(JSON.stringify({ t: 'result', gameId: 'g', result })).ok).toBe(true);
+    const bad = { ...RESULT, players: [{ ...p, damageTaken: -1 }, RESULT.players[1]] };
+    expect(parseClientMessage(JSON.stringify({ t: 'result', gameId: 'g', result: bad })).ok).toBe(
+      false,
+    );
+  });
+});

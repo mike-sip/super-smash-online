@@ -64,7 +64,7 @@
   - Vérification : client contre le service sur des connexions en mémoire : parcours, coupure et reprise, refus affichés, serveur fermé.
   - Fichiers : `packages/lobby/src/client.ts`, `packages/lobby/test/client.test.ts`
 
-- [ ] **T11 : Bout en bout simulé**
+- [x] **T11 : Bout en bout simulé**
   - Acceptation : harnais : tickets signés par `signTicket`/`verifyTicket` de `accounts` (tests), lobby, relais réservé et clients complets (client du lobby, client `netcode`, simulation par `createMatchSimConfig` avec le contenu de test de `sim-core`, joueurs simulés, déclaration du résultat sur état confirmé) sur le réseau simulé de `netcode`.
   - Vérification : salon privé à 8 de bout en bout avec revanche ; partie rapide à 4 ; un membre coupé 10 s dans le salon ; une page « rechargée » en pleine partie qui revient et finit synchronisée ; l'hôte qui part ; un joueur qui ne rejoint pas le relais ; tout le monde qui quitte la partie (abandon) ; `onMatchResult` conforme à `matchResult` ; empreintes identiques.
   - Fichiers : `packages/lobby/test/harness.ts`, `packages/lobby/test/e2e-simulated.test.ts`
