@@ -1,6 +1,6 @@
 # Tâches : module `lobby`
 
-> Statut : **PROPOSÉ le 2026-11-15, en attente de votre validation.** Plan : [plan.md](plan.md).
+> Statut : **VALIDÉ le 2026-11-15**. Plan : [plan.md](plan.md).
 >
 > Vérification commune à chaque tâche : `pnpm --filter @game/netcode test` et `pnpm --filter @game/netcode typecheck` passent (tests existants inchangés) ; à partir de T3, `pnpm --filter @game/lobby test` et `pnpm --filter @game/lobby typecheck` aussi ; à partir de T12, `pnpm --filter @game/lobby test:e2e` ; à partir de T13, `pnpm --filter @game/online test` ; et toujours `pnpm lint`.
 

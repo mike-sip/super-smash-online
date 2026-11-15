@@ -1,6 +1,6 @@
 # Plan : module `lobby`
 
-> Statut : **PROPOSÉ le 2026-11-15, en attente de votre validation.** Spec : [SPEC-lobby.md](../../SPEC-lobby.md). Tâches détaillées : [todo.md](todo.md).
+> Statut : **VALIDÉ le 2026-11-15**. Spec : [SPEC-lobby.md](../../SPEC-lobby.md). Tâches détaillées : [todo.md](todo.md).
 
 ## Approche
 

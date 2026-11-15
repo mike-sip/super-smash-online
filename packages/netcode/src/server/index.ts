@@ -5,6 +5,8 @@ export {
   type Connection,
   type Relay,
   type RelayOptions,
+  type RelayGameEvent,
   type RelayPeer,
+  type Reservation,
 } from './relay.ts';
 export { attachRelay, startRelayServer, type RelayHost } from './host.ts';

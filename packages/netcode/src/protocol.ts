@@ -37,6 +37,10 @@ export const ERR_MISMATCH = 4;
 export const ERR_INVALID = 5;
 export const ERR_TIMEOUT = 6;
 export const ERR_SERVER_FULL = 7;
+/** Mode réservé : ticket refusé, partie non réservée, ou compte sans place. */
+export const ERR_AUTH = 8;
+/** Partie fermée par le serveur (annulée par le lobby, ou terminée). */
+export const ERR_CLOSED = 9;
 
 /** Plus gros message possible : `INPUTS` complet à 8 joueurs (1 074 octets), `HELLO` avec ticket (1 062). */
 export const MAX_MESSAGE_BYTES = 2048;

@@ -17,6 +17,8 @@ import {
   START_DELAY_MS,
 } from '../constants.ts';
 import {
+  ERR_AUTH,
+  ERR_CLOSED,
   ERR_FULL,
   ERR_INVALID,
   ERR_MISMATCH,
@@ -40,6 +42,7 @@ import {
   createMessage,
   decode,
   encode,
+  isValidGameId,
   type Message,
 } from '../protocol.ts';
 
@@ -73,11 +76,53 @@ export interface RelayOptions {
   readonly onDesync?: (gameId: string, frame: number, checksums: readonly number[]) => void;
   /** Journal des événements notables (connexions refusées, désync, départs). */
   readonly log?: (message: string) => void;
+  /**
+   * Mode réservé (SPEC-lobby.md, « Relais authentifié ») : vérifie le ticket d'un `HELLO` et
+   * renvoie l'identifiant du compte, ou `null`. Avec elle, seules les parties créées par
+   * `reserve` existent et chaque compte reçoit sa place. Sans elle, le relais reste ouvert.
+   */
+  readonly authenticate?: (ticket: string) => { readonly id: string } | null;
+  /** Événements de partie, pour le lobby. */
+  readonly onGameEvent?: (event: RelayGameEvent) => void;
+}
+
+export type RelayGameEvent =
+  | { readonly type: 'started'; readonly gameId: string }
+  | {
+      readonly type: 'left';
+      readonly gameId: string;
+      readonly slot: number;
+      readonly frame: number;
+    }
+  | {
+      readonly type: 'rejoined';
+      readonly gameId: string;
+      readonly slot: number;
+      readonly frame: number;
+    }
+  | {
+      readonly type: 'closed';
+      readonly gameId: string;
+      readonly reason: 'empty' | 'cancelled' | 'expired' | 'timeout';
+    };
+
+export interface Reservation {
+  /** Identifiant de compte de chaque place, de 2 à 8, tous différents. */
+  readonly seats: readonly string[];
+  /** Délai pour que toutes les places soient prises ; au-delà, la partie est fermée. */
+  readonly expiresInMs: number;
 }
 
 export interface Relay {
   /** Nouvelle connexion : renvoie ce que l'hôte doit appeler à chaque message et à la fermeture. */
   connect(conn: Connection): RelayPeer;
+  /**
+   * Réserve une partie (mode réservé seulement). Renvoie `false` si l'identifiant est invalide
+   * ou déjà pris, les places mal formées, le serveur plein, ou sans `authenticate`.
+   */
+  reserve(gameId: string, reservation: Reservation): boolean;
+  /** Ferme une partie et ses connexions (`ERR_CLOSED` avec `reason`). `false` si inconnue. */
+  cancel(gameId: string, reason: string): boolean;
   /** À appeler souvent (toutes les 4 ms) : retards, déconnexions, délais d'attente, renvois. */
   tick(): void;
   gameCount(): number;
@@ -110,6 +155,8 @@ interface Client {
   /** Par joueur : dernière fois que l'accusé du client a avancé, ou qu'il était à jour. */
   readonly ackedAt: Float64Array;
   open: boolean;
+  /** Compte authentifié (mode réservé), sinon `null`. */
+  account: string | null;
 }
 
 interface PendingChecksum {
@@ -131,9 +178,15 @@ interface Game {
   readonly confirmed: Uint32Array;
   readonly record: Uint32Array[] | null;
   readonly createdAt: number;
+  /** Mode réservé : compte de chaque place ; `null` pour une partie ouverte. */
+  readonly seats: readonly string[] | null;
+  /** Mode réservé : échéance pour que toutes les places soient prises. */
+  readonly expiresAt: number;
   /** Instant de départ (horloge du serveur), `NaN` tant que des joueurs manquent. */
   startAt: number;
   desynced: boolean;
+  /** Fermeture en cours : les départs ne sont plus annoncés. */
+  closing: boolean;
   /** Des inputs ont été confirmés depuis le dernier envoi. */
   dirty: boolean;
   readonly pending: PendingChecksum[];
@@ -204,6 +257,10 @@ export function createRelay(options: RelayOptions): Relay {
       );
       return;
     }
+    if (options.authenticate !== undefined) {
+      reservedHello(client, m, options.authenticate);
+      return;
+    }
     let game = games.get(m.gameId);
     if (game === undefined) {
       if (games.size >= maxGames) {
@@ -247,7 +304,65 @@ export function createRelay(options: RelayOptions): Relay {
     }
   }
 
-  function createGame(id: string, players: number): Game {
+  /** `HELLO` en mode réservé : ticket, partie réservée, place du compte. */
+  function reservedHello(
+    client: Client,
+    m: Message,
+    authenticate: NonNullable<RelayOptions['authenticate']>,
+  ): void {
+    const identity = m.ticket === '' ? null : authenticate(m.ticket);
+    if (identity === null) {
+      fail(client, ERR_AUTH, 'Ticket d’authentification refusé.');
+      return;
+    }
+    const game = games.get(m.gameId);
+    const seats = game?.seats ?? null;
+    if (game === undefined || seats === null) {
+      fail(client, ERR_AUTH, 'Cette partie n’existe pas ou n’est pas réservée.');
+      return;
+    }
+    const slots: number[] = [];
+    for (let p = 0; p < seats.length; p++) if (seats[p] === identity.id) slots.push(p);
+    if (slots.length === 0) {
+      fail(client, ERR_AUTH, 'Vous n’avez pas de place dans cette partie.');
+      return;
+    }
+    if (m.players !== game.players || m.localPlayers !== slots.length) {
+      fail(client, ERR_MISMATCH, 'La demande ne correspond pas à la réservation.');
+      return;
+    }
+    if (scheduled(game)) {
+      fail(client, ERR_STARTED, `La partie « ${game.id} » a déjà commencé.`);
+      return;
+    }
+    // Même compte déjà connecté (page rechargée avant le départ) : la nouvelle connexion gagne.
+    const previous = game.clients.find((c) => c.account === identity.id);
+    if (previous !== undefined) fail(previous, ERR_AUTH, 'Connexion remplacée par une autre.');
+    client.account = identity.id;
+    const index = game.clients.length;
+    game.clients.push(client);
+    client.game = game;
+    for (const p of slots) {
+      game.owner[p] = index;
+      client.slots.push(p);
+    }
+    let free = 0;
+    for (let p = 0; p < game.players; p++) if (game.owner[p] === -1) free++;
+    if (free === 0) {
+      game.startAt = now() + startDelayMs;
+      for (const c of game.clients) sendStart(game, c);
+      options.onGameEvent?.({ type: 'started', gameId: game.id });
+    } else {
+      broadcastWaiting(game);
+    }
+  }
+
+  function createGame(
+    id: string,
+    players: number,
+    seats: readonly string[] | null = null,
+    expiresAt = Number.POSITIVE_INFINITY,
+  ): Game {
     const known = new Int32Array(players);
     known.fill(inputDelay);
     return {
@@ -261,8 +376,11 @@ export function createRelay(options: RelayOptions): Relay {
       confirmed: new Uint32Array(players * SERVER_HISTORY),
       record: options.record === true ? [] : null,
       createdAt: now(),
+      seats,
+      expiresAt,
       startAt: Number.NaN,
       desynced: false,
+      closing: false,
       dirty: false,
       pending: [],
     };
@@ -492,7 +610,7 @@ export function createRelay(options: RelayOptions): Relay {
 
   function leave(client: Client): void {
     const game = client.game;
-    if (game === null) return;
+    if (game === null || game.closing) return;
     const index = game.clients.indexOf(client);
     if (!running(game)) {
       // Avant le départ : l'emplacement se libère, la partie (re)passe en attente.
@@ -502,11 +620,12 @@ export function createRelay(options: RelayOptions): Relay {
         if (o === index) game.owner[p] = -1;
         else if (o > index) game.owner[p] = o - 1;
       }
+      game.startAt = Number.NaN;
       if (game.clients.length === 0) {
-        games.delete(game.id);
+        // Une partie réservée attend ses joueurs jusqu'à son échéance.
+        if (game.seats === null) games.delete(game.id);
         return;
       }
-      game.startAt = Number.NaN;
       broadcastWaiting(game);
       return;
     }
@@ -519,13 +638,35 @@ export function createRelay(options: RelayOptions): Relay {
       outgoing.frame = game.known[p]!;
       for (const c of game.clients) send(c, outgoing);
       log(`partie « ${game.id} » : joueur ${p + 1} parti à la frame ${game.known[p]}`);
+      options.onGameEvent?.({ type: 'left', gameId: game.id, slot: p, frame: game.known[p]! });
     }
     if (game.clients.every((c) => !c.open)) {
-      games.delete(game.id);
+      closeGame(game, 'empty');
       return;
     }
     if (arbitrate(game)) flushAll(game);
     settleChecksums(game);
+  }
+
+  /** Retire la partie et l'annonce. */
+  function closeGame(game: Game, reason: 'empty' | 'cancelled' | 'expired' | 'timeout'): void {
+    if (games.get(game.id) !== game) return;
+    game.closing = true;
+    games.delete(game.id);
+    options.onGameEvent?.({ type: 'closed', gameId: game.id, reason });
+  }
+
+  /** Ferme les connexions de la partie avec une erreur, puis la retire. */
+  function shutGame(
+    game: Game,
+    code: number,
+    text: string,
+    reason: 'cancelled' | 'expired' | 'timeout',
+  ): void {
+    game.closing = true;
+    for (const c of [...game.clients]) fail(c, code, text);
+    game.closing = false;
+    closeGame(game, reason);
   }
 
   // ── Connexions ────────────────────────────────────────────────────────────────────────────
@@ -540,6 +681,7 @@ export function createRelay(options: RelayOptions): Relay {
         sent: new Int32Array(8),
         ackedAt: new Float64Array(8),
         open: true,
+        account: null,
       };
       return {
         receive(data) {
@@ -581,11 +723,42 @@ export function createRelay(options: RelayOptions): Relay {
           if (t < game.startAt) continue;
           arbitrate(game);
           flushAll(game);
+        } else if (game.seats !== null) {
+          if (t >= game.expiresAt) {
+            shutGame(game, ERR_TIMEOUT, 'Tous les joueurs ne sont pas venus.', 'expired');
+          }
         } else if (t - game.createdAt > waitingTimeoutMs) {
-          for (const c of [...game.clients]) fail(c, ERR_TIMEOUT, 'Personne d’autre n’est venu.');
-          games.delete(game.id);
+          shutGame(game, ERR_TIMEOUT, 'Personne d’autre n’est venu.', 'timeout');
         }
       }
+    },
+
+    reserve(gameId, reservation) {
+      const seats = reservation.seats;
+      if (
+        options.authenticate === undefined ||
+        !isValidGameId(gameId) ||
+        games.has(gameId) ||
+        games.size >= maxGames ||
+        seats.length < 2 ||
+        seats.length > 8 ||
+        new Set(seats).size !== seats.length ||
+        seats.some((s) => typeof s !== 'string' || s.length === 0) ||
+        !(reservation.expiresInMs > 0)
+      ) {
+        return false;
+      }
+      const game = createGame(gameId, seats.length, [...seats], now() + reservation.expiresInMs);
+      games.set(gameId, game);
+      if (game.record !== null) records.set(game.id, game.record);
+      return true;
+    },
+
+    cancel(gameId, reason) {
+      const game = games.get(gameId);
+      if (game === undefined) return false;
+      shutGame(game, ERR_CLOSED, reason, 'cancelled');
+      return true;
     },
 
     gameCount: () => games.size,
