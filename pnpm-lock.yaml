@@ -190,6 +190,9 @@ importers:
       '@game/match-rules':
         specifier: workspace:*
         version: link:../../packages/match-rules
+      '@game/ranking':
+        specifier: workspace:*
+        version: link:../../packages/ranking
       '@game/render':
         specifier: workspace:*
         version: link:../../packages/render

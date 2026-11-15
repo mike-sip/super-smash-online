@@ -24,6 +24,10 @@ export default defineConfig({
         replacement: source('../../packages/accounts/src/protocol.ts'),
       },
       {
+        find: /^@game\/ranking\/client$/,
+        replacement: source('../../packages/ranking/src/client.ts'),
+      },
+      {
         find: /^@game\/match-rules$/,
         replacement: source('../../packages/match-rules/src/index.ts'),
       },
@@ -35,6 +39,8 @@ export default defineConfig({
       // la démo, comme le fera le proxy inverse en production : le cookie de session reste sur un
       // seul site. L'en-tête Host est conservé, ce qui permet au serveur de reconnaître l'origine.
       '/api/accounts': { target: process.env.ACCOUNTS_URL ?? 'http://127.0.0.1:8787' },
+      // Le classement est servi par le même processus (`pnpm --filter @game/ranking dev`).
+      '/api/ranking': { target: process.env.ACCOUNTS_URL ?? 'http://127.0.0.1:8787' },
     },
   },
 });

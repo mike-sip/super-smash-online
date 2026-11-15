@@ -6,6 +6,8 @@ export interface ControlHandlers {
   onRemap(): void;
   onSound(): void;
   onAccount(): void;
+  /** Ouvre ou ferme le panneau Classement. */
+  onLeaderboard(): void;
   /** Ouvre ou ferme le choix des règles du match. */
   onRules(): void;
   onDebug(enabled: boolean): void;
@@ -109,6 +111,7 @@ export function createControls(
   button('KeyM', 'M', 'Commandes', () => handlers.onRemap());
   button('KeyS', 'S', 'Son', () => handlers.onSound());
   button('KeyU', 'U', 'Compte', () => handlers.onAccount());
+  button('KeyO', 'O', 'Classement', () => handlers.onLeaderboard());
   button('KeyG', 'G', 'Règles du match', () => handlers.onRules());
   const keys: ReadonlySet<string> = new Set(actions.keys());
   refresh();

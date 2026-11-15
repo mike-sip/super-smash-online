@@ -251,6 +251,53 @@
       #account [data-account$='-hint'] {
         color: #94a3b8;
       }
+      #leaderboard {
+        position: absolute;
+        top: 70px;
+        left: 12px;
+        width: 480px;
+        max-width: calc(100% - 48px);
+        max-height: calc(100% - 150px);
+        padding: 8px 12px;
+        overflow-y: auto;
+        border: 1px solid #475569;
+        border-radius: 6px;
+        background: rgba(15, 23, 42, 0.94);
+        color: #cbd5e1;
+        font-size: 12px;
+      }
+      #leaderboard h2,
+      #leaderboard h3 {
+        margin: 8px 0 4px;
+        font-size: 13px;
+        color: #f8fafc;
+      }
+      #leaderboard h3 {
+        font-size: 12px;
+        color: #94a3b8;
+      }
+      #leaderboard p {
+        margin: 4px 0;
+      }
+      #leaderboard table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 2px 0 6px;
+      }
+      #leaderboard th,
+      #leaderboard td {
+        padding: 2px 4px;
+        border-bottom: 1px solid #334155;
+        text-align: left;
+        white-space: nowrap;
+      }
+      #leaderboard th {
+        color: #94a3b8;
+        font-weight: normal;
+      }
+      #leaderboard [data-ranking='hint'] {
+        color: #94a3b8;
+      }
       #rules,
       #results {
         position: absolute;
@@ -366,6 +413,7 @@
     <div id="remap" hidden></div>
     <div id="sound" hidden></div>
     <div id="account" hidden></div>
+    <div id="leaderboard" hidden></div>
     <div id="rules" hidden></div>
     <div id="results" hidden></div>
     <div id="status" role="status"></div>
