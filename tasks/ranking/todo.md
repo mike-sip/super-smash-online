@@ -1,6 +1,6 @@
 # Tâches : module `ranking`
 
-> Statut : **BROUILLON, soumis le 2026-11-15**. Plan : [plan.md](plan.md).
+> Statut : **VALIDÉ le 2026-11-15**. Plan : [plan.md](plan.md).
 >
 > Vérification commune à chaque tâche : `pnpm --filter @game/ranking test`, `pnpm --filter @game/ranking typecheck` et `pnpm lint` passent ; à partir de T7, `pnpm --filter @game/accounts test` et son typecheck aussi ; à partir de T10, `pnpm --filter @game/demo test` et son typecheck aussi.
 

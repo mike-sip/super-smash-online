@@ -1,6 +1,6 @@
 # Plan : module `ranking`
 
-> Statut : **BROUILLON, soumis le 2026-11-15**. Spec : [SPEC-ranking.md](../../SPEC-ranking.md). Tâches détaillées : [todo.md](todo.md).
+> Statut : **VALIDÉ le 2026-11-15**. Spec : [SPEC-ranking.md](../../SPEC-ranking.md). Tâches détaillées : [todo.md](todo.md).
 
 ## Approche
 
