@@ -20,12 +20,12 @@
 
 ## Phase B — Règles du lobby
 
-- [ ] **T3 : Paquet, protocole et codes**
+- [x] **T3 : Paquet, protocole et codes**
   - Acceptation : paquet `@game/lobby` (points d'entrée `.`, `./client`, `./protocol`), résolu comme `accounts` ; types de tous les messages de la spec ; `parseClientMessage` / `parseServerMessage` : JSON, taille, type, champs connus seulement, bornes, sans exception ; codes : tirage par une source d'aléa injectée dans l'alphabet de 30 symboles, normalisation de la saisie, affichage `ABC-DEF` ; aucun import Node dans `protocol.ts`, `codes.ts` (hors tirage injecté) et `client.ts`.
   - Vérification : chaque message accepté et chaque refus (champ inconnu, type faux, borne) ; 10 000 entrées aléatoires ou tronquées sans exception ; codes : alphabet, longueur, normalisation (minuscules, tirets, espaces), refus des caractères exclus ; test de frontières d'imports.
   - Fichiers : `packages/lobby/package.json`, `packages/lobby/tsconfig.json`, `packages/lobby/tsconfig.build.json`, `packages/lobby/vitest.config.ts`, `packages/lobby/src/protocol.ts`, `packages/lobby/src/codes.ts`, `packages/lobby/test/protocol.test.ts`, `packages/lobby/test/codes.test.ts`, `packages/lobby/test/boundaries.test.ts`, `pnpm-lock.yaml`
 
-- [ ] **T4 : Limites**
+- [x] **T4 : Limites**
   - Acceptation : seaux à jetons à horloge injectée (débit par connexion, créations, codes faux par minute et par heure, entrées en file), compteur de connexions par adresse (IPv6 par /64, IPv4 vues en IPv6 ramenées), mémoire des `jti` vus (70 s), oubli des seaux inactifs.
   - Vérification : tests unitaires avec horloge factice (épuisement, remplissage, oubli, clés d'adresse, jti rejoué puis oublié).
   - Fichiers : `packages/lobby/src/limits.ts`, `packages/lobby/test/limits.test.ts`

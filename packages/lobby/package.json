@@ -1,0 +1,43 @@
+{
+  "name": "@game/lobby",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    },
+    "./protocol": {
+      "types": "./dist/protocol.d.ts",
+      "default": "./dist/protocol.js"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "deps": "pnpm --filter @game/match-rules build && pnpm --filter @game/netcode build && pnpm --filter @game/accounts build",
+    "typecheck": "pnpm run deps && tsc --noEmit",
+    "build": "pnpm run deps && tsc -p tsconfig.build.json",
+    "dev": "pnpm run deps && node src/dev.ts",
+    "start": "pnpm run deps && node src/main.ts"
+  },
+  "dependencies": {
+    "@game/accounts": "workspace:*",
+    "@game/match-rules": "workspace:*",
+    "@game/netcode": "workspace:*",
+    "ws": "^8.23.0"
+  },
+  "devDependencies": {
+    "@game/sim-core": "workspace:*",
+    "@types/node": "^26.6.6",
+    "@types/ws": "^8.18.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
