@@ -23,8 +23,8 @@
     }
   },
   "scripts": {
-    "dev": "node src/dev.ts",
-    "start": "node src/main.ts",
+    "dev": "pnpm --filter @game/accounts build && node src/dev.ts",
+    "start": "pnpm --filter @game/accounts build && node src/main.ts",
     "seed": "node src/seed.ts",
     "test": "vitest run",
     "typecheck": "pnpm --filter @game/accounts build && pnpm --filter @game/match-rules build && tsc --noEmit",
