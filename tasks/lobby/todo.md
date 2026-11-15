@@ -73,7 +73,7 @@
 
 ## Phase D — Réel
 
-- [ ] **T12 : Hôte, serveur complet et bout en bout réel**
+- [x] **T12 : Hôte, serveur complet et bout en bout réel**
   - Acceptation : `admission.ts` (`verifyTicket` audience `relay` + rejeu) ; `host.ts` (`/lobby` sur `ws`, adresse du client, `trustProxy`, taille maximale, silence) ; `createGameServer` (HTTP, lobby, relais réservé, pas des minuteries) ; `config.ts` (variables d'environnement, refus sans clé ni contenu) ; `main.ts`, `dev.ts` (port 8788, clé « dev ») ; scripts `start`, `dev`, `test:e2e`.
   - Vérification : vrai serveur des comptes et vrai serveur de jeu sur des ports libres, 3 clients Node (`AccountsClient` avec cookies, client du lobby, client `netcode`) : créer, rejoindre, choisir, lancer, finir un match en mode Temps de 30 s, revenir au salon ; refus d'un ticket d'une autre audience sur les deux points d'entrée ; message texte trop gros ou invalide sur vrai WebSocket ; configuration (tests unitaires).
   - Fichiers : `packages/lobby/src/admission.ts`, `packages/lobby/src/host.ts`, `packages/lobby/src/server.ts`, `packages/lobby/src/config.ts`, `packages/lobby/src/main.ts`, `packages/lobby/src/dev.ts`, `packages/lobby/vitest.e2e.config.ts`, `packages/lobby/test/config.test.ts`, `packages/lobby/test/e2e/real.test.ts`

@@ -14,3 +14,12 @@ export {
 export type { LobbyContent } from './room.ts';
 export type { MatchRecord } from './results.ts';
 export * from './protocol.ts';
+export { lobbyTicketVerifier, relayAuthenticator, type TicketKeys } from './admission.ts';
+export { attachLobby, type LobbyHost } from './host.ts';
+export {
+  attachGameServer,
+  createGameServer,
+  type GameServer,
+  type GameServerConfig,
+} from './server.ts';
+export { readConfig, type EnvConfig } from './config.ts';

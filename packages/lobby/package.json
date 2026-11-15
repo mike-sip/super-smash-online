@@ -21,7 +21,7 @@
   "scripts": {
     "test": "vitest run",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
-    "deps": "pnpm --filter @game/match-rules build && pnpm --filter @game/netcode build && pnpm --filter @game/accounts build",
+    "deps": "pnpm --filter @game/match-rules build && pnpm --filter @game/netcode build && pnpm --filter @game/accounts build && pnpm --filter @game/accounts-client build",
     "typecheck": "pnpm run deps && tsc --noEmit",
     "build": "pnpm run deps && tsc -p tsconfig.build.json",
     "dev": "pnpm run deps && node src/dev.ts",
@@ -34,6 +34,7 @@
     "ws": "^8.23.0"
   },
   "devDependencies": {
+    "@game/accounts-client": "workspace:*",
     "@game/sim-core": "workspace:*",
     "@types/node": "^26.6.6",
     "@types/ws": "^8.18.2",
