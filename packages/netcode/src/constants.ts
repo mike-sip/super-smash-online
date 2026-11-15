@@ -24,9 +24,11 @@ export const MAX_LOCAL_PLAYERS = 4;
 
 /**
  * Capacité, en frames, des anneaux d'historique des inputs. Puissance de deux. Elle doit couvrir
- * la fenêtre de prédiction, le délai d'input et la redondance des envois, avec de la marge.
+ * la fenêtre de prédiction, le délai d'input et la redondance des envois, avec de la marge ; elle
+ * fixe aussi le débit du rattrapage d'un joueur revenu en pleine partie (le relais lui envoie
+ * jusqu'à `HISTORY_FRAMES - 128` frames au-delà de son accusé). 128 à l'origine, 512 depuis `lobby`.
  */
-export const HISTORY_FRAMES = 128;
+export const HISTORY_FRAMES = 512;
 /** Frames d'inputs au plus par joueur et par message (redondance jusqu'à accusé). */
 export const MAX_FRAMES_PER_MESSAGE = 32;
 

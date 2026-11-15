@@ -16,7 +16,7 @@ import {
 } from './constants.ts';
 
 /** Version du protocole, portée par `HELLO`. À augmenter à tout changement de format. */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 export const MSG_HELLO = 1;
 export const MSG_WAITING = 2;
@@ -29,6 +29,8 @@ export const MSG_CHECKSUM = 8;
 export const MSG_DESYNC = 9;
 export const MSG_LEFT = 10;
 export const MSG_ERROR = 11;
+/** Mode réservé : un joueur parti est revenu ; ses inputs comptent de nouveau à partir de `frame`. */
+export const MSG_REJOINED = 12;
 
 export const ERR_VERSION = 1;
 export const ERR_FULL = 2;
@@ -266,6 +268,7 @@ export function encode(m: Message, buf: Uint8Array): number {
       for (let i = 0; i < m.players; i++) p = putU32(buf, p, m.checksums[i]!);
       return p;
     case MSG_LEFT:
+    case MSG_REJOINED:
       p = putU8(buf, p, m.slot);
       return putU32(buf, p, m.frame);
     case MSG_ERROR:
@@ -399,6 +402,7 @@ function decodeBody(r: Cursor, m: Message): string | null {
       for (let i = 0; i < m.players; i++) m.checksums[i] = u32(r);
       return null;
     case MSG_LEFT:
+    case MSG_REJOINED:
       m.slot = u8(r);
       m.frame = u32(r);
       return m.slot < MAX_PLAYERS ? null : 'emplacement invalide';

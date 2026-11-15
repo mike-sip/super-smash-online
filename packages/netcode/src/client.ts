@@ -28,6 +28,7 @@ import {
   MSG_LEFT,
   MSG_PING,
   MSG_PONG,
+  MSG_REJOINED,
   MSG_START,
   MSG_WAITING,
   PROTOCOL_VERSION,
@@ -103,6 +104,8 @@ export interface NetClient {
   onStatus(listener: (status: NetStatus) => void): () => void;
   onDesync(listener: (frame: number) => void): () => void;
   onPlayerLeft(listener: (slot: number, frame: number) => void): () => void;
+  /** Mode réservé : un joueur parti est revenu ; ses inputs comptent à partir de `frame`. */
+  onPlayerRejoined(listener: (slot: number, frame: number) => void): () => void;
   close(): void;
 }
 
@@ -135,6 +138,7 @@ export function createNetClient(options: NetClientOptions): NetClient {
   const statusEvents = listeners<[NetStatus]>();
   const desyncEvents = listeners<[number]>();
   const leftEvents = listeners<[number, number]>();
+  const rejoinedEvents = listeners<[number, number]>();
 
   let status: NetStatus = 'connecting';
   let match: MatchInfo | null = null;
@@ -235,6 +239,9 @@ export function createNetClient(options: NetClientOptions): NetClient {
         break;
       case MSG_LEFT:
         leftEvents.emit(m.slot, m.frame);
+        break;
+      case MSG_REJOINED:
+        rejoinedEvents.emit(m.slot, m.frame);
         break;
       case MSG_ERROR:
         error = m.text;
@@ -356,6 +363,7 @@ export function createNetClient(options: NetClientOptions): NetClient {
     onStatus: (l) => statusEvents.add(l),
     onDesync: (l) => desyncEvents.add(l),
     onPlayerLeft: (l) => leftEvents.add(l),
+    onPlayerRejoined: (l) => rejoinedEvents.add(l),
 
     close() {
       transport.close();

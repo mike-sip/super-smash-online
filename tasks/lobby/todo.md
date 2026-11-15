@@ -6,12 +6,12 @@
 
 ## Phase A — Relais authentifié (`netcode`)
 
-- [ ] **T1 : Mode réservé du relais**
+- [x] **T1 : Mode réservé du relais**
   - Acceptation : `RelayOptions.authenticate(ticket)` ; avec elle, un `HELLO` doit porter un ticket accepté, viser une partie réservée par `Relay.reserve(gameId, { seats, expiresInMs })` et venir d'un compte qui y a une place ; il reçoit sa place réservée (et non la première libre) ; refus par `ERR_AUTH` (nouveau code) et fermeture ; réservation expirée sans tous les joueurs : partie fermée, connectés prévenus ; `Relay.cancel(gameId, reason)` ; `RelayOptions.onGameEvent` (`started`, `left`, `closed`) ; un même compte ne peut pas ouvrir deux connexions dans une partie ; sans `authenticate`, comportement inchangé.
   - Vérification : tests du relais pour chaque refus et chaque événement, places imposées dans un ordre d'arrivée quelconque, expiration et annulation ; tous les tests existants de `netcode` inchangés.
   - Fichiers : `packages/netcode/src/server/relay.ts`, `packages/netcode/src/server/index.ts`, `packages/netcode/src/protocol.ts`, `packages/netcode/test/relay-reserved.test.ts`
 
-- [ ] **T2 : Reconnexion en pleine partie**
+- [x] **T2 : Reconnexion en pleine partie**
   - Acceptation : en mode réservé, historique complet des inputs confirmés par blocs de 4 096 frames, libéré à la fermeture ; `HELLO` d'un compte dont les places sont absentes dans une partie commencée : accepté, `START` d'origine renvoyé, historique transmis depuis la frame `D` par fenêtres à chaque pas du relais ; message `REJOINED` (place, frame de reprise) à tous ; événement `rejoined` ; le client rattrape une partie commencée sans afficher les frames intermédiaires ; ses inputs comptent à partir de la frame de reprise.
   - Vérification : bout en bout simulé : 4 clients, l'un coupé à 1 min puis revenu à 5 min, rattrape en moins de 20 s de temps simulé, toutes les empreintes égales à la rejoue hors ligne du journal du relais, aucune désync ; deux départs et retours successifs ; revenant après la fin de partie refusé ; mesure de la mémoire de l'historique.
   - Fichiers : `packages/netcode/src/server/relay.ts`, `packages/netcode/src/protocol.ts`, `packages/netcode/src/client.ts`, éventuellement `packages/netcode/src/rollback.ts`, `packages/netcode/test/match.ts` (options ajoutées, sans changer les existantes), `packages/netcode/test/session-rejoin.test.ts`, `packages/netcode/test/protocol.test.ts` (cas ajoutés), `SPEC-netcode.md` (section « Écarts »)

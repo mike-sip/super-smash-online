@@ -10,6 +10,7 @@ import {
   ERR_TIMEOUT,
   MSG_ERROR,
   MSG_LEFT,
+  MSG_REJOINED,
   MSG_START,
   MSG_WAITING,
 } from '../src/protocol.ts';
@@ -178,6 +179,10 @@ describe('relais réservé : réservations', () => {
     expect(a.last(MSG_LEFT)!.slot).toBe(1);
     expect(events).toContainEqual(expect.objectContaining({ type: 'left', gameId: 'g1', slot: 1 }));
     a.disconnect();
+    // Une partie réservée vide attend encore 30 s un retour.
+    advance(29_000);
+    expect(relay.gameCount()).toBe(1);
+    advance(2_000);
     expect(events).toContainEqual({ type: 'closed', gameId: 'g1', reason: 'empty' });
     expect(relay.gameCount()).toBe(0);
   });
@@ -190,5 +195,76 @@ describe('relais réservé : réservations', () => {
     expect(a.last(MSG_WAITING)).toBeDefined();
     t += 1;
     expect(testAuthenticate('ok:x')).toEqual({ id: 'x' });
+  });
+});
+
+describe('relais réservé : retour en pleine partie', () => {
+  function running() {
+    const env = reservedSetup();
+    env.relay.reserve('g1', { seats: ['alice', 'bob'], expiresInMs: 20_000 });
+    const a = new FakeClient(env.relay);
+    a.hello('g1', 2, 'ok:alice');
+    const b = new FakeClient(env.relay);
+    b.hello('g1', 2, 'ok:bob');
+    const startAt = a.last(MSG_START)!.startAt;
+    env.advance(startAt - env.now() + 1000);
+    return { ...env, a, b, startAt };
+  }
+
+  it('renvoie le START d’origine, annonce le retour et transmet l’historique depuis le début', () => {
+    const { relay, a, b, startAt, advance, events } = running();
+    b.disconnect();
+    advance(500);
+    const back = new FakeClient(relay);
+    back.hello('g1', 2, 'ok:bob');
+    const start = back.last(MSG_START)!;
+    expect(start.startAt).toBe(startAt);
+    expect(Array.from(start.slots.subarray(0, start.slotCount))).toEqual([1]);
+    const rejoined = a.last(MSG_REJOINED)!;
+    expect(rejoined.slot).toBe(1);
+    expect(events).toContainEqual(expect.objectContaining({ type: 'rejoined', slot: 1 }));
+    advance(4);
+    // Le revenant reçoit les inputs confirmés de tous depuis la frame D = 2.
+    expect(back.inputsOf(0).has(2)).toBe(true);
+    expect(back.inputsOf(1).has(2)).toBe(true);
+    // Ses inputs comptent à partir de la frame annoncée.
+    back.input(2, 1, rejoined.frame, [7]);
+    advance(4);
+    expect(a.inputsOf(1).get(rejoined.frame)).toBe(7);
+  });
+
+  it('une seconde connexion du même compte en pleine partie remplace la première', () => {
+    const { relay, a, b } = running();
+    const again = new FakeClient(relay);
+    again.hello('g1', 2, 'ok:bob');
+    expect(b.last(MSG_ERROR)!.code).toBe(ERR_AUTH);
+    expect(a.last(MSG_LEFT)!.slot).toBe(1);
+    expect(a.last(MSG_REJOINED)!.slot).toBe(1);
+    expect(again.last(MSG_START)).toBeDefined();
+  });
+
+  it('refuse le retour dans une partie fermée', () => {
+    const { relay, a, b } = running();
+    relay.cancel('g1', 'fin du match');
+    const late = new FakeClient(relay);
+    late.hello('g1', 2, 'ok:bob');
+    expect(late.last(MSG_ERROR)!.code).toBe(ERR_AUTH);
+    expect(a.closedWith).not.toBeNull();
+    expect(b.closedWith).not.toBeNull();
+  });
+
+  it('le dernier connecté qui recharge sa page retrouve la partie', () => {
+    const { relay, b } = running();
+    b.disconnect();
+    const again = new FakeClient(relay);
+    again.hello('g1', 2, 'ok:alice');
+    expect(again.last(MSG_START)).toBeDefined();
+    expect(relay.gameCount()).toBe(1);
+  });
+
+  it('refuse le retour dans une partie annulée, avec ERR_CLOSED pour une connexion déjà admise', () => {
+    const { relay, a } = running();
+    relay.cancel('g1', 'fin');
+    expect(a.last(MSG_ERROR)!.code).toBe(ERR_CLOSED);
   });
 });
