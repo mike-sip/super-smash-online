@@ -28,6 +28,55 @@ export interface HttpOptions {
   readonly log: (line: string) => void;
   /** Horloge, pour la durée des cookies. */
   readonly now: () => number;
+  /** Routes d'autres modules hébergés dans le même processus (voir `HttpExtension`). */
+  readonly extensions?: readonly HttpExtension[];
+}
+
+/** Session vue par une extension : l'identifiant suffit, le reste se demande à `AccountService`. */
+export interface ExtensionAuth {
+  readonly accountId: string;
+  readonly guest: boolean;
+}
+
+export interface ExtensionContext {
+  /** Clé d'adresse du client (IPv6 regroupée par /64), pour une limitation éventuelle. */
+  readonly address: string;
+  /**
+   * Session du cookie, ou `null`. Une session prolongée par cet appel pose aussi le cookie
+   * renouvelé sur la réponse : appeler avant d'écrire les en-têtes.
+   */
+  auth(): Promise<ExtensionAuth | null>;
+  /** Vrai si la requête respecte la règle d'origine des comptes (même hôte ou origine autorisée). */
+  originAllowed(): boolean;
+  /** En-têtes de sécurité communs, à poser sur chaque réponse. */
+  readonly securityHeaders: Readonly<Record<string, string>>;
+}
+
+/**
+ * Routes d'un autre module (`ranking`) servies par ce serveur, sous leur propre préfixe
+ * (`/api/<module>/v<n>`). L'extension lit son corps et écrit sa réponse elle-même. Elle renvoie
+ * le nom de la route pour le journal (jamais de donnée venue de la requête). Une exception devient
+ * une réponse 500 générique.
+ */
+export interface HttpExtension {
+  readonly prefix: string;
+  handle(
+    request: IncomingMessage,
+    response: ServerResponse,
+    context: ExtensionContext,
+  ): Promise<string>;
+}
+
+/** Vérifie les préfixes des extensions ; lève si l'un est mal formé, en double ou chez les comptes. */
+export function checkExtensions(extensions: readonly HttpExtension[]): void {
+  const seen = new Set<string>();
+  for (const { prefix } of extensions) {
+    if (!/^\/api\/[a-z][a-z0-9-]*\/v[0-9]+$/.test(prefix) || prefix.startsWith('/api/accounts/')) {
+      throw new Error(`Extension : préfixe invalide « ${prefix} » (forme /api/<module>/v<n>).`);
+    }
+    if (seen.has(prefix)) throw new Error(`Extension : préfixe « ${prefix} » en double.`);
+    seen.add(prefix);
+  }
 }
 
 const STATUS: Readonly<Record<ErrorCode, number>> = {
@@ -385,7 +434,60 @@ export function createHandler(
     response.end(text);
   }
 
+  const extensions = options.extensions ?? [];
+
+  /** Requête confiée à une extension : même journal, même réponse en cas de panne. */
+  function delegate(
+    extension: HttpExtension,
+    request: IncomingMessage,
+    response: ServerResponse,
+  ): void {
+    const started = performance.now();
+    const method = request.method ?? '?';
+    const token = readCookie(request.headers.cookie, cookieName);
+    const context: ExtensionContext = {
+      address: addressOf(request),
+      securityHeaders: SECURITY_HEADERS,
+      async auth() {
+        const found = await options.service.authenticate(token);
+        if (found === null) return null;
+        if (found.extended && token !== undefined && !response.headersSent) {
+          response.setHeader('Set-Cookie', cookie(token, Math.round(SESSION_TTL_MS / 1000)));
+        }
+        return { accountId: found.account.id, guest: found.account.guest };
+      },
+      originAllowed() {
+        try {
+          checkOrigin(request);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+    };
+    const line = (route: string): string =>
+      `${method} ${extension.prefix}${route} ${response.statusCode} ${Math.round(performance.now() - started)} ms`;
+    extension
+      .handle(request, response, context)
+      .then((route) => {
+        // Le nom vient de l'extension ; on le borne quand même.
+        options.log(line(/^[/a-z0-9-]{0,40}$/.test(route) ? route : '?'));
+      })
+      .catch((error: unknown) => {
+        console.error(`accounts : erreur interne dans l'extension ${extension.prefix}`, error);
+        if (response.headersSent) response.destroy();
+        else send(response, 500, { error: { code: 'internal', message: ERROR_MESSAGES.internal } });
+        options.log(line('?'));
+      });
+  }
+
   return (request, response) => {
+    const path = new URL(request.url ?? '/', 'http://serveur').pathname;
+    const extension = extensions.find((e) => path === e.prefix || path.startsWith(e.prefix + '/'));
+    if (extension !== undefined) {
+      delegate(extension, request, response);
+      return;
+    }
     const started = performance.now();
     const method = request.method ?? '?';
     const known = (path: string): string => {

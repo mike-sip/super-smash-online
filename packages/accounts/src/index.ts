@@ -11,7 +11,7 @@ import {
   type HashParams,
   type HasherLimits,
 } from './hashing.ts';
-import { createHandler } from './http.ts';
+import { checkExtensions, createHandler, type HttpExtension } from './http.ts';
 import { AccountService, type RateLimiters } from './service.ts';
 import type { AccountStore } from './store.ts';
 
@@ -39,6 +39,8 @@ export interface AccountsConfig {
   readonly log?: (line: string) => void;
   /** Intervalle de la purge des sessions expirées et des invités inactifs ; défaut : une heure. */
   readonly purgeEveryMs?: number;
+  /** Routes d'autres modules servies par ce processus (`ranking`), sous leur propre préfixe. */
+  readonly extensions?: readonly HttpExtension[];
 }
 
 export interface AccountsServer {
@@ -49,6 +51,7 @@ export interface AccountsServer {
 }
 
 export function createAccountsServer(config: AccountsConfig): AccountsServer {
+  checkExtensions(config.extensions ?? []);
   const now = config.now ?? Date.now;
   const log = config.log ?? ((line: string) => console.log(line));
   const hasher = new PasswordHasher(config.hashing ?? PRODUCTION_HASH_PARAMS, config.hasherLimits);
@@ -67,6 +70,7 @@ export function createAccountsServer(config: AccountsConfig): AccountsServer {
       trustProxy: config.trustProxy,
       log,
       now,
+      ...(config.extensions === undefined ? {} : { extensions: config.extensions }),
     }),
   );
   // Un client lent ne garde pas une connexion indéfiniment.
@@ -109,6 +113,7 @@ export function createAccountsServer(config: AccountsConfig): AccountsServer {
 }
 
 export { AccountService, toView } from './service.ts';
+export type { ExtensionAuth, ExtensionContext, HttpExtension } from './http.ts';
 export type {
   Authenticated,
   DeletionListener,
