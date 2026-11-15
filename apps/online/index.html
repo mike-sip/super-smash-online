@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Combat en ligne</title>
+    <!-- Pas d'icône : évite une requête en échec dans la console. -->
+    <link rel="icon" href="data:," />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #1b2233;
+        color: #e2e8f0;
+        font-family: system-ui, sans-serif;
+      }
+      #game,
+      #overlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      #game {
+        display: block;
+      }
+      #overlay {
+        pointer-events: none;
+      }
+      #join {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        display: grid;
+        gap: 10px;
+        width: min(340px, calc(100% - 32px));
+        padding: 20px;
+        border: 1px solid #475569;
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.92);
+      }
+      #join[hidden] {
+        display: none;
+      }
+      #join h1 {
+        margin: 0 0 4px;
+        font-size: 18px;
+      }
+      #join label {
+        display: grid;
+        gap: 4px;
+        font-size: 13px;
+        color: #cbd5e1;
+      }
+      #join input,
+      #join select,
+      #join button {
+        padding: 6px 8px;
+        border: 1px solid #64748b;
+        border-radius: 4px;
+        background: #0f172a;
+        color: #e2e8f0;
+        font: inherit;
+      }
+      #join button {
+        border-color: #facc15;
+        color: #facc15;
+        cursor: pointer;
+      }
+      #join p {
+        margin: 0;
+        font-size: 12px;
+        color: #94a3b8;
+      }
+      #status {
+        position: absolute;
+        left: 50%;
+        top: 74px;
+        transform: translateX(-50%);
+        padding: 4px 12px;
+        border-radius: 4px;
+        background: rgba(15, 23, 42, 0.8);
+        color: #fde68a;
+        font-size: 14px;
+        pointer-events: none;
+      }
+      #status:empty {
+        display: none;
+      }
+      #banner {
+        position: absolute;
+        left: 50%;
+        top: 110px;
+        transform: translateX(-50%);
+        padding: 6px 14px;
+        border-radius: 4px;
+        background: #7f1d1d;
+        color: #fee2e2;
+        font-size: 14px;
+      }
+      #banner:empty {
+        display: none;
+      }
+      #diagnostics {
+        position: absolute;
+        left: 12px;
+        bottom: 10px;
+        margin: 0;
+        padding: 6px 10px;
+        border-radius: 4px;
+        background: rgba(15, 23, 42, 0.8);
+        color: #94a3b8;
+        font:
+          12px ui-monospace,
+          monospace;
+        white-space: pre;
+        pointer-events: none;
+      }
+      #diagnostics[hidden] {
+        display: none;
+      }
+      #help {
+        position: absolute;
+        right: 12px;
+        bottom: 10px;
+        color: #64748b;
+        font-size: 12px;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="overlay"></div>
+    <form id="join" hidden>
+      <h1>Combat en ligne</h1>
+      <label>
+        Identifiant de la partie
+        <input name="game" required maxlength="32" pattern="[A-Za-z0-9_\-]{1,32}" value="salon" />
+      </label>
+      <label>
+        Joueurs attendus
+        <select name="players">
+          <option>2</option>
+          <option>3</option>
+          <option>4</option>
+          <option>5</option>
+          <option>6</option>
+          <option>7</option>
+          <option>8</option>
+        </select>
+      </label>
+      <label>
+        Joueurs sur cette machine
+        <select name="local">
+          <option>1</option>
+          <option>2</option>
+          <option>3</option>
+          <option>4</option>
+        </select>
+      </label>
+      <button type="submit">Rejoindre</button>
+      <p>
+        Ouvrez la même adresse dans d'autres onglets ou sur d'autres machines du réseau local, avec
+        le même identifiant et le même nombre de joueurs.
+      </p>
+    </form>
+    <div id="status"></div>
+    <div id="banner" role="alert"></div>
+    <pre id="diagnostics" hidden></pre>
+    <div id="help">F2 : diagnostic réseau · H : vue technique</div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
