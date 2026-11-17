@@ -101,7 +101,7 @@
 
 ## Phase F — Bilan
 
-- [ ] **T16 : Relecture de sécurité, bilan, carte**
+- [x] **T16 : Relecture de sécurité, bilan, carte**
   - Acceptation : relecture des serveurs assemblés, du frontal, du client et des scripts consignée dans la spec, constats corrigés avec un test ou expliqués ; bilan des critères de succès ; ligne « Specs existantes » et état d'`app-shell` mis à jour dans `CAPABILITY-MAP.md`.
   - Vérification : `pnpm test`, `pnpm typecheck`, `pnpm lint`, bancs, perf de la démo et de l'application, tests d'Edge des trois applications passants.
   - Fichiers : `SPEC-app-shell.md`, `CAPABILITY-MAP.md`

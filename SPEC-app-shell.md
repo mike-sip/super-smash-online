@@ -1,6 +1,6 @@
 # Spec : `app-shell` — l'application du jeu, son assemblage et son déploiement
 
-> Statut : **APPROUVÉE le 2026-11-17** (décisions par défaut retenues, nom « Fracas »). Module de la [carte des capacités](CAPABILITY-MAP.md), dernier de la v1 (jalon 4 : v1 publique). Dépend de : tous les autres modules, implémentés et fusionnés (`sim-core`, `input`, `render` avec l'audio, `fighters`, `stages-items`, `match-rules`, `netcode`, `accounts`, `lobby`, `ranking`). Plan et tâches : `tasks/app-shell/plan.md` et `todo.md`, rédigés après validation de cette spec.
+> Statut : **APPROUVÉE le 2026-11-17, implémentée le 2026-11-17** (décisions par défaut retenues, nom « Fracas » ; relecture de sécurité et bilan en fin de document ; votre essai et le déploiement réel restent à faire). Module de la [carte des capacités](CAPABILITY-MAP.md), dernier de la v1 (jalon 4 : v1 publique). Dépend de : tous les autres modules, implémentés et fusionnés (`sim-core`, `input`, `render` avec l'audio, `fighters`, `stages-items`, `match-rules`, `netcode`, `accounts`, `lobby`, `ranking`). Plan et tâches : `tasks/app-shell/plan.md` et `todo.md`, rédigés après validation de cette spec.
 
 ## Hypothèses
 
@@ -299,3 +299,71 @@ Choix par défaut approuvés le 2026-11-17 :
 6. **Plafond de 200 parties simultanées** par défaut en production (`RELAY_MAX_GAMES`), à ajuster selon la mémoire de la machine louée.
 7. **Lien d'invitation** `…/#rejoindre=CODE` en plus du code à dicter.
 8. **Vérification sans Docker** : build de production + vrais serveurs + passerelle locale dans les tests ; images Docker écrites mais non construites sur cette machine.
+
+## Écarts et limites constatés pendant l'implémentation
+
+| Sujet | État actuel | Suite prévue |
+|---|---|---|
+| Configuration du serveur de jeu | En plus de `RANKING_URL`, `RANKING_REPORT_SECRETS` et `RELAY_MAX_GAMES` (défaut 200) : `LOBBY_QUICK_RULES` (JSON des règles) et `LOBBY_QUICK_WAIT_MS`, réglages d'exploitation prévus par la spec du lobby (« réglables par la configuration du serveur »), utilisés par les tests pour des parties rapides de 30 s. `/health` donne aussi les compteurs du lobby et les rapports en attente. `@game/lobby` exporte l'expéditeur. Tout est additif et consigné dans `SPEC-lobby.md`. | — |
+| Build vérifié | Le parcours complet tourne sur `dist-e2e`, le build de production plus la prise de test (activée par `.env.e2e`, mode Vite `e2e`). Le build public (`dist`) est vérifié à part : ni prise de test, ni clé de développement, ni carte des sources, ni script ou style en ligne (`test/e2e/build.test.ts`). | — |
+| Conversion d'un invité | Trouvé par le test du profil : un invité converti garde son identifiant, le lobby gardait donc son identité d'invité et la partie rapide n'était pas classée. Le client du lobby se reconnecte désormais quand le pseudo ou le statut d'invité change. | — |
+| Sélection locale | Les boutons ‹ › et « Prêt » des cartes sont pour la souris seulement (hors tabulation) : au clavier et à la manette, chaque joueur commande sa carte par ses directions, Entrée/A et Échap/B, comme prévu. Un bouton focalisé « volait » l'Entrée du joueur clavier (trouvé par le test d'Edge). | — |
+| Commandes | Le saut au stick se règle pour J1 dans les options (l'API d'`input` le permet par joueur ; les autres joueurs locaux gardent le défaut). | Par joueur si le besoin apparaît. |
+| Sons de menu | Repris de la banque existante (`SND_LEDGE`, `SND_JUMP`, `SND_SHIELD`) ; une seule musique (`arena`) pour les menus et les combats. | Sons dédiés plus tard, derrière la même banque. |
+| Scène de fond | Belvédère et deux combattants au repos ; HUD du renderer masqué derrière les menus ; une seule image en « mouvements réduits ». | — |
+| Mannequins « aléatoires » | Réservés à la mesure de performance (prise de test), absents de l'écran d'entraînement. | — |
+| Santé des comptes | Elle est sous `/api/accounts/v1/health` (pas `/health`) ; elle reste lisible depuis Internet par le frontal et ne dit que `{ ok: true }`. | — |
+| Grand texte | Vérifié à 125 % (réglage « grand texte ») sans débordement du menu principal ; un zoom du navigateur à 200 % n'a pas été mesuré automatiquement. | À essayer à la main. |
+
+## Relecture de sécurité (2026-11-17)
+
+Relecture des serveurs assemblés (comptes + classement, jeu), de l'expéditeur des rapports, du frontal (Caddyfile, passerelle), des conteneurs, des scripts et du client. Faite par moi (Claude), pas par un relecteur indépendant.
+
+### Constat corrigé
+
+| Constat | Risque | Correction | Preuve |
+|---|---|---|---|
+| Seul le chemin exact `/api/ranking/v1/matches` était bloqué au frontal | Des variantes (`/matches/`, `/matches/x`) atteignaient le serveur du classement depuis Internet. Impact faible (signature HMAC exigée, tout en-tête `Origin` refusé), mais la route doit rester interne | Blocage par préfixe dans `deploy/routes.ts` et le Caddyfile (`/matches` et `/matches/*`) ; le test de concordance exige les sous-chemins | `test/gateway.test.ts` (échoue sans la correction), `test/deploy.test.ts` |
+
+### Points vérifiés sans constat
+
+- **Origine des résultats** : seul le serveur de jeu envoie des rapports, signés par une clé distincte de celle des tickets (vérifié au démarrage des deux côtés), par le réseau interne ; route bloquée depuis Internet ; seuls les matchs `agreed` partent ; les journaux de l'expéditeur ne contiennent que le début du `matchId` et des nombres (test).
+- **Client** : aucune écriture HTML (`textContent` partout, vérifié par recherche : pas de `innerHTML`, `insertAdjacentHTML`, `eval`, ni attribut `style`) ; pseudos, codes et messages du serveur affichés comme texte ; mots de passe jamais gardés (champ vidé après l'envoi, `autocomplete` correct) ; erreur imprévue affichée sans détail technique ; le lien d'invitation est lu par une expression stricte puis retiré de l'adresse ; seule une marque de reprise (sans donnée) est gardée en `sessionStorage`.
+- **Politique de sécurité du contenu** : `default-src 'self'`, ni script ni style en ligne ; le parcours complet tourne dans Edge avec ces en-têtes sans erreur de console ; `frame-ancestors 'none'`, `nosniff`, `no-referrer`, `Permissions-Policy` (manette seulement), HSTS en https.
+- **Prise de test** : absente du build public (test qui lit `dist`).
+- **Frontal et passerelle** : fichiers servis seulement depuis le dossier du client (chemins encodés compris, test) ; `X-Forwarded-For` du client remplacé par sa vraie adresse (test) ; santé des serveurs non exposée ; un seul proxy de confiance, comme le supposent `accounts` et `lobby`.
+- **Conteneurs** : utilisateur non root pour les serveurs, système de fichiers en lecture seule sauf le volume des bases, `cap_drop: ALL`, `no-new-privileges`, seul le frontal publié, journaux bornés ; cookies `Secure` et origine autorisée fixées dans la composition ; `deploy/.env` hors du dépôt et de l'image (`.gitignore`, `.dockerignore`).
+- **Journaux** : heure ISO, ni pseudo, ni ticket, ni mot de passe ; adresses IP tronquées et cookies retirés dans le journal de Caddy.
+- **Dépendances** : aucune dépendance npm ajoutée.
+
+### Risques acceptés ou laissés à d'autres modules
+
+- **Résultats par concordance** (décision de `lobby`) : des joueurs tous d'accord peuvent imposer un faux résultat classé ; parade : rejoue serveur, hors v1.
+- **Rapports en mémoire** : perdus si le serveur de jeu redémarre pendant une panne du serveur des comptes (décision n° 5).
+- **Pas de limitation de débit au frontal** : `accounts` et `lobby` ont leurs propres limites ; les lectures du classement n'en ont pas (constat de `ranking`). Un `rate_limit` Caddy demanderait un module tiers : à décider avec l'hébergement.
+- **Caddy tourne en root dans son conteneur** (image officielle) ; ports 80/443 publiés seulement.
+- **Images de base non épinglées par empreinte** dans le dépôt : à faire au premier déploiement (`DEPLOIEMENT.md`, section 6).
+- **Non vérifié faute de Docker** : construction des images, syntaxe du filtre de journal de Caddy, TLS réel.
+
+## Bilan des critères de succès (2026-11-17)
+
+| N° | Critère | État | Preuve |
+|---|---|---|---|
+| 1 | Résultats classés | Atteint | `packages/lobby/test/e2e/ranking.test.ts` : vrais serveurs, deux inscrits en partie rapide, cotes 1016 et 984, historique et compteurs, renvoi `duplicate` sans effet, salon privé non classé, rapport rattrapé après une coupure du classement ; `ranking-report.test.ts` (15 tests : filtre `agreed`, signature, renvois, abandon sur 4xx, file bornée, arrêt) |
+| 2 | Jouable sans souris | Atteint (manette réelle non essayée) | Parcours d’Edge au clavier seul (`menus`, `local`, `options`, `online`, `journey` ; `profile` remplit deux champs de mot de passe directement) ; manette simulée (fausse `navigator.getGamepads`) dans les menus et la sélection locale ; seuls raccourcis de test : finir un match (KO, avance rapide, sortie de stage) |
+| 3 | Combat local complet | Atteint | `local.test.ts` : à deux (clavier + manette), stage, règles, combat, résultats, revanche, pause ; règles refusées affichées ; entraînement à 3 et 8 combattants ; `content.test.ts` : chaque personnage sur chaque stage avec objets, chaque mode |
+| 4 | En ligne complet | Atteint | `online.test.ts` : invités, salon par code (saisie tolérante) et par lien, règles de l'hôte, prêt, lancement, page rechargée en pleine partie qui revient, match jusqu'au bout, résultats identiques, retour au salon, code faux ; `profile.test.ts` : conversion d'invité, partie rapide, connexion refusée puis acceptée |
+| 5 | Profil et classement | Atteint | `profile.test.ts` et `journey.test.ts` : cote 1016/984 et historique classé dans les deux onglets, classement affiché ; déconnexion et suppression de compte confirmées |
+| 6 | Options persistantes | Atteint | `options.test.ts` : touche remappée qui produit l'attaque après rechargement, capture annulée par Échap, commandes par défaut, son coupé, grand texte et compteur gardés, stockage corrompu ignoré ; `settings.test.ts` |
+| 7 | Erreurs visibles | Atteint | `errors.test.ts` (chaque code des comptes et du lobby) ; `journey.test.ts` : serveur de jeu arrêté → bandeau « Reconnexion… / injoignable », relancé → bandeau retiré et lobby en ligne sans recharger ; code faux, mauvais mot de passe |
+| 8 | Lisible et accessible | Atteint en partie | Contraste de chaque paire de la palette ≥ 4,5:1 et focus ≥ 3:1 (`palette.test.ts`) ; focus visible et noms accessibles (`menus.test.ts`) ; grand texte sans débordement ; mouvements réduits (réglage et `prefers-reduced-motion`). **Non vérifié** : Narrateur (lecteur d'écran), zoom à 200 % |
+| 9 | Performance | Atteint | `pnpm --filter @game/app perf`, Edge, RTX 4060 Ti, écran à 240 Hz : menus p95 0,30 ms ; combat à 8, objets fréquents, son actif : p95 0,30 à 0,40 ms et dessin moyen 0,16 à 0,24 ms sur les 4 stages (seuils : 16,7 et 4 ms) ; client 217 Ko compressé. Temps processeur seulement, comme la mesure de la démo ; perf de la démo inchangée et passante |
+| 10 | Production | Atteint | `journey.test.ts` : build de production (avec la prise de test) servi par la passerelle, vrais processus comptes + classement et jeu, tout le parcours de l'objectif, en-têtes de sécurité, routes internes refusées ; `build.test.ts` : build public sans prise de test, clé de dev ni carte des sources, sans script ni style en ligne |
+| 11 | Prêt à déployer | Fait, non vérifié dans Docker | `deploy/` (Dockerfile, composition, Caddyfile, `.env.example`, clés, sauvegardes, horodatage) et `DEPLOIEMENT.md` ; `deploy.test.ts` et `gateway.test.ts`. **Images jamais construites ni TLS essayé** (pas de Docker sur cette machine) |
+| 12 | Non-régression | Atteint | Tests de tous les paquets passants (voir ci-dessous), démo (26) et démo en ligne (3) inchangées ; bancs de `sim-core`, `input`, `fighters`, `match-rules`, `netcode` passants |
+| 13 | Relu | Fait | Section « Relecture de sécurité » : un constat corrigé avec son test ; relecture faite par moi seul |
+| 14 | Jugé | **Non vérifié** | En attente de votre essai (écrans, manette en main, nom « Fracas ») |
+
+**Vérifié seulement à la main** : l'écran titre et la scène de fond (captures relues) ; `serve:prod` qui démarre et horodate ses journaux. **Non vérifié** : Firefox et Safari (absents de la machine) ; manette réelle ; lecteur d'écran ; deux machines ; Docker, Caddy et TLS réels ; tout déploiement chez un hébergeur (en attente de votre accord, rien n'a été commandé ni publié).
+
+État des commandes le 2026-11-17 : `pnpm typecheck` et `pnpm lint` passants ; tests de `input` (175), `fighters` (169), `stages-items` (29), `match-rules` (63), `render` (206), `netcode` (96), `accounts` (168), `accounts-client` (7), `ranking` (138), `lobby` (128), démo (26 ; un test de réglage de gravité a échoué une fois d'un écart de 0,02 puis passé au second essai, sans aucun fichier de la démo ni de ses dépendances modifié), démo en ligne (3), application (119) ; bouts en bout réels de `lobby` (4) et `netcode` ; Edge de l'application (18) ; perf de l'application (6) et de la démo ; bancs passants. `sim-core` : ses deux tests de déterminisme dans Firefox et WebKit échouent faute de ces navigateurs, comme avant ce module (403 autres passants, aucun fichier de `sim-core` modifié).
