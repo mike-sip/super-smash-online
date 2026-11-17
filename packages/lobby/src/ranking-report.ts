@@ -162,7 +162,9 @@ export function createRankingReporter(options: ReporterOptions): RankingReporter
       if (closed) return;
       if (record.status !== 'agreed') return;
       if (jobs.size >= maxQueue) {
-        log(`[classement] file pleine (${jobs.size}) : rapport ${record.matchId.slice(0, 8)} perdu.`);
+        log(
+          `[classement] file pleine (${jobs.size}) : rapport ${record.matchId.slice(0, 8)} perdu.`,
+        );
         return;
       }
       const job: Job = {
