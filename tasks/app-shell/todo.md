@@ -82,7 +82,7 @@
 
 ## Phase E — Prêt pour la production
 
-- [ ] **T13 : Build de production et parcours complet**
+- [x] **T13 : Build de production et parcours complet**
   - Acceptation : `vite build` sans prise de test, sans clé de développement, sans carte des sources ; `deploy/routes.ts` (routes et en-têtes) ; `deploy/gateway.ts` ; `serve:prod` (comptes + classement et jeu en vrais processus, SQLite dans un dossier temporaire, passerelle) ; `test:e2e` qui lance tout cela.
   - Vérification : test du contenu du build ; parcours de l'objectif dans Edge sur le build de production (titre, local, deux onglets en partie rapide, résultats, profil à jour), au clavier seul, sans erreur de console.
   - Fichiers : `apps/game/vite.config.ts`, `deploy/routes.ts`, `deploy/gateway.ts`, `apps/game/scripts/serve-prod.ts`, `apps/game/test/build.test.ts`, `apps/game/test/e2e/journey.test.ts`

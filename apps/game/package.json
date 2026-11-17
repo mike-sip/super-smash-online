@@ -8,9 +8,11 @@
     "dev": "pnpm run servers && vite",
     "build": "vite build",
     "test": "vitest run",
-    "test:e2e": "pnpm run servers && vitest run --config vitest.e2e.config.ts",
+    "test:e2e": "pnpm run servers && vite build && vite build --mode e2e --outDir dist-e2e && vitest run --config vitest.e2e.config.ts",
     "perf": "pnpm run servers && vitest run --config vitest.perf.config.ts",
-    "typecheck": "pnpm run servers && pnpm --filter @game/render build && pnpm --filter @game/input build && pnpm --filter @game/accounts-client build && pnpm --filter @game/stages-items build && pnpm --filter @game/fighters build && tsc --noEmit"
+    "typecheck": "pnpm run servers && pnpm --filter @game/render build && pnpm --filter @game/input build && pnpm --filter @game/accounts-client build && pnpm --filter @game/stages-items build && pnpm --filter @game/fighters build && tsc --noEmit",
+    "build:e2e": "vite build --mode e2e --outDir dist-e2e",
+    "serve:prod": "pnpm run servers && node scripts/serve-prod.ts"
   },
   "dependencies": {
     "@game/accounts-client": "workspace:*",

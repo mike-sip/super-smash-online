@@ -1,8 +1,15 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node", "vite/client"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "node",
+      "vite/client"
+    ],
     "noEmit": true
   },
   "include": [
@@ -14,6 +21,7 @@
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.e2e.config.ts",
-    "vitest.perf.config.ts"
+    "vitest.perf.config.ts",
+    "../../deploy"
   ]
 }
