@@ -23,7 +23,7 @@ const NON_DETERMINISTIC_MATH = [
 ];
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**'] },
+  { ignores: ['**/dist/**', '**/dist-e2e/**', '**/coverage/**', '**/node_modules/**'] },
   ...tseslint.configs.recommended,
   {
     // La simulation doit être reproductible au bit près : voir SPEC-sim-core.md, « Limites ».
