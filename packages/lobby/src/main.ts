@@ -15,7 +15,8 @@ if (!read.ok) {
   process.exit(1);
 }
 const config = read.config;
-const log = (message: string): void => console.log(message);
+/** Une ligne par événement, préfixée de l'heure ISO ; jamais de pseudo, ticket ni adresse. */
+const log = (message: string): void => console.log(`${new Date().toISOString()} ${message}`);
 
 let reporter: RankingReporter | null = null;
 if (config.ranking !== null) {

@@ -20,6 +20,7 @@ describe('configuration', () => {
         trustProxy: false,
         maxGames: 200,
         ranking: null,
+        quick: {},
       },
     });
   });
@@ -52,6 +53,36 @@ describe('configuration', () => {
         RANKING_REPORT_SECRETS: 'x'.repeat(32),
       }).ok,
     ).toBe(false);
+  });
+
+  it('règles et attente de la partie rapide réglables, validées', () => {
+    const rules = {
+      mode: 'time',
+      stocks: 3,
+      timeLimit: 30,
+      stamina: 150,
+      teams: false,
+      teamAttack: false,
+      ultimate: true,
+      items: { enabled: false, frequency: 'normal' },
+    };
+    const r = readConfig({
+      ...BASE,
+      LOBBY_QUICK_RULES: JSON.stringify(rules),
+      LOBBY_QUICK_WAIT_MS: '500',
+    });
+    expect(r.ok && r.config.quick).toEqual({ rules, maxWaitMs: 500 });
+    expect(
+      readConfig(BASE).ok && (readConfig(BASE) as { config: { quick: unknown } }).config.quick,
+    ).toEqual({});
+    expect(readConfig({ ...BASE, LOBBY_QUICK_RULES: '{' }).ok).toBe(false);
+    expect(
+      readConfig({ ...BASE, LOBBY_QUICK_RULES: JSON.stringify({ ...rules, timeLimit: 5 }) }).ok,
+    ).toBe(false);
+    expect(
+      readConfig({ ...BASE, LOBBY_QUICK_RULES: JSON.stringify({ ...rules, extra: 1 }) }).ok,
+    ).toBe(false);
+    expect(readConfig({ ...BASE, LOBBY_QUICK_WAIT_MS: '-1' }).ok).toBe(false);
   });
 
   it('plafond de parties du relais', () => {

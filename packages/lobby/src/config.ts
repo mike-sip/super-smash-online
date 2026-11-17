@@ -9,8 +9,12 @@
  * Envoi des résultats au classement (ensemble, ou pas du tout) :
  *   RANKING_URL (origine du serveur des comptes et du classement, ex. http://accounts:8787),
  *   RANKING_REPORT_SECRETS (mêmes clés que le classement ; la première signe les rapports)
+ *
+ * Partie rapide (facultatif) : LOBBY_QUICK_RULES (JSON des règles, comme `setRules`),
+ *   LOBBY_QUICK_WAIT_MS (attente avant de partir à moins de 4)
  */
-import { RANDOM, isContentId, isRegion } from './protocol.ts';
+import { validateMatchConfig } from '@game/match-rules';
+import { RANDOM, isContentId, isRegion, type RoomRules } from './protocol.ts';
 import type { GameServerConfig } from './server.ts';
 
 /** Longueur minimale d'une clé, comme dans `accounts` et `ranking`. */
@@ -22,6 +26,8 @@ export type EnvConfig = Pick<
   GameServerConfig,
   'host' | 'port' | 'ticketSecrets' | 'content' | 'regions' | 'trustProxy'
 > & {
+  /** Règles et attente de la partie rapide (`LOBBY_QUICK_RULES`, `LOBBY_QUICK_WAIT_MS`). */
+  readonly quick: { rules?: RoomRules; maxWaitMs?: number };
   readonly maxGames: number;
   /** Où et avec quelle clé envoyer les résultats ; `null` : seulement journalisés. */
   readonly ranking: { readonly url: string; readonly secret: string } | null;
@@ -66,6 +72,7 @@ export function readConfig(
   if (!Number.isInteger(maxGames) || maxGames < 1 || maxGames > 100_000)
     errors.push('RELAY_MAX_GAMES : entier de 1 à 100 000.');
   const ranking = readRanking(env, ticketSecrets, errors);
+  const quick = readQuick(env, errors);
   if (errors.length > 0) return { ok: false, errors };
   return {
     ok: true,
@@ -78,6 +85,7 @@ export function readConfig(
       trustProxy: trust === 'true',
       maxGames,
       ranking,
+      quick,
     },
   };
 }
@@ -113,4 +121,44 @@ function readRanking(
     return null;
   }
   return { url: new URL(RANKING_REPORT_PATH, url).toString(), secret: secrets[0]! };
+}
+
+const RULE_KEYS = [
+  'mode',
+  'stocks',
+  'timeLimit',
+  'stamina',
+  'teams',
+  'teamAttack',
+  'ultimate',
+  'items',
+];
+
+function readQuick(env: Record<string, string | undefined>, errors: string[]): EnvConfig['quick'] {
+  const quick: { rules?: RoomRules; maxWaitMs?: number } = {};
+  if (env.LOBBY_QUICK_RULES !== undefined) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(env.LOBBY_QUICK_RULES);
+    } catch {
+      parsed = null;
+    }
+    const keys = typeof parsed === 'object' && parsed !== null ? Object.keys(parsed) : [];
+    const valid =
+      keys.length === RULE_KEYS.length &&
+      keys.every((k) => RULE_KEYS.includes(k)) &&
+      validateMatchConfig({
+        version: 1,
+        ...(parsed as object),
+        players: [{ team: 0 }, { team: 1 }],
+      }).ok;
+    if (valid) quick.rules = parsed as RoomRules;
+    else errors.push('LOBBY_QUICK_RULES : règles JSON invalides (voir validateMatchConfig).');
+  }
+  if (env.LOBBY_QUICK_WAIT_MS !== undefined) {
+    const ms = Number(env.LOBBY_QUICK_WAIT_MS);
+    if (Number.isInteger(ms) && ms >= 0 && ms <= 600_000) quick.maxWaitMs = ms;
+    else errors.push('LOBBY_QUICK_WAIT_MS : entier de 0 à 600 000.');
+  }
+  return quick;
 }
