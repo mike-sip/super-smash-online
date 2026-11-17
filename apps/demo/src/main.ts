@@ -1,5 +1,6 @@
 /** Démo jouable : boucle à pas fixe, assemblage de la simulation, du rendu et du son. */
 import { createAccountsClient } from '@game/accounts-client';
+import { createRankingClient } from '@game/ranking/client';
 import { KEYBOARD_ID, MAX_LOCAL_PLAYERS, createInput, type Device } from '@game/input';
 import { buildMatchConfig } from '@game/fighters';
 import {
@@ -39,6 +40,7 @@ import { TEST_ENTITIES, TEST_STAGE } from '@game/sim-core/testing';
 import { createAccountPanel } from './account.ts';
 import { createControls } from './controls.ts';
 import { createDummies, type Dummies, type DummyMode } from './dummies.ts';
+import { createLeaderboardPanel } from './leaderboard.ts';
 import { createMatchSetup, matchFromParams, matchToParams } from './match-setup.ts';
 import { createEntityFeeder, createPerfProbe, type EntityFeeder } from './perf.ts';
 import { createRemap, type Remap } from './remap.ts';
@@ -236,6 +238,7 @@ const controls = createControls(window, element('toolbar'), {
   onRemap: () => remap.screen?.toggle(),
   onSound: () => soundPanel.toggle(),
   onAccount: () => account.toggle(),
+  onLeaderboard: () => leaderboard.toggle(),
   onRules: () => (setup.visible ? setup.close() : setup.open(match)),
   onDebug: (enabled) => renderer.setDebug(enabled),
 });
@@ -243,6 +246,11 @@ const controls = createControls(window, element('toolbar'), {
 // Panneau Compte : le serveur des comptes, relayé par Vite sous /api/accounts, n'est contacté
 // qu'à l'ouverture du panneau.
 const account = createAccountPanel({ panel: element('account'), client: createAccountsClient() });
+// Panneau Classement : même serveur, relayé sous /api/ranking, contacté à l'ouverture seulement.
+const leaderboard = createLeaderboardPanel({
+  panel: element('leaderboard'),
+  client: createRankingClient(),
+});
 
 remap.screen = createRemap({
   panel: element('remap'),

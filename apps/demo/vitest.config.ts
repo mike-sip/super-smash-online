@@ -8,6 +8,8 @@ export default defineConfig({
     // Le test du panneau Compte démarre un vrai serveur des comptes, lu dans ses sources.
     alias: [
       { find: /^@game\/accounts$/, replacement: source('../../packages/accounts/src/index.ts') },
+      // Le test du panneau Classement démarre un vrai serveur comptes + classement.
+      { find: /^@game\/ranking$/, replacement: source('../../packages/ranking/src/index.ts') },
     ],
   },
   test: {

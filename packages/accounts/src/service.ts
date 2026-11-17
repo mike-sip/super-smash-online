@@ -477,6 +477,21 @@ export class AccountService {
     return ok({ ticket, expiresAt: claims.exp });
   }
 
+  /**
+   * Pseudo actuel et marqueur invité des comptes existants, pour l'affichage par `ranking` ; les
+   * identifiants inconnus sont absents du résultat.
+   */
+  async publicNames(
+    ids: readonly string[],
+  ): Promise<Map<string, { pseudo: string; guest: boolean }>> {
+    const result = new Map<string, { pseudo: string; guest: boolean }>();
+    for (const id of new Set(ids)) {
+      const account = await this.#store.findAccountById(id);
+      if (account !== null) result.set(id, { pseudo: account.pseudo, guest: account.guest });
+    }
+    return result;
+  }
+
   /** Ajoute un match aux statistiques. Pour `ranking`, hébergé dans le même processus. */
   recordMatch(accountId: string, won: boolean): Promise<boolean> {
     return this.#store.recordMatch(accountId, won);

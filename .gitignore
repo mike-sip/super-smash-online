@@ -5,3 +5,4 @@ test-results/
 playwright-report/
 *.tsbuildinfo
 packages/accounts/data/
+packages/ranking/data/
