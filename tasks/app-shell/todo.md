@@ -1,6 +1,6 @@
 # Tâches : module `app-shell`
 
-> Statut : **SOUMIS le 2026-11-17**. Plan : [plan.md](plan.md).
+> Statut : **VALIDÉ le 2026-11-17**. Plan : [plan.md](plan.md).
 >
 > Vérification commune à chaque tâche : `pnpm lint` et `pnpm typecheck` passent ; `pnpm --filter @game/lobby test` à partir de T1 ; `pnpm --filter @game/app test` à partir de T3 ; les tests d'Edge de l'application à partir de T6 ; tests existants de la démo et de la démo en ligne passants et inchangés.
 

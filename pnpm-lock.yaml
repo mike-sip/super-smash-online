@@ -336,6 +336,9 @@ importers:
       '@game/netcode':
         specifier: workspace:*
         version: link:../netcode
+      '@game/ranking':
+        specifier: workspace:*
+        version: link:../ranking
       ws:
         specifier: ^8.23.0
         version: 8.23.0

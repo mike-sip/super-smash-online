@@ -1,6 +1,6 @@
 # Plan : module `app-shell`
 
-> Statut : **SOUMIS le 2026-11-17**. Spec : [SPEC-app-shell.md](../../SPEC-app-shell.md) (approuvée le 2026-11-17, décisions par défaut, nom « Fracas »). Tâches détaillées : [todo.md](todo.md).
+> Statut : **VALIDÉ le 2026-11-17**. Spec : [SPEC-app-shell.md](../../SPEC-app-shell.md) (approuvée le 2026-11-17, décisions par défaut, nom « Fracas »). Tâches détaillées : [todo.md](todo.md).
 
 ## Approche
 
