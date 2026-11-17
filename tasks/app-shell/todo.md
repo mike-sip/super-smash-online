@@ -30,7 +30,7 @@
   - Vérification : tests unitaires de chaque cas de la stratégie de test.
   - Fichiers : `apps/game/src/screens.ts`, `src/nav.ts`, `src/menu-pad.ts`, `test/screens.test.ts`, `test/nav.test.ts`, `test/menu-pad.test.ts`
 
-- [ ] **T5 : Réglages, contenu, erreurs (purs)**
+- [x] **T5 : Réglages, contenu, erreurs (purs)**
   - Acceptation : réglages son et affichage (défauts, bornes, lecture tolérante, version) ; `buildSimConfig` pour tout personnage, stage, mode et objets ; noms et descriptions ; `describeError` pour chaque code des clients des comptes, du lobby, du relais et du classement ; textes dans `strings.ts`.
   - Vérification : tests unitaires ; même entrée ⇒ même `checksum` de simulation après 600 frames ; aucun code d'erreur connu sans message.
   - Fichiers : `apps/game/src/settings.ts`, `src/content.ts`, `src/errors.ts`, `src/strings.ts`, `test/settings.test.ts`, `test/content.test.ts`, `test/errors.test.ts`
