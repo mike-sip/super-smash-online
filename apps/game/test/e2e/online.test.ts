@@ -3,7 +3,7 @@
  * règles de l'hôte, match jusqu'au bout, mêmes résultats, retour au salon ; rechargement en
  * pleine partie ; lien d'invitation ; erreurs visibles.
  */
-import type { Browser, Page } from 'playwright-core';
+import type { Browser } from 'playwright-core';
 import type { ViteDevServer } from 'vite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { focused, hook, openTab, startGame, waitScreen } from '../helpers.ts';
