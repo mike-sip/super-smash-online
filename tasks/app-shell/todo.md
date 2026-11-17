@@ -6,12 +6,12 @@
 
 ## Phase A — Résultats classés
 
-- [ ] **T1 : Expéditeur des rapports**
+- [x] **T1 : Expéditeur des rapports**
   - Acceptation : `createRankingReporter` (spec, « API publique ») ; seuls les `agreed` partent ; rapport par `reportFromResult` ; en-tête par `signReport` ; `201`/`200` : fini ; réseau, `5xx`, 5 s sans réponse : nouvel essai (1, 2, 4… s, 60 s au plus, 24 h au plus), même `matchId`, `reportedAt` neuf ; `400`/`401`/`403`/`409` : abandon journalisé ; file bornée à 1 000 ; `close()` ; journaux sans pseudo ni identifiant de compte.
   - Vérification : tests à horloge et `fetch` factices : filtre du statut, contenu du rapport, signature vérifiée par `verifyReportSignature`, renvois, abandon, file pleine, arrêt.
   - Fichiers : `packages/lobby/src/ranking-report.ts`, `packages/lobby/test/ranking-report.test.ts`, `packages/lobby/package.json` (dépendance `@game/ranking`), `pnpm-lock.yaml`
 
-- [ ] **T2 : Branchement et bout en bout réel**
+- [x] **T2 : Branchement et bout en bout réel**
   - Acceptation : `config.ts` lit `RANKING_URL`, `RANKING_REPORT_SECRETS` (ensemble ou pas du tout), `RELAY_MAX_GAMES` ; `main.ts` branche l'expéditeur sur `onMatchResult` et le ferme à l'arrêt ; `/health` donne connexions, parties, rapports en attente ; `SPEC-lobby.md` mis à jour (écart « envoi branché »).
   - Vérification : tests de configuration ; `test/e2e/ranking.test.ts` : vrais serveurs, deux inscrits en partie rapide (Temps 30 s), cotes 1016/984 (ou égalité), historique et compteurs, doublon `duplicate`, salon privé non classé, serveur des comptes arrêté puis relancé pendant l'envoi.
   - Fichiers : `packages/lobby/src/config.ts`, `packages/lobby/src/main.ts`, `packages/lobby/src/server.ts`, `packages/lobby/test/config.test.ts`, `packages/lobby/test/e2e/ranking.test.ts`, `SPEC-lobby.md`
