@@ -20,12 +20,12 @@
 
 ## Phase B — L'application s'ouvre
 
-- [ ] **T3 : Paquet `@game/app`**
+- [x] **T3 : Paquet `@game/app`**
   - Acceptation : `apps/game` (Vite, alias vers les sources comme la démo), `index.html` sans script en ligne, `dev-plugin.ts` (comptes + classement en mémoire avec `submitMatch` direct, serveur de jeu avec le vrai contenu), configuration « game » dans `.claude/launch.json`, palette et typographie dans `style.css`, prise de test derrière une variable de build.
   - Vérification : `pnpm --filter @game/app dev` répond ; test de contraste de la palette (4,5:1) ; typecheck.
   - Fichiers : `apps/game/package.json`, `tsconfig.json`, `vite.config.ts`, `vitest.config.ts`, `index.html`, `src/main.ts`, `src/style.css`, `src/palette.ts`, `dev-plugin.ts`, `test/palette.test.ts`, `.claude/launch.json`, `pnpm-lock.yaml`
 
-- [ ] **T4 : Écrans, navigation, manette des menus (purs)**
+- [x] **T4 : Écrans, navigation, manette des menus (purs)**
   - Acceptation : pile d'écrans (`push`, `replace`, `back` avec confirmation, `reset`) ; `nextFocus` par direction ; lecteur de manette des menus (croix, stick avec zone morte et répétition, A, B, Start, disposition non standard).
   - Vérification : tests unitaires de chaque cas de la stratégie de test.
   - Fichiers : `apps/game/src/screens.ts`, `src/nav.ts`, `src/menu-pad.ts`, `test/screens.test.ts`, `test/nav.test.ts`, `test/menu-pad.test.ts`
