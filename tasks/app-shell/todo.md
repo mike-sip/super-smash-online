@@ -44,12 +44,12 @@
 
 ## Phase C — On joue en local
 
-- [ ] **T7 : Moteur de combat local**
+- [x] **T7 : Moteur de combat local**
   - Acceptation : boucle à pas fixe, personnages stylés, son, HUD de match, pause (reprendre, recommencer, quitter), fin vers les résultats ; entraînement sans fin avec mannequins (immobiles, sauteurs, bouclier, aléatoires pour la mesure) ; scène de fond derrière les menus, coupée en « mouvements réduits ».
   - Vérification : Edge : match court jusqu'à la fin par la prise de test ; pause qui arrête la simulation ; non-ingérence du rendu (empreinte avant et après dessin).
   - Fichiers : `apps/game/src/local-match.ts`, `src/background.ts`, `src/ui/pause.ts`, `test/e2e/local.test.ts`
 
-- [ ] **T8 : Sélection locale, stage, règles, entraînement, résultats**
+- [x] **T8 : Sélection locale, stage, règles, entraînement, résultats**
   - Acceptation : rejoindre par périphérique (2 à 4) ; une carte par joueur (personnage, équipe, prêt) commandée par son périphérique ; stage (aperçu, description, dangers) ; règles avec préréglages et validation par `match-rules` ; entraînement ; résultats (revanche, changer, menu) ; derniers réglages gardés.
   - Vérification : Edge : combat à deux (clavier et fausse manette) jusqu'aux résultats puis revanche ; chaque mode ; règles refusées affichées ; entraînement à 7 mannequins.
   - Fichiers : `apps/game/src/ui/local-setup.ts`, `src/ui/stage-select.ts`, `src/ui/rules.ts`, `src/ui/training.ts`, `src/ui/results.ts`, `src/local-setup.ts` (état pur), `test/local-setup.test.ts`, `test/e2e/local.test.ts`

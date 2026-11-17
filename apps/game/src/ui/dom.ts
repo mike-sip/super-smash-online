@@ -43,7 +43,7 @@ export function focusables(root: Element): HTMLElement[] {
     'button, input, select, a[href], [tabindex]:not([tabindex="-1"])',
   );
   return [...all].filter((e) => {
-    if ((e as HTMLButtonElement).disabled) return false;
+    if ((e as HTMLButtonElement).disabled || e.tabIndex < 0) return false;
     if (e.closest('[hidden], [inert]') !== null) return false;
     const r = e.getBoundingClientRect();
     return r.width > 0 && r.height > 0;

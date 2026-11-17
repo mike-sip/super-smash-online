@@ -9,6 +9,7 @@ import { createMatchSimConfig, type MatchConfig } from '@game/match-rules';
 import type { SimConfig } from '@game/sim-core';
 import {
   STAGES,
+  type ItemFrequency,
   applyItems,
   applyStage,
   isStageId,
@@ -87,8 +88,8 @@ export interface MatchChoice {
   readonly hazards?: boolean;
 }
 
-/** Configuration de simulation d'un match. Lève sur un identifiant inconnu. */
-export function buildSimConfig(match: MatchConfig, choice: MatchChoice): SimConfig {
+/** Contenu d'une partie (stage, combattants, objets), sans règles de match. */
+function buildContent(choice: MatchChoice, items: ItemFrequency): SimConfig {
   if (!isStageId(choice.stage)) throw new Error(`Stage inconnu : « ${choice.stage} ».`);
   const fighters = choice.fighters.map((id) => {
     if (!isFighterId(id)) throw new Error(`Personnage inconnu : « ${id} ».`);
@@ -100,14 +101,25 @@ export function buildSimConfig(match: MatchConfig, choice: MatchChoice): SimConf
     seed: choice.seed,
   });
   const staged = applyStage(base, choice.stage, { hazards: choice.hazards ?? true });
-  const withItems = applyItems(staged, {
-    frequency: match.items.enabled ? match.items.frequency : 'off',
-  });
+  return applyItems(staged, { frequency: items });
+}
+
+/**
+ * Configuration sans règles de match (entraînement : pas de fin, réapparition gérée par
+ * l'appelant).
+ */
+export function buildFreeConfig(choice: MatchChoice, items: ItemFrequency = 'off'): SimConfig {
+  return buildContent(choice, items);
+}
+
+/** Configuration de simulation d'un match. Lève sur un identifiant inconnu. */
+export function buildSimConfig(match: MatchConfig, choice: MatchChoice): SimConfig {
+  const content = buildContent(choice, match.items.enabled ? match.items.frequency : 'off');
   return createMatchSimConfig(match, {
-    stage: withItems.stage,
-    fighters: withItems.fighters,
-    entities: withItems.entities,
-    items: withItems.items,
+    stage: content.stage,
+    fighters: content.fighters,
+    entities: content.entities,
+    items: content.items,
     seed: choice.seed,
   });
 }

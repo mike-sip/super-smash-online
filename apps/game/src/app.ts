@@ -92,6 +92,7 @@ export class App {
     this.input.assign(0, KEYBOARD_ID);
     this.audio = createGameAudio({ settings: this.audioSettings() });
     this.applyDisplay();
+    this.test.devices = () => [0, 1, 2, 3].map((p) => this.input.assigned(p)?.id ?? null);
 
     const unlock = (): void => this.audio.unlock();
     window.addEventListener('pointerdown', unlock, { capture: true });
@@ -187,7 +188,12 @@ export class App {
         ? remembered
         : (screen.root.querySelector<HTMLElement>('[data-autofocus]') ??
           focusables(screen.root)[0]);
-    target?.focus({ preventScroll: false });
+    if (target !== undefined) target.focus({ preventScroll: false });
+    else {
+      // Rien à focaliser (sélection locale…) : le focus va à l'écran lui-même.
+      screen.root.tabIndex = -1;
+      screen.root.focus();
+    }
     if (screen.capturesInput !== true) this.pad.suspend();
   }
 

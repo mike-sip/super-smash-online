@@ -2,6 +2,7 @@
 import './style.css';
 import { App, type AppElements } from './app.ts';
 import { GAME_NAME } from './strings.ts';
+import { openLocal, openTraining } from './ui/local.ts';
 import { errorScreen, titleScreen, type MainMenuEntry } from './ui/screens-basic.ts';
 
 function element<T extends HTMLElement>(id: string): T {
@@ -22,7 +23,15 @@ const elements: AppElements = {
   fps: element('fps'),
 };
 
-const entries: MainMenuEntry[] = [];
+const entries: MainMenuEntry[] = [
+  { id: 'local', label: 'Combat local', detail: '2 à 4 joueurs', open: openLocal },
+  {
+    id: 'training',
+    label: 'Entraînement',
+    detail: 'Seul, contre des mannequins',
+    open: openTraining,
+  },
+];
 
 const app = new App(elements, (a) => titleScreen(a, entries));
 app.onFatal = () => app.reset(errorScreen());
