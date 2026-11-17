@@ -1,0 +1,121 @@
+# Fracas en production, sur une machine : frontal (Caddy), comptes + classement, serveur de jeu.
+#   cp deploy/.env.example deploy/.env   (puis remplir, voir DEPLOIEMENT.md)
+#   docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
+name: fracas
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+x-server: &server
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+    target: server
+  image: fracas-server:latest
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  logging: *logging
+  networks:
+    - internal
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: web
+    image: fracas-web:latest
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN manquant}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      accounts:
+        condition: service_healthy
+      game:
+        condition: service_healthy
+    logging: *logging
+    networks:
+      - internal
+
+  accounts:
+    <<: *server
+    command: ['node', 'packages/ranking/src/main.ts']
+    environment:
+      ACCOUNTS_HOST: 0.0.0.0
+      ACCOUNTS_PORT: '8787'
+      ACCOUNTS_DB: /data/accounts.sqlite
+      RANKING_DB: /data/ranking.sqlite
+      ACCOUNTS_TICKET_SECRETS: ${ACCOUNTS_TICKET_SECRETS:?ACCOUNTS_TICKET_SECRETS manquant}
+      RANKING_REPORT_SECRETS: ${RANKING_REPORT_SECRETS:?RANKING_REPORT_SECRETS manquant}
+      ACCOUNTS_ALLOWED_ORIGINS: https://${DOMAIN}
+      ACCOUNTS_SECURE_COOKIES: 'true'
+      ACCOUNTS_TRUST_PROXY: 'true'
+    volumes:
+      - data:/data
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8787/api/accounts/v1/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  game:
+    <<: *server
+    command: ['node', 'packages/lobby/src/main.ts']
+    environment:
+      LOBBY_HOST: 0.0.0.0
+      LOBBY_PORT: '8788'
+      ACCOUNTS_TICKET_SECRETS: ${ACCOUNTS_TICKET_SECRETS:?ACCOUNTS_TICKET_SECRETS manquant}
+      LOBBY_FIGHTERS: sorel,zephine,ferroc,nacre
+      LOBBY_STAGES: belvedere,recif,canal,geysers
+      LOBBY_REGIONS: eu
+      LOBBY_TRUST_PROXY: 'true'
+      RANKING_URL: http://accounts:8787
+      RANKING_REPORT_SECRETS: ${RANKING_REPORT_SECRETS:?RANKING_REPORT_SECRETS manquant}
+      RELAY_MAX_GAMES: ${RELAY_MAX_GAMES:-200}
+    depends_on:
+      accounts:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8788/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:

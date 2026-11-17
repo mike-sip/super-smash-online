@@ -92,7 +92,7 @@
   - Vérification : seuils de `render` tenus ; menus à 95 % sous 16,7 ms.
   - Fichiers : `apps/game/test/perf/perf.test.ts`, `apps/game/vitest.perf.config.ts`
 
-- [ ] **T15 : Déploiement**
+- [x] **T15 : Déploiement**
   - Acceptation : `Dockerfile` (plusieurs étapes, non root, lecture seule sauf `data/`), `docker-compose.yml` (frontal, comptes, jeu, santé, redémarrage, journaux bornés), `Caddyfile` (TLS, routes, en-têtes, route des rapports et santé bloquées depuis l'extérieur), `.env.example`, `generate-secrets.ts`, `backup.ts` (`VACUUM INTO`), heure ISO dans les journaux des serveurs, `DEPLOIEMENT.md`.
   - Vérification : test qui compare le `Caddyfile` à `routes.ts` ; `generate-secrets.ts` et `backup.ts` essayés en local ; relecture des fichiers Docker (non construits : pas de Docker ici).
   - Fichiers : `deploy/*`, `DEPLOIEMENT.md`, `apps/game/test/deploy.test.ts`

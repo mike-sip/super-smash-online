@@ -1,0 +1,11 @@
+node_modules
+**/node_modules
+**/dist
+**/dist-e2e
+.git
+.claude
+coverage
+**/data
+deploy/.env
+test-results
+playwright-report

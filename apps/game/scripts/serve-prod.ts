@@ -15,7 +15,7 @@ import type { Server } from 'node:http';
 import { createServer as createNetServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createGateway } from '../../../deploy/gateway.ts';
 import { CONTENT_IDS } from '../src/content-ids.ts';
 
@@ -73,7 +73,12 @@ function run(
 ): ChildProcess {
   const child = spawn(process.execPath, [join(REPO, script)], {
     cwd: REPO,
-    env: { ...process.env, ...env },
+    // Comme dans les conteneurs : heure ISO en tête de chaque ligne de journal.
+    env: {
+      ...process.env,
+      NODE_OPTIONS: `--import ${pathToFileURL(join(REPO, 'deploy/log-time.ts')).href}`,
+      ...env,
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const forward = (chunk: Buffer): void => {
