@@ -15,7 +15,9 @@ export const MAX_ENTITIES = 32;
 export const G_FRAME = 0;
 export const G_RNG = 1;
 export const G_PLAYERS = 2;
-export const GLOBAL_COUNT = 3;
+/** Frames avant la prochaine apparition d'objet (module stages-items). */
+export const G_ITEM_TIMER = 3;
+export const GLOBAL_COUNT = 4;
 
 /** Un Int32 par joueur. Positions et vitesses en virgule fixe, durées en frames. */
 export const FIGHTER_FIELDS = [
@@ -96,6 +98,8 @@ export const FIGHTER_FIELDS = [
   'invincible',
   /** 1 si l'attaque ultime est autorisée : le prochain spécial neutre la lance. */
   'ultimateReady',
+  /** Objet tenu : emplacement d'entité + 1, ou 0. */
+  'held',
 ] as const;
 
 /** Un Int32 par entité (projectile, objet). `eKind` à 0 signifie emplacement libre. */
@@ -109,6 +113,10 @@ export const ENTITY_FIELDS = [
   'eLife',
   /** Joueurs déjà touchés par cette entité, un bit par joueur. */
   'eHitMask',
+  /** Objets seulement : `ITEM_FREE`, `ITEM_HELD` ou `ITEM_THROWN` ; 0 pour un projectile. */
+  'eMode',
+  /** Objet posé : surface sous lui (index dans la géométrie + 1), ou 0 en l'air. */
+  'eSurface',
 ] as const;
 
 /**

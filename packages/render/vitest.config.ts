@@ -13,6 +13,10 @@ export default defineConfig({
         replacement: source('../sim-core/src/testing/fixtures.ts'),
       },
       { find: /^@game\/sim-core$/, replacement: source('../sim-core/src/index.ts') },
+      {
+        find: /^@game\/stages-items$/,
+        replacement: source('../stages-items/src/index.ts'),
+      },
     ],
   },
   test: {

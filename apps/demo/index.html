@@ -63,6 +63,15 @@
         font-size: 12px;
         cursor: pointer;
       }
+      #toolbar select {
+        padding: 3px 6px;
+        border: 1px solid #64748b;
+        border-radius: 4px;
+        background: rgba(15, 23, 42, 0.9);
+        color: #cbd5e1;
+        font: inherit;
+        font-size: 12px;
+      }
       #toolbar button[aria-pressed='true'] {
         border-color: #facc15;
         color: #facc15;
@@ -360,7 +369,9 @@
       Son : cliquez ou appuyez sur une touche pour l’activer, <kbd>S</kbd> pour les réglages.<br />
       Manette : appuyez sur un bouton pour rejoindre, jusqu'à 4 joueurs. <kbd>G</kbd> règles du
       match. Adresse :
-      <code>?dummies=1…7&amp;mode=idle|random&amp;rules=stock|time|stamina|free</code>
+      <code
+        >?dummies=1…7&amp;mode=idle|random&amp;rules=stock|time|stamina|free&amp;stage=belvedere|recif|canal|geysers|test</code
+      >
     </p>
     <div id="tuning" hidden></div>
     <div id="remap" hidden></div>

@@ -43,6 +43,8 @@ export interface MatchContent {
   /** Un combattant par joueur, dans l'ordre de `MatchConfig.players`. */
   readonly fighters: readonly FighterDef[];
   readonly entities?: readonly EntityDef[];
+  /** Apparition des objets (module `stages-items`) ; absent : aucun objet. */
+  readonly items?: SimConfig['items'];
   readonly seed: number;
 }
 
@@ -64,6 +66,7 @@ export function createMatchSimConfig(match: MatchConfig, content: MatchContent):
     stage: content.stage,
     fighters: content.fighters,
     entities: content.entities,
+    items: content.items,
     seed: content.seed,
     teams: config.teams ? config.players.map((p) => p.team) : undefined,
     teamAttack: config.teams ? config.teamAttack : true,

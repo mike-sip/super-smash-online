@@ -18,6 +18,7 @@ import {
   A_JUMPSQUAT,
   A_LAND,
   A_LEDGE,
+  A_LEDGE_ROLL,
   A_RUN,
   A_SHIELD_BREAK,
   A_TECH,
@@ -53,6 +54,11 @@ export interface StageGeo {
   readonly surfX1: Int32Array;
   readonly surfX2: Int32Array;
   readonly surfY: Int32Array;
+  /**
+   * Hauteur de la surface à la frame précédente. Égale à `surfY` pour une surface fixe ; pour une
+   * plateforme mobile, l'atterrissage s'y compare (voir `systems/stage-motion.ts`).
+   */
+  readonly surfPrevY: Int32Array;
   /** 1 si la surface est une plateforme traversable. */
   readonly surfPass: Uint8Array;
 
@@ -76,6 +82,7 @@ export function compileStage(stage: StageDef): StageGeo {
     surfX1: new Int32Array(surfCount),
     surfX2: new Int32Array(surfCount),
     surfY: new Int32Array(surfCount),
+    surfPrevY: new Int32Array(surfCount),
     surfPass: new Uint8Array(surfCount),
     solidCount: solids.length,
     solidX1: new Int32Array(solids.length),
@@ -105,6 +112,7 @@ export function compileStage(stage: StageDef): StageGeo {
     geo.surfY[k] = p.y;
     geo.surfPass[k] = 1;
   });
+  geo.surfPrevY.set(geo.surfY);
   return geo;
 }
 
@@ -271,12 +279,14 @@ function integrateAirborne(sim: Sim, i: number): void {
     }
   } else {
     // Atterrissage : les pieds franchissent une surface de haut en bas. S'il y en a plusieurs,
-    // la plus haute gagne, car c'est la première rencontrée.
+    // la plus haute gagne, car c'est la première rencontrée. Les pieds sont comparés à la hauteur
+    // de la surface avant et après la frame : une plateforme qui monte ne laisse pas passer.
     const holdingDown = inputStickY(s.input[i]!) <= STICK_HOLD_DOWN;
     let landed = -1;
     for (let k = 0; k < geo.surfCount; k++) {
       const top = geo.surfY[k]!;
-      if (prevY < top || y > top || x < geo.surfX1[k]! || x > geo.surfX2[k]!) continue;
+      if (prevY < geo.surfPrevY[k]! || y > top || x < geo.surfX1[k]! || x > geo.surfX2[k]!)
+        continue;
       if (geo.surfPass[k] === 1 && holdingDown) continue;
       if (landed < 0 || top > geo.surfY[landed]!) landed = k;
     }
@@ -303,7 +313,9 @@ export function integrate(sim: Sim, i: number): void {
   const action = s.action[i]!;
   // Un combattant tenu ne bouge pas de lui-même : sa position est imposée par celui qui le tient.
   // Un combattant suspendu à un rebord non plus.
-  if (action === A_DEAD || action === A_GRABBED || action >= A_LEDGE) return;
+  if (action === A_DEAD || action === A_GRABBED || (action >= A_LEDGE && action <= A_LEDGE_ROLL)) {
+    return;
+  }
   if (s.grounded[i] === 1) integrateGrounded(sim, i);
   else integrateAirborne(sim, i);
 }

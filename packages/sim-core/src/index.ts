@@ -15,9 +15,14 @@ export type {
   EntityHitDef,
   FighterDef,
   GrabDef,
+  HazardDef,
   HitDef,
+  ItemDef,
+  ItemSpawnDef,
+  ItemZoneDef,
   MoveDef,
   PlatformDef,
+  PlatformMotionDef,
   SolidDef,
   SpawnDef,
   StageDef,
@@ -57,10 +62,17 @@ export {
   A_LEDGE,
   A_LEDGE_GETUP,
   A_LEDGE_ROLL,
+  A_ITEM_THROW,
+  A_ITEM_SWING,
 } from './actions.ts';
 export {
   EV_GRAB,
+  EV_HEAL,
   EV_HIT,
+  EV_ITEM_BREAK,
+  EV_ITEM_PICKUP,
+  EV_ITEM_SPAWN,
+  EV_ITEM_THROW,
   EV_KO,
   EV_LEDGE,
   EV_PARRY,
@@ -96,8 +108,10 @@ export {
   createFighterView,
   readEntity,
   readFighter,
+  readPlatform,
   type EntityView,
   type FighterView,
+  type PlatformView,
 } from './view.ts';
 export {
   ENTITY_BOUNCE,
@@ -106,6 +120,17 @@ export {
   destroyEntity,
   spawnEntity,
 } from './systems/entities.ts';
+export {
+  ITEM_MODE_FREE,
+  ITEM_MODE_HELD,
+  ITEM_MODE_THROWN,
+  ITEM_THROW_FRAMES,
+  ITEM_THROW_RELEASE,
+  THROW_BACK,
+  THROW_DOWN,
+  THROW_FORWARD,
+  THROW_UP,
+} from './systems/items.ts';
 
 function checkSize(buf: Uint8Array): void {
   if (buf.length < STATE_BYTES) {

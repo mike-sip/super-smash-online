@@ -27,6 +27,10 @@ export default defineConfig({
         find: /^@game\/match-rules$/,
         replacement: source('../../packages/match-rules/src/index.ts'),
       },
+      {
+        find: /^@game\/stages-items$/,
+        replacement: source('../../packages/stages-items/src/index.ts'),
+      },
     ],
   },
   server: {

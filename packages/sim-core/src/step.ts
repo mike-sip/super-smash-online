@@ -1,5 +1,5 @@
 import { A_AIR, A_IDLE, A_SHIELD, A_SHIELD_BREAK, setAction } from './actions.ts';
-import type { EntityDef, FighterDef, StageDef } from './defs.ts';
+import type { EntityDef, FighterDef, ItemSpawnDef, StageDef } from './defs.ts';
 import { createEventQueue, type EventQueue } from './events.ts';
 import { rngSeed } from './rng.ts';
 import {
@@ -17,9 +17,16 @@ import { SHIELD_REGEN, tickDodgeStale } from './systems/defense.ts';
 import { updateEntities } from './systems/entities.ts';
 import { resolveGrabs } from './systems/grab.ts';
 import { createHitScratch, resolveHits, type HitScratch } from './systems/hit.ts';
+import { initItems, updateItemSpawner, updateItems } from './systems/items.ts';
 import { launch } from './systems/knockback.ts';
 import { resolveLedges } from './systems/ledge.ts';
 import { trackStick, updateMovement } from './systems/movement.ts';
+import {
+  compileMotion,
+  updateHazards,
+  updateStageMotion,
+  type StageMotion,
+} from './systems/stage-motion.ts';
 
 /**
  * Règles de match branchées sur la simulation (module `match-rules`). Elles tournent dans
@@ -39,6 +46,8 @@ export interface SimConfig {
   readonly fighters: readonly FighterDef[];
   /** Types d'entités (projectiles, objets) utilisables pendant le combat. */
   readonly entities?: readonly EntityDef[];
+  /** Apparition des objets ; absent, aucun objet n'apparaît (module stages-items). */
+  readonly items?: ItemSpawnDef;
   readonly seed: number;
   /**
    * Équipe de chaque joueur (entier positif ou nul), un par joueur. Absent : chacun pour soi.
@@ -59,6 +68,8 @@ export interface Sim {
   readonly entityDefs: readonly EntityDef[];
   /** Géométrie du stage, figée à la création. */
   readonly geo: StageGeo;
+  /** Plateformes mobiles du stage, figées à la création ; leur position dépend de la frame. */
+  readonly motion: StageMotion;
   /** Événements de la dernière frame. Hors snapshot : reconstruits à chaque `step`. */
   readonly events: EventQueue;
   /** Tableaux de travail internes à une frame. Hors snapshot. */
@@ -115,11 +126,13 @@ export function createSim(config: SimConfig): Sim {
       team[i] = t;
     }
   }
+  const geo = compileStage(config.stage);
   const sim: Sim = {
     config,
     state: createState(),
     entityDefs: config.entities ?? [],
-    geo: compileStage(config.stage),
+    geo,
+    motion: compileMotion(config.stage, geo),
     events: createEventQueue(),
     scratch: createHitScratch(),
     team,
@@ -127,6 +140,7 @@ export function createSim(config: SimConfig): Sim {
   };
   sim.state.g[G_PLAYERS] = players;
   rngSeed(sim.state, config.seed);
+  initItems(sim);
   for (let i = 0; i < players; i++) placeAtSpawn(sim, i);
   config.rules?.init(sim);
   return sim;
@@ -153,6 +167,9 @@ export function step(sim: Sim, inputs: Uint32Array): void {
   const frozen = sim.scratch.frozen;
   const players = s.g[G_PLAYERS]!;
   sim.events.count = 0;
+
+  // 0. Le stage bouge et emporte ceux qui s'y tiennent.
+  updateStageMotion(sim);
 
   // 1. Inputs : mémorisés et mis en tampon pour tous, même gelés par le hitlag.
   for (let i = 0; i < players; i++) {
@@ -182,6 +199,9 @@ export function step(sim: Sim, inputs: Uint32Array): void {
 
   resolveLedges(sim);
   updateEntities(sim);
+  updateHazards(sim);
+  updateItemSpawner(sim);
+  updateItems(sim);
 
   // 4. Coups, sur les positions à jour.
   resolveHits(sim);

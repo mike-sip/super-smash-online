@@ -18,11 +18,14 @@ import {
 } from '@game/render';
 import {
   A_DEAD,
+  MAX_ENTITIES,
   checksum,
+  createEntityView,
   createFighterView,
   createSim,
   frame,
   knockOut,
+  readEntity,
   readFighter,
   respawn,
   step,
@@ -38,6 +41,7 @@ import { createEntityFeeder, createPerfProbe, type EntityFeeder } from './perf.t
 import { createRemap, type Remap } from './remap.ts';
 import { createSoundPanel, loadAudioSettings } from './sound.ts';
 import { createResults } from './results.ts';
+import { applySetup, createStageSelect, readSetup } from './stage-select.ts';
 import { createTuning } from './tuning.ts';
 
 const STEP_MS = 1000 / 60;
@@ -77,8 +81,12 @@ const players = 1 + dummyCount;
 /** Règles du match en cours, ou `null` pour un combat libre sans fin. */
 let match: MatchConfig | null = matchFromParams(params, players);
 const baseConfig = testConfig(players, seed);
-/** Configuration en cours : celle d'origine, ou la copie produite par le panneau de réglage. */
-let config: SimConfig = baseConfig;
+/** Combattants en cours : ceux d'origine, ou la copie produite par le panneau de réglage. */
+let fighterConfig: SimConfig = baseConfig;
+/** Stage choisi dans la barre d'outils ou par l'adresse. */
+const stageSetup = readSetup(params);
+/** Configuration réellement simulée : les combattants, sur le stage choisi. */
+let config: SimConfig = applySetup(fighterConfig, stageSetup);
 const canvas = element<HTMLCanvasElement>('game');
 const overlay = element('overlay');
 
@@ -167,7 +175,7 @@ const soundPanel = createSoundPanel({
 });
 
 const tuning = createTuning(element('tuning'), baseConfig, (tuned) => {
-  config = tuned;
+  fighterConfig = tuned;
   start();
 });
 
@@ -222,7 +230,10 @@ function resize(): void {
 }
 window.addEventListener('resize', resize);
 
+createStageSelect(element('toolbar'), stageSetup, () => start());
+
 function start(): void {
+  config = applySetup(fighterConfig, stageSetup);
   // À la première création `renderer` n'existe pas encore.
   (renderer as Renderer | undefined)?.dispose();
   matchHud?.dispose();
@@ -236,6 +247,7 @@ function start(): void {
           stage: config.stage,
           fighters: config.fighters,
           entities: config.entities,
+          items: config.items,
           seed: config.seed,
         }),
   );
@@ -325,6 +337,16 @@ requestAnimationFrame(tick);
 /** Prise pour les tests automatiques de la démo. Aucun code de jeu ne doit s'en servir. */
 const testHook = {
   frame: () => frame(sim),
+  /** Nom du stage simulé. */
+  stage: () => sim.config.stage.name,
+  /** Objets présents (libres, tenus ou lancés). */
+  items(): number {
+    const v = createEntityView();
+    let n = 0;
+    for (let slot = 0; slot < MAX_ENTITIES; slot++)
+      if (readEntity(sim, slot, v) && v.mode !== 0) n++;
+    return n;
+  },
   players,
   paused: () => controls.paused,
   speed: () => controls.speed,

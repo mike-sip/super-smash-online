@@ -4,7 +4,7 @@
     "seed": 101,
     "inputSeed": 1001,
     "frames": 36000,
-    "checksum": 2111251774,
+    "checksum": 3086186302,
     "hits": 1057,
     "kos": 312
   },
@@ -13,7 +13,7 @@
     "seed": 202,
     "inputSeed": 2002,
     "frames": 36000,
-    "checksum": 385160898,
+    "checksum": 1382984378,
     "hits": 986,
     "kos": 321
   },
@@ -22,7 +22,7 @@
     "seed": 303,
     "inputSeed": 3003,
     "frames": 36000,
-    "checksum": 4064463468,
+    "checksum": 932900380,
     "hits": 986,
     "kos": 351
   },
@@ -31,7 +31,7 @@
     "seed": 404,
     "inputSeed": 4004,
     "frames": 36000,
-    "checksum": 3305571037,
+    "checksum": 493030341,
     "hits": 978,
     "kos": 326
   },
@@ -40,7 +40,7 @@
     "seed": 505,
     "inputSeed": 5005,
     "frames": 36000,
-    "checksum": 560375932,
+    "checksum": 1018779804,
     "hits": 968,
     "kos": 316
   }

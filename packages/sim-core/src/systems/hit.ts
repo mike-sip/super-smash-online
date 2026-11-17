@@ -5,7 +5,7 @@
  * Ainsi, quand deux joueurs se frappent à la même frame, les deux coups portent, quel que soit
  * l'ordre des joueurs.
  */
-import { A_ATTACK, A_DEAD } from '../actions.ts';
+import { A_ATTACK, A_DEAD, A_ITEM_SWING } from '../actions.ts';
 import type { CapsuleDef, FighterDef } from '../defs.ts';
 import { EV_HIT, EV_PARRY, EV_SHIELD, emit } from '../events.ts';
 import { FX_ONE, fxMul } from '../fixed.ts';
@@ -13,6 +13,7 @@ import { capsulesOverlap } from '../geometry.ts';
 import { G_PLAYERS, MAX_ENTITIES, MAX_PLAYERS, type SimState } from '../state.ts';
 import type { Sim } from '../step.ts';
 import { PARRY_ATTACKER_LAG, blockHit, isParrying, isShielding, parryHit } from './defense.ts';
+import { ITEM_MODE_THROWN, heldSwing, itemHitFighter } from './items.ts';
 import { applyHit, hitlagFrames, knockback } from './knockback.ts';
 
 /** Tableaux de travail d'une frame. Hors de l'état : entièrement recalculés à chaque `step`. */
@@ -128,8 +129,16 @@ export function resolveHits(sim: Sim): void {
 
   // Passe 1 : relever les contacts.
   for (let i = 0; i < players; i++) {
-    if (s.action[i] !== A_ATTACK || sc.frozen[i] === 1) continue;
-    const move = fighters[i]!.moves[s.move[i]!]!;
+    if (sc.frozen[i] === 1) continue;
+    const action = s.action[i]!;
+    // Une attaque, ou le coup de l'objet à frapper tenu (module stages-items).
+    const move =
+      action === A_ATTACK
+        ? fighters[i]!.moves[s.move[i]!]!
+        : action === A_ITEM_SWING
+          ? heldSwing(sim, i)
+          : undefined;
+    if (move === undefined) continue;
     const hits = move.hits;
     const moveFrame = s.actionFrame[i]! + 1;
     const facing = s.facing[i]!;
@@ -188,9 +197,13 @@ export function resolveHits(sim: Sim): void {
     const def = sim.entityDefs[kind - 1]!;
     const hit = def.hit;
     if (hit === undefined) continue;
+    // Un objet ne frappe que lancé.
+    if (def.item !== undefined && s.eMode[e] !== ITEM_MODE_THROWN) continue;
     const owner = s.eOwner[e]! - 1;
     const ex = s.ePosX[e]!;
     const ey = s.ePosY[e]!;
+    // Capsule verticale pour une entité qui a une hauteur (jet de geyser), cercle sinon.
+    const eyTop = def.height ?? 0;
     const dir = s.eVelX[e]! >= 0 ? 1 : -1;
 
     for (let j = 0; j < players; j++) {
@@ -200,7 +213,7 @@ export function resolveHits(sim: Sim): void {
       if (allies && owner >= 0 && team[owner] === team[j]) continue;
       const bit = 1 << j;
       if ((s.eHitMask[e]! & bit) !== 0) continue;
-      if (!overlapsHurtboxes(s, j, fighters[j]!, ex, ey, ex, ey, def.radius)) continue;
+      if (!overlapsHurtboxes(s, j, fighters[j]!, ex, ey, ex, ey + eyTop, def.radius)) continue;
 
       s.eHitMask[e] = s.eHitMask[e]! | bit;
       const kb = knockback(
@@ -218,6 +231,10 @@ export function resolveHits(sim: Sim): void {
         sc.pushDir[j] = dir;
       }
       sc.byEntity[j] = owner >= 0 ? owner + 1 : -1;
+      if (def.item !== undefined) {
+        itemHitFighter(sim, e);
+        break;
+      }
       if (def.destroyOnHit) {
         s.eKind[e] = 0;
         break;

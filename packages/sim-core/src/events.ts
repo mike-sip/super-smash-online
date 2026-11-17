@@ -27,6 +27,17 @@ export const EV_LEDGE = 7;
  * (qui prend 8 pour `EV_COUNTER`) : une seule des deux implémentations restera à la fusion.
  */
 export const EV_ULTIMATE = 9;
+// Stages et objets (module stages-items), numérotés à part pour ne pas croiser ceux d'autres modules.
+/** Un objet est apparu. `a` = emplacement d'entité, `b` = type. */
+export const EV_ITEM_SPAWN = 20;
+/** Un joueur a ramassé un objet. `a` = joueur, `b` = emplacement. */
+export const EV_ITEM_PICKUP = 21;
+/** Un joueur a lancé son objet. `a` = joueur, `b` = emplacement. */
+export const EV_ITEM_THROW = 22;
+/** Un joueur s'est soigné. `a` = joueur, `b` = soin en pourcentage entier. */
+export const EV_HEAL = 23;
+/** Un objet s'est brisé ou a explosé. `a` = emplacement (déjà libéré), `b` = type. */
+export const EV_ITEM_BREAK = 24;
 
 export interface EventQueue {
   count: number;

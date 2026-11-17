@@ -10,6 +10,7 @@
 import { fx, fxMul } from '../fixed.ts';
 import { MAX_ENTITIES } from '../state.ts';
 import type { Sim } from '../step.ts';
+import { ITEM_MODE_FREE } from './items.ts';
 
 /** Comportement d'une entité au contact d'un bloc plein. */
 export const ENTITY_PASS = 0;
@@ -50,6 +51,8 @@ export function spawnEntity(
     s.eVelY[e] = velY;
     s.eLife[e] = def.lifetime;
     s.eHitMask[e] = 0;
+    s.eMode[e] = def.item === undefined ? 0 : ITEM_MODE_FREE;
+    s.eSurface[e] = 0;
     return e;
   }
   return -1;
@@ -69,6 +72,8 @@ export function updateEntities(sim: Sim): void {
     const kind = s.eKind[e]!;
     if (kind === 0) continue;
     const def = sim.entityDefs[kind - 1]!;
+    // Les objets ont leur propre système (`systems/items.ts`).
+    if (def.item !== undefined) continue;
 
     const life = s.eLife[e]! - 1;
     if (life <= 0) {

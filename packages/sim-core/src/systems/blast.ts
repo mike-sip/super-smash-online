@@ -2,6 +2,7 @@
 import { A_DEAD, A_HITSTUN, A_TUMBLE, setAction } from '../actions.ts';
 import { EV_KO, emit } from '../events.ts';
 import type { Sim } from '../step.ts';
+import { destroyHeld } from './items.ts';
 
 export function checkBlast(sim: Sim, i: number): void {
   const s = sim.state;
@@ -31,6 +32,7 @@ export function koFighter(sim: Sim, i: number): void {
   s.hitlag[i] = 0;
   s.launchPending[i] = 0;
   s.stun[i] = 0;
+  destroyHeld(sim, i);
   setAction(s, i, A_DEAD);
   emit(sim.events, EV_KO, i, 0);
 }

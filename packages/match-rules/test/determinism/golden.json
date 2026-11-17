@@ -1,7 +1,7 @@
 [
   {
     "name": "stock-ffa",
-    "checksum": 3479519943,
+    "checksum": 1184156727,
     "phase": "over",
     "reason": "last-standing",
     "endFrame": 4658,
@@ -11,7 +11,7 @@
   },
   {
     "name": "time-teams",
-    "checksum": 3708176760,
+    "checksum": 2517289584,
     "phase": "over",
     "reason": "time",
     "endFrame": 10800,
@@ -21,7 +21,7 @@
   },
   {
     "name": "stamina-ffa",
-    "checksum": 90412387,
+    "checksum": 1884370307,
     "phase": "over",
     "reason": "last-standing",
     "endFrame": 4394,

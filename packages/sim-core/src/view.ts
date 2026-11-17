@@ -7,6 +7,7 @@
  */
 import { fxToFloat } from './fixed.ts';
 import type { Sim } from './step.ts';
+import { platformAt } from './systems/stage-motion.ts';
 
 export interface FighterView {
   x: number;
@@ -49,6 +50,11 @@ export interface EntityView {
   velY: number;
   /** Frames de vie restantes. */
   life: number;
+  /**
+   * Objets seulement (module stages-items) : 1 libre, 2 tenu (par `owner`), 3 lancé (par `owner`).
+   * 0 pour un projectile.
+   */
+  mode: number;
 }
 
 export function createFighterView(): FighterView {
@@ -74,7 +80,7 @@ export function createFighterView(): FighterView {
 }
 
 export function createEntityView(): EntityView {
-  return { kind: 0, owner: -1, x: 0, y: 0, velX: 0, velY: 0, life: 0 };
+  return { kind: 0, owner: -1, x: 0, y: 0, velX: 0, velY: 0, life: 0, mode: 0 };
 }
 
 export function readFighter(sim: Sim, player: number, out: FighterView): void {
@@ -113,5 +119,26 @@ export function readEntity(sim: Sim, slot: number, out: EntityView): boolean {
   out.velX = fxToFloat(s.eVelX[slot]!);
   out.velY = fxToFloat(s.eVelY[slot]!);
   out.life = s.eLife[slot]!;
+  out.mode = s.eMode[slot]!;
   return true;
+}
+
+export interface PlatformView {
+  x1: number;
+  x2: number;
+  y: number;
+}
+
+const platformScratch = { x1: 0, x2: 0, y: 0 };
+
+/**
+ * Position courante de la plateforme `index` de `StageDef.platforms`, en unités de jeu : celle où
+ * la simulation a posé les combattants pendant la dernière frame. Pour une plateforme fixe, ce sont
+ * ses coordonnées de définition.
+ */
+export function readPlatform(sim: Sim, index: number, out: PlatformView): void {
+  platformAt(sim, index, platformScratch);
+  out.x1 = fxToFloat(platformScratch.x1);
+  out.x2 = fxToFloat(platformScratch.x2);
+  out.y = fxToFloat(platformScratch.y);
 }
