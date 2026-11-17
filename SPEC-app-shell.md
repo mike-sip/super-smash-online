@@ -1,6 +1,6 @@
 # Spec : `app-shell` — l'application du jeu, son assemblage et son déploiement
 
-> Statut : **BROUILLON du 2026-11-17, soumis à validation.** Module de la [carte des capacités](CAPABILITY-MAP.md), dernier de la v1 (jalon 4 : v1 publique). Dépend de : tous les autres modules, implémentés et fusionnés (`sim-core`, `input`, `render` avec l'audio, `fighters`, `stages-items`, `match-rules`, `netcode`, `accounts`, `lobby`, `ranking`). Plan et tâches : `tasks/app-shell/plan.md` et `todo.md`, rédigés après validation de cette spec.
+> Statut : **APPROUVÉE le 2026-11-17** (décisions par défaut retenues, nom « Fracas »). Module de la [carte des capacités](CAPABILITY-MAP.md), dernier de la v1 (jalon 4 : v1 publique). Dépend de : tous les autres modules, implémentés et fusionnés (`sim-core`, `input`, `render` avec l'audio, `fighters`, `stages-items`, `match-rules`, `netcode`, `accounts`, `lobby`, `ranking`). Plan et tâches : `tasks/app-shell/plan.md` et `todo.md`, rédigés après validation de cette spec.
 
 ## Hypothèses
 
@@ -287,9 +287,9 @@ Les tests de logique sont écrits avant le code. Les parcours dans Edge sont éc
 13. **Relu** : relecture de sécurité des serveurs assemblés, du frontal et du client consignée, constats corrigés ou expliqués.
 14. **Jugé** : vous avez fait le parcours et donné votre avis sur les écrans et le nom.
 
-## Décisions à valider
+## Décisions prises à la validation
 
-Je propose ces choix par défaut ; dites-moi ceux que vous voulez changer.
+Choix par défaut approuvés le 2026-11-17 :
 
 1. **Nom du jeu** : « Fracas » (alternatives : « Éjecta », « Tumulte », ou votre idée).
 2. **Nouvelle application `apps/game`** à côté des démos, en DOM natif sans framework, sans dépendance ajoutée.
