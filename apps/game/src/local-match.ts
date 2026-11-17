@@ -69,6 +69,7 @@ export interface LocalMatch extends Screen {
 }
 
 export function localMatch(app: App, options: LocalMatchOptions): LocalMatch {
+  app.releaseCanvas();
   const players = options.fighters.length;
   const canvas = app.elements.canvas;
   const overlay = app.elements.overlay;

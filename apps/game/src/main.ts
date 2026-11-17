@@ -1,6 +1,7 @@
 /** Point d'entrée de Fracas : assemble l'application et ses écrans. */
 import './style.css';
 import { App, type AppElements } from './app.ts';
+import { createBackground } from './background.ts';
 import { GAME_NAME } from './strings.ts';
 import { openLocal, openTraining } from './ui/local.ts';
 import { errorScreen, titleScreen, type MainMenuEntry } from './ui/screens-basic.ts';
@@ -34,6 +35,10 @@ const entries: MainMenuEntry[] = [
 ];
 
 const app = new App(elements, (a) => titleScreen(a, entries));
+/** Écrans qui ont leur propre rendu sur le canvas. */
+const MATCH_SCREENS = new Set(['match-local', 'training', 'match-online']);
+const background = createBackground(app, () => MATCH_SCREENS.has(app.top().id));
+app.releaseCanvas = () => background.release();
 app.onFatal = () => app.reset(errorScreen());
 window.addEventListener('error', (event) => app.fail(event.error));
 window.addEventListener('unhandledrejection', (event) => app.fail(event.reason));

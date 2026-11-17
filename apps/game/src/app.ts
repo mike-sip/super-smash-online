@@ -74,6 +74,8 @@ export class App {
   settings: Settings;
   /** Écrans et actions de test, remplis seulement quand la prise de test est active. */
   readonly test: Record<string, unknown> = {};
+  /** Rend le canvas à un combat (la scène de fond s'y branche). */
+  releaseCanvas: () => void = () => {};
 
   private readonly stack: ScreenStack<Screen>;
   private readonly focusMemory = new WeakMap<Screen, HTMLElement>();
