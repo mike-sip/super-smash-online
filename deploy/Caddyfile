@@ -22,7 +22,7 @@
 	# Les rapports de match ne viennent que du serveur de jeu, par le réseau interne ; la santé
 	# des serveurs ne se lit pas depuis Internet.
 	@blocked {
-		path /api/ranking/v1/matches /health /health/*
+		path /api/ranking/v1/matches /api/ranking/v1/matches/* /health /health/*
 	}
 	respond @blocked "Introuvable." 404
 

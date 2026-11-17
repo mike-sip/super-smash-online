@@ -33,8 +33,11 @@ describe('déploiement', () => {
   it('le Caddyfile suit les routes : bloquées, comptes, jeu', () => {
     const blocked = /@blocked \{\s*path ([^\n]+)\n/.exec(caddy)![1]!.split(/\s+/);
     for (const r of ROUTES) {
-      if (r.to === 'block') expect(blocked).toContain(r.path);
-      else {
+      if (r.to === 'block') {
+        expect(blocked).toContain(r.path);
+        // Préfixe : les sous-chemins aussi.
+        if (r.exact !== true) expect(blocked).toContain(`${r.path}/*`);
+      } else {
         const upstream = r.to === 'accounts' ? 'accounts:8787' : 'game:8788';
         const path = r.exact === true ? r.path : `${r.path}*`;
         expect(caddy, r.path).toMatch(

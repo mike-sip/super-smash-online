@@ -18,7 +18,8 @@ export interface Route {
 /** Dans l'ordre : la première qui correspond gagne. Le reste : fichiers statiques du client. */
 export const ROUTES: readonly Route[] = [
   // Les rapports de match ne viennent que du serveur de jeu, par le réseau interne.
-  { path: '/api/ranking/v1/matches', exact: true, to: 'block' },
+  // Préfixe : « /matches/ » et ses variantes ne passent pas non plus.
+  { path: '/api/ranking/v1/matches', to: 'block' },
   { path: '/api/accounts/', to: 'accounts' },
   { path: '/api/ranking/', to: 'accounts' },
   { path: '/lobby', exact: true, to: 'game', websocket: true },
