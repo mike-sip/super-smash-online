@@ -35,7 +35,7 @@
   - Vérification : tests unitaires ; même entrée ⇒ même `checksum` de simulation après 600 frames ; aucun code d'erreur connu sans message.
   - Fichiers : `apps/game/src/settings.ts`, `src/content.ts`, `src/errors.ts`, `src/strings.ts`, `test/settings.test.ts`, `test/content.test.ts`, `test/errors.test.ts`
 
-- [ ] **T6 : Titre, menu principal, composants**
+- [x] **T6 : Titre, menu principal, composants**
   - Acceptation : application (`app.ts`) avec services partagés et boucle d'images ; composants (bouton, liste, interrupteur, curseur, bandeau, dialogue) ; écran titre (nom, « Appuyez sur une touche », musique après le premier geste) ; menu principal ; crédits ; navigation clavier, manette et souris branchée ; région `aria-live` ; écran d'erreur inattendue.
   - Vérification : Edge : titre → menu → crédits → retour au clavier seul, puis avec une fausse manette ; noms accessibles ; focus visible ; aucune erreur de console.
   - Fichiers : `apps/game/src/app.ts`, `src/ui/*.ts` (composants, title, main-menu, credits, error), `test/helpers.ts`, `test/e2e/menus.test.ts`
