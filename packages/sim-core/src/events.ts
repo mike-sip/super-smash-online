@@ -21,12 +21,11 @@ export const EV_SHIELD_BREAK = 5;
 export const EV_GRAB = 6;
 /** Un joueur s'est accroché à un rebord. `a` = joueur, `b` = index du rebord. */
 export const EV_LEDGE = 7;
-
-/**
- * Une attaque ultime a été lancée. `a` = joueur. Même valeur que l'extension E6 de `fighters`
- * (qui prend 8 pour `EV_COUNTER`) : une seule des deux implémentations restera à la fusion.
- */
+/** Un coup a été contré (SPEC-fighters.md, E5). `a` = attaquant (-1 : entité sans propriétaire), `b` = défenseur. */
+export const EV_COUNTER = 8;
+/** Une attaque ultime vient de partir (SPEC-fighters.md, E6). `a` = joueur. */
 export const EV_ULTIMATE = 9;
+
 // Stages et objets (module stages-items), numérotés à part pour ne pas croiser ceux d'autres modules.
 /** Un objet est apparu. `a` = emplacement d'entité, `b` = type. */
 export const EV_ITEM_SPAWN = 20;

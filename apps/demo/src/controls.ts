@@ -2,6 +2,12 @@
 
 export interface ControlHandlers {
   onReset(): void;
+  /** Panneau de choix des personnages. */
+  onRoster(): void;
+  /** Lève le drapeau « attaque ultime prête » de tous les joueurs. */
+  onUltimate(): void;
+  /** Tableau de frame data du personnage de J1. */
+  onFrameData(): void;
   onTuning(): void;
   onRemap(): void;
   onSound(): void;
@@ -110,6 +116,9 @@ export function createControls(
   button('KeyS', 'S', 'Son', () => handlers.onSound());
   button('KeyU', 'U', 'Compte', () => handlers.onAccount());
   button('KeyG', 'G', 'Règles du match', () => handlers.onRules());
+  button('KeyO', 'O', 'Personnages', () => handlers.onRoster());
+  button('KeyY', 'Y', 'Ultime prête', () => handlers.onUltimate());
+  button('KeyF', 'F', 'Frame data', () => handlers.onFrameData());
   const keys: ReadonlySet<string> = new Set(actions.keys());
   refresh();
 

@@ -12,7 +12,9 @@ import {
   M_DAIR,
   M_DASH_ATTACK,
   M_DSMASH,
+  M_DSPECIAL,
   M_DTILT,
+  M_EXTRA1,
   M_FAIR,
   M_FSMASH,
   M_FTILT,
@@ -22,9 +24,11 @@ import {
   M_LEDGE_ATTACK,
   M_NAIR,
   M_NSPECIAL,
+  M_SSPECIAL,
   M_UAIR,
-  M_USMASH,
   M_ULTIMATE,
+  M_USMASH,
+  M_USPECIAL,
   M_UTILT,
 } from '../moves.ts';
 import type { SimConfig } from '../step.ts';
@@ -63,7 +67,12 @@ function move(
   name: string,
   totalFrames: number,
   hits: HitSpec[],
-  extra: Partial<Pick<MoveDef, 'charge' | 'landingLag' | 'spawn'>> & {
+  extra: Partial<
+    Pick<
+      MoveDef,
+      'charge' | 'landingLag' | 'spawn' | 'motion' | 'intangible' | 'helpless' | 'armor' | 'counter'
+    >
+  > & {
     cancels?: CancelDef[];
   } = {},
 ): MoveDef {
@@ -106,11 +115,15 @@ export const TEST_ENTITIES: EntityDef[] = [
 
 const TEST_MOVES = moveset([
   [
-    // Ultime provisoire (règles de match) : large balayage lent et puissant.
+    // Ultime provisoire (règles de match) : large balayage lent et puissant. Invincible pendant la
+    // préparation, comme l'exige la validation des personnages (`fighters`).
     M_ULTIMATE,
-    move('ultimate', 60, [
-      { frames: [18, 24], shape: [-14, 6, 18, 6, 8], damage: 30, angle: 50, base: 60, growth: 1 },
-    ]),
+    move(
+      'ultimate',
+      60,
+      [{ frames: [18, 24], shape: [-14, 6, 18, 6, 8], damage: 30, angle: 50, base: 60, growth: 1 }],
+      { intangible: { start: 1, end: 17 } },
+    ),
   ],
   [
     M_NSPECIAL,
@@ -476,3 +489,61 @@ export function testConfig(players: number, seed = 1): SimConfig {
     seed,
   };
 }
+
+/**
+ * Troisième combattant : celui de test, avec des spéciaux qui exercent les extensions demandées
+ * par le module `fighters` (SPEC-fighters.md, E1 à E6). `TEST_FIGHTER` reste inchangé, pour que
+ * les scénarios et checksums existants ne bougent pas.
+ */
+export const TEST_SPECIALIST: FighterDef = {
+  ...TEST_FIGHTER,
+  name: 'specialist',
+  moves: (() => {
+    const moves = TEST_MOVES.slice();
+    // Fente : avance vite et frappe à l'arrivée ; en l'air, finit en chute impuissante.
+    moves[M_SSPECIAL] = move(
+      'lunge',
+      30,
+      [{ frames: [12, 14], shape: [5, 7, 3], damage: 8, angle: 40, base: 30, growth: 0.6 }],
+      { motion: [{ start: 5, end: 14, velX: fx(2) }], helpless: true, landingLag: 12 },
+    );
+    // Montée : décolle et monte, invincible au départ, puis chute impuissante.
+    moves[M_USPECIAL] = move(
+      'rise',
+      30,
+      [{ frames: [6, 18], shape: [0, 8, 5], damage: 6, angle: 85, base: 40, growth: 0.5 }],
+      {
+        motion: [{ start: 4, end: 20, velY: fx(2.4) }],
+        intangible: { start: 1, end: 5 },
+        helpless: true,
+        landingLag: 15,
+      },
+    );
+    // Contre : frappé pendant la garde, riposte en M_EXTRA1.
+    moves[M_DSPECIAL] = move('counter', 40, [], { counter: { start: 4, end: 20, to: M_EXTRA1 } });
+    moves[M_EXTRA1] = move('riposte', 30, [
+      { frames: [3, 6], shape: [6, 7, 4], damage: 10, angle: 40, base: 40, growth: 0.8 },
+    ]);
+    // Coup armé : encaisse les coups faibles pendant sa préparation.
+    moves[M_NSPECIAL] = move(
+      'armored punch',
+      40,
+      [{ frames: [18, 20], shape: [6, 7, 3], damage: 14, angle: 40, base: 30, growth: 0.9 }],
+      { armor: { start: 1, end: 20, maxKnockback: fx(60) } },
+    );
+    // Plongeon : en l'air, fonce en diagonale vers le bas.
+    moves[M_DAIR] = move(
+      'dive',
+      40,
+      [{ frames: [3, 40], shape: [2, 2, 3], damage: 9, angle: 280, base: 20, growth: 0.6 }],
+      { motion: [{ start: 3, end: 40, velX: fx(1), velY: fx(-2) }], landingLag: 16 },
+    );
+    moves[M_ULTIMATE] = move(
+      'ultimate',
+      60,
+      [{ frames: [20, 24], shape: [0, 8, 20], damage: 35, angle: 50, base: 80, growth: 1 }],
+      { intangible: { start: 1, end: 60 } },
+    );
+    return moves;
+  })(),
+};

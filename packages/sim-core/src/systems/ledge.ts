@@ -7,6 +7,7 @@
  */
 import {
   A_AIR,
+  A_HELPLESS,
   A_IDLE,
   A_LEDGE,
   A_LEDGE_GETUP,
@@ -169,7 +170,7 @@ export function resolveLedges(sim: Sim): void {
 
   for (let i = 0; i < players; i++) {
     const action = s.action[i]!;
-    if (action !== A_AIR && action !== A_TUMBLE) continue;
+    if (action !== A_AIR && action !== A_TUMBLE && action !== A_HELPLESS) continue;
     if (sim.scratch.frozen[i] === 1 || s.ledgeCooldown[i]! > 0 || s.velY[i]! > 0) continue;
     if (inputStickY(s.input[i]!) <= STICK_HOLD_DOWN) continue;
     const def = sim.config.fighters[i]!;

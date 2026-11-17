@@ -39,7 +39,14 @@ describe('démo', () => {
 
   async function open(query: string, init?: () => void): Promise<{ page: Page; errors: string[] }> {
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-    if (init !== undefined) await page.addInitScript(init);
+    // Sans scénario de manette, aucune manette : une vraie manette branchée sur la machine (et
+    // actionnée pendant le test) prendrait la place de J1 et fausserait les tests au clavier.
+    await page.addInitScript(
+      init ??
+        (() => {
+          navigator.getGamepads = () => [];
+        }),
+    );
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => {
@@ -446,6 +453,59 @@ describe('démo', () => {
     await page.keyboard.press('KeyS');
     expect(await page.locator('[data-sound="enabled"]').isChecked()).toBe(false);
     expect(await page.locator('[data-sound="effects"]').inputValue()).toBe('40');
+    expect(errors).toEqual([]);
+    await page.close();
+  }, 60_000);
+
+  it('donne Sorel à chaque joueur par défaut, et lit le choix dans l’adresse', async () => {
+    const first = await open('');
+    expect(await first.page.evaluate(() => [__demo.fighterName(0), __demo.fighterName(1)])).toEqual(
+      ['Sorel', 'Sorel'],
+    );
+    await first.page.close();
+    const { page, errors } = await open('?p1=test&p2=sorel');
+    expect(await page.evaluate(() => [__demo.fighterName(0), __demo.fighterName(1)])).toEqual([
+      'test',
+      'Sorel',
+    ]);
+    expect(errors).toEqual([]);
+    await page.close();
+  }, 60_000);
+
+  it('change le personnage d’un joueur depuis le panneau, et recrée le combat', async () => {
+    const { page, errors } = await open('');
+    await page.keyboard.press('KeyO');
+    await page.locator('[data-roster="p2"]').selectOption('test');
+    expect(await page.evaluate(() => __demo.fighterName(1))).toBe('test');
+    expect(await page.evaluate(() => __demo.selection())).toEqual(['sorel', 'test']);
+    expect(await page.evaluate(() => __demo.frame())).toBeLessThan(60);
+    expect(await page.evaluate(() => __demo.distinctColors())).toBeGreaterThanOrEqual(4);
+    expect(errors).toEqual([]);
+    await page.close();
+  }, 60_000);
+
+  it('lance l’ultime après le bouton « Ultime prête », par le spécial neutre', async () => {
+    const { page, errors } = await open('');
+    await page.keyboard.press('KeyY');
+    expect(await page.evaluate(() => __demo.fighter(0).ultimateReady)).toBe(true);
+    await page.keyboard.down('KeyC');
+    // M_ULTIMATE = 20.
+    await page.waitForFunction(
+      () => __demo.fighter(0).move === 20 && __demo.fighter(0).action === 11,
+    );
+    await page.keyboard.up('KeyC');
+    expect(await page.evaluate(() => __demo.fighter(0).ultimateReady)).toBe(false);
+    expect(errors).toEqual([]);
+    await page.close();
+  }, 60_000);
+
+  it('affiche le tableau de frame data du personnage de J1', async () => {
+    const { page, errors } = await open('');
+    await page.keyboard.press('KeyF');
+    const rows = page.locator('[data-framedata="moves"] tr');
+    // Une ligne d'en-tête, 21 emplacements et la riposte du contre.
+    expect(await rows.count()).toBe(23);
+    expect(await page.locator('#framedata h2').textContent()).toBe('Frame data : Sorel');
     expect(errors).toEqual([]);
     await page.close();
   }, 60_000);

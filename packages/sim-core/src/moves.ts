@@ -24,9 +24,10 @@ export const M_USPECIAL = 17;
 export const M_DSPECIAL = 18;
 /** Attaque de remontée depuis un rebord. */
 export const M_LEDGE_ATTACK = 19;
-/**
- * Attaque ultime : lancée par un spécial neutre quand les règles de match l'autorisent
- * (`setUltimateReady`). Ajout demandé par `match-rules` ; le coup est fourni par `fighters`.
- */
+// Emplacements ajoutés pour le module `fighters` (SPEC-fighters.md).
+/** Attaque ultime (E6) : lancée par le spécial neutre quand `state.ultimateReady` vaut 1. */
 export const M_ULTIMATE = 20;
-export const MOVE_SLOTS = 21;
+/** Emplacements libres, atteignables seulement par annulation ou par un contre (E5). */
+export const M_EXTRA1 = 21;
+export const M_EXTRA2 = 22;
+export const MOVE_SLOTS = 23;

@@ -13,6 +13,7 @@ import {
   A_DEAD,
   A_DOWN,
   A_GRABBED,
+  A_HELPLESS,
   A_HITSTUN,
   A_IDLE,
   A_JUMPSQUAT,
@@ -232,7 +233,7 @@ function land(sim: Sim, i: number, k: number, knocked: boolean): void {
     s.landLag[i] = def.airDodgeLandingLag;
     setAction(s, i, A_LAND);
   } else {
-    const move = action === A_ATTACK ? def.moves[s.move[i]!] : undefined;
+    const move = action === A_ATTACK || action === A_HELPLESS ? def.moves[s.move[i]!] : undefined;
     s.landLag[i] = move?.landingLag ?? def.landFrames;
     setAction(s, i, A_LAND);
   }

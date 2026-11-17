@@ -7,12 +7,15 @@ import type { Sim } from './step.ts';
 
 export { fx, fxToFloat, FX_ONE, type Fx } from './fixed.ts';
 export type {
+  ArmorDef,
   CancelDef,
   CapsuleDef,
   ChargeDef,
+  CounterDef,
   DodgeDef,
   EntityDef,
   EntityHitDef,
+  FrameWindow,
   FighterDef,
   GrabDef,
   HazardDef,
@@ -20,6 +23,7 @@ export type {
   ItemDef,
   ItemSpawnDef,
   ItemZoneDef,
+  MotionDef,
   MoveDef,
   PlatformDef,
   PlatformMotionDef,
@@ -64,8 +68,10 @@ export {
   A_LEDGE_ROLL,
   A_ITEM_THROW,
   A_ITEM_SWING,
+  A_HELPLESS,
 } from './actions.ts';
 export {
+  EV_COUNTER,
   EV_GRAB,
   EV_HEAL,
   EV_HIT,

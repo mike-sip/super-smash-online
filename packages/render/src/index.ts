@@ -44,3 +44,11 @@ export {
   type MatchHudData,
   type MatchHudSink,
 } from './match-hud.ts';
+export {
+  MAX_PARTS,
+  createMannequins,
+  createStyledMannequins,
+  type MannequinColor,
+  type MannequinPart,
+  type MannequinStyle,
+} from './fighters/mannequin.ts';

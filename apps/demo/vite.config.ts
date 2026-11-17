@@ -5,7 +5,7 @@ const source = (path: string): string => fileURLToPath(new URL(path, import.meta
 
 export default defineConfig({
   resolve: {
-    // La démo lit `sim-core`, `render`, `input` et le client des comptes dans leurs sources, par
+    // La démo lit `sim-core`, `render`, `input`, `fighters` et les autres modules dans leurs sources, par
     // leurs points d'entrée publics : une valeur modifiée est visible au rechargement, sans recompiler.
     alias: [
       {
@@ -31,6 +31,7 @@ export default defineConfig({
         find: /^@game\/stages-items$/,
         replacement: source('../../packages/stages-items/src/index.ts'),
       },
+      { find: /^@game\/fighters$/, replacement: source('../../packages/fighters/src/index.ts') },
     ],
   },
   server: {

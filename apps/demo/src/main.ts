@@ -1,6 +1,7 @@
 /** Démo jouable : boucle à pas fixe, assemblage de la simulation, du rendu et du son. */
 import { createAccountsClient } from '@game/accounts-client';
 import { KEYBOARD_ID, MAX_LOCAL_PLAYERS, createInput, type Device } from '@game/input';
+import { buildMatchConfig } from '@game/fighters';
 import {
   createMatchSimConfig,
   createMatchView,
@@ -13,6 +14,7 @@ import {
   createMatchHud,
   createGameAudio,
   createRenderer,
+  createStyledMannequins,
   type MatchHud,
   type Renderer,
 } from '@game/render';
@@ -28,11 +30,12 @@ import {
   readEntity,
   readFighter,
   respawn,
+  setUltimateReady,
   step,
   type Sim,
   type SimConfig,
 } from '@game/sim-core';
-import { testConfig } from '@game/sim-core/testing';
+import { TEST_ENTITIES, TEST_STAGE } from '@game/sim-core/testing';
 import { createAccountPanel } from './account.ts';
 import { createControls } from './controls.ts';
 import { createDummies, type Dummies, type DummyMode } from './dummies.ts';
@@ -42,6 +45,12 @@ import { createRemap, type Remap } from './remap.ts';
 import { createSoundPanel, loadAudioSettings } from './sound.ts';
 import { createResults } from './results.ts';
 import { applySetup, createStageSelect, readSetup } from './stage-select.ts';
+import {
+  createFrameDataPanel,
+  createRosterPanel,
+  findCharacter,
+  parseSelection,
+} from './roster-panel.ts';
 import { createTuning } from './tuning.ts';
 
 const STEP_MS = 1000 / 60;
@@ -80,8 +89,24 @@ const entityTarget = intParam(params, 'entities', 0, 32, 0);
 const players = 1 + dummyCount;
 /** Règles du match en cours, ou `null` pour un combat libre sans fin. */
 let match: MatchConfig | null = matchFromParams(params, players);
-const baseConfig = testConfig(players, seed);
-/** Combattants en cours : ceux d'origine, ou la copie produite par le panneau de réglage. */
+/** Personnage de chaque joueur, par identifiant. */
+let selection = parseSelection(params, players);
+
+/**
+ * Combattants d'une sélection, sur le stage de test (le stage choisi s'applique ensuite). Les
+ * entités de test passent en tête de liste : le scénario de performance (`?entities=`) fait
+ * apparaître l'une d'elles, quels que soient les personnages.
+ */
+function configFor(ids: readonly string[]): SimConfig {
+  return buildMatchConfig({
+    stage: TEST_STAGE,
+    players: ids.map((id) => findCharacter(id)!),
+    entities: TEST_ENTITIES,
+    seed,
+  });
+}
+let baseConfig = configFor(selection);
+/** Combattants en cours : ceux de la sélection, ou la copie produite par le panneau de réglage. */
 let fighterConfig: SimConfig = baseConfig;
 /** Stage choisi dans la barre d'outils ou par l'adresse. */
 const stageSetup = readSetup(params);
@@ -174,14 +199,40 @@ const soundPanel = createSoundPanel({
   track: MUSIC,
 });
 
-const tuning = createTuning(element('tuning'), baseConfig, (tuned) => {
-  fighterConfig = tuned;
+function makeTuning() {
+  return createTuning(element('tuning'), baseConfig, (tuned) => {
+    fighterConfig = tuned;
+    start();
+  });
+}
+let tuning = makeTuning();
+
+const frameDataPanel = createFrameDataPanel(element('framedata'));
+frameDataPanel.show(findCharacter(selection[0]!)!);
+
+/** Change de personnages : nouvelle configuration, panneau de réglage remis à zéro. */
+function select(ids: string[]): void {
+  selection = ids;
+  baseConfig = configFor(selection);
+  fighterConfig = baseConfig;
+  tuning.dispose();
+  tuning = makeTuning();
+  frameDataPanel.show(findCharacter(selection[0]!)!);
+  const names = selection.map((id, p) => `J${p + 1} ${findCharacter(id)!.name}`).join(', ');
+  announce(names);
   start();
-});
+}
+const rosterPanel = createRosterPanel(element('roster'), selection, select);
 
 const controls = createControls(window, element('toolbar'), {
   onReset: () => start(),
   onTuning: () => tuning.toggle(),
+  onRoster: () => rosterPanel.toggle(),
+  onFrameData: () => frameDataPanel.toggle(),
+  onUltimate: () => {
+    for (let p = 0; p < players; p++) setUltimateReady(sim, p, true);
+    announce('Ultime prête pour tous : spécial neutre pour la lancer.');
+  },
   onRemap: () => remap.screen?.toggle(),
   onSound: () => soundPanel.toggle(),
   onAccount: () => account.toggle(),
@@ -251,7 +302,14 @@ function start(): void {
           seed: config.seed,
         }),
   );
-  renderer = createRenderer({ canvas, overlay, config: sim.config });
+  // Le combattant de test garde le mannequin standard, aux couleurs du joueur.
+  const styles = selection.map((id) => (id === 'test' ? undefined : findCharacter(id)!.look));
+  renderer = createRenderer({
+    canvas,
+    overlay,
+    config: sim.config,
+    fighterVisuals: createStyledMannequins((p) => styles[p]),
+  });
   if (match !== null) {
     matchHud = createMatchHud(players, createMatchDomSink(overlay, players));
   }
@@ -347,6 +405,10 @@ const testHook = {
       if (readEntity(sim, slot, v) && v.mode !== 0) n++;
     return n;
   },
+  /** Identifiant du personnage de chaque joueur. */
+  selection: () => [...selection],
+  select: (ids: string[]) => select(ids),
+  fighterName: (player: number) => sim.config.fighters[player]!.name,
   players,
   paused: () => controls.paused,
   speed: () => controls.speed,

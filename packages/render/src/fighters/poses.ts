@@ -22,6 +22,7 @@ import {
   A_GRABBED,
   A_GRABBING,
   A_GRAB_RELEASE,
+  A_HELPLESS,
   A_HITSTUN,
   A_IDLE,
   A_ITEM_SWING,
@@ -47,7 +48,10 @@ import {
   M_DAIR,
   M_DASH_ATTACK,
   M_DSMASH,
+  M_DSPECIAL,
   M_DTILT,
+  M_EXTRA1,
+  M_EXTRA2,
   M_FAIR,
   M_FSMASH,
   M_FTILT,
@@ -57,8 +61,11 @@ import {
   M_LEDGE_ATTACK,
   M_NAIR,
   M_NSPECIAL,
+  M_SSPECIAL,
   M_UAIR,
+  M_ULTIMATE,
   M_USMASH,
+  M_USPECIAL,
   M_UTILT,
   ITEM_THROW_FRAMES,
   ITEM_THROW_RELEASE,
@@ -476,6 +483,34 @@ function attackKeys(move: number, w: Pose, s: Pose): void {
       limbs(w, -0.1, 0, 0.6, 1.6, -0.4, 0.8, 0.1, -0.1, -0.2, -0.1);
       limbs(s, 0.1, 0, 1.57, 0, 1.2, 1.2, 0.35, -0.3, -0.3, -0.1);
       return;
+    // Spéciaux, ultime et suites (SPEC-fighters.md) : une pose générique par emplacement, commune
+    // à tous les personnages.
+    case M_SSPECIAL:
+      // Fente : ramassé, puis tout le corps lancé vers l'avant.
+      limbs(w, -0.25, 0.1, -0.7, 1.4, -0.5, 1.4, 0.6, -1.4, 0.3, -1.0);
+      limbs(s, 0.75, -0.4, 1.65, 0.05, 1.3, 0.3, 0.9, -0.4, -0.9, -0.2);
+      return;
+    case M_USPECIAL:
+      // Montée : accroupi, puis bras tendus au-dessus de la tête, corps droit.
+      limbs(w, 0.4, 0.2, 0.9, 1.4, 0.7, 1.4, 1.3, -2.1, 1.1, -2.1);
+      limbs(s, -0.1, -0.5, 2.95, 0.1, 2.75, 0.2, 0.25, -0.3, -0.15, -0.6);
+      return;
+    case M_DSPECIAL:
+      // Garde ou appui au sol : bras croisés devant, jambes fléchies.
+      limbs(w, 0.1, 0.1, 0.7, 1.7, 0.9, 1.7, 0.4, -0.7, -0.3, -0.5);
+      limbs(s, -0.15, 0.2, 1.1, 1.9, 1.3, 1.8, 0.7, -1.4, -0.5, -0.9);
+      return;
+    case M_ULTIMATE:
+      // Ultime : ramassé, puis bras et jambes grands ouverts.
+      limbs(w, 0.5, 0.3, 1.0, 2.0, 0.8, 2.0, 1.0, -1.8, 0.8, -1.8);
+      limbs(s, -0.25, -0.4, 2.3, 0.1, -2.3, 0.1, 0.9, -0.2, -0.9, -0.2);
+      return;
+    case M_EXTRA1:
+    case M_EXTRA2:
+      // Riposte : un coup droit appuyé.
+      limbs(w, -0.3, 0, -0.9, 1.7, 0.4, 0.9, 0.2, -0.4, 0.1, -0.3);
+      limbs(s, 0.45, -0.1, 1.6, 0, -0.9, 1.0, 0.75, -0.5, -0.65, -0.1);
+      return;
     case M_LEDGE_ATTACK:
       limbs(w, 0.6, 0, 0.3, 0.9, 0.3, 0.9, 1.0, -1.9, 0.8, -1.9);
       limbs(s, 0.3, 0, 1.3, 0.2, 1.0, 0.4, 1.1, -0.1, -0.5, -0.6);
@@ -686,6 +721,12 @@ export function computePose(input: PoseInput, out: Pose): void {
       limbs(out, 0, -0.2, 2.2, 0.3, -2.0, 0.3, 0.8, -0.6, -0.7, -0.5);
       out.spin = -f * 0.22;
       return;
+    case A_HELPLESS: {
+      // Chute impuissante : corps relâché, bras levés qui flottent.
+      const sway = Math.sin(f * 0.25) * 0.15;
+      limbs(out, -0.25, 0.35, 2.5 + sway, 0.5, 2.1 - sway, 0.5, 0.2, -0.9, -0.35, -0.4);
+      return;
+    }
     case A_TECH: {
       const up = smooth(progress(input));
       limbs(out, 0.6, 0.3, 1.0, 1.4, 0.8, 1.4, 1.5, -2.0, 1.3, -2.0);

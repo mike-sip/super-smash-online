@@ -5,6 +5,7 @@ import {
   A_CROUCH,
   A_DEAD,
   A_GRAB,
+  A_HELPLESS,
   A_IDLE,
   A_LEDGE,
   A_LEDGE_GETUP,
@@ -21,7 +22,7 @@ import {
   M_NSPECIAL,
   MOVE_SLOTS,
 } from '@game/sim-core';
-import { TEST_FIGHTER, TEST_HEAVY } from '@game/sim-core/testing';
+import { TEST_FIGHTER, TEST_HEAVY, TEST_SPECIALIST } from '@game/sim-core/testing';
 import {
   POSE_KEYS,
   SHIN,
@@ -36,7 +37,8 @@ import {
   type PoseInput,
 } from '../src/fighters/poses.ts';
 
-const ACTION_COUNT = A_LEDGE_ROLL + 1;
+// `A_HELPLESS` (31) suit directement `A_LEDGE_ROLL` (30) : toutes les actions restent contiguës.
+const ACTION_COUNT = A_HELPLESS + 1;
 const OFFSET_KEYS = new Set<keyof Pose>(['hipY', 'offsetX', 'offsetY', 'offsetZ']);
 
 function input(action: number, frame: number, move = 0): PoseInput {
@@ -47,7 +49,10 @@ function input(action: number, frame: number, move = 0): PoseInput {
   // Les attaques aériennes ne se lancent qu'en l'air.
   const aerial = action === A_ATTACK && move >= M_NAIR && move <= M_DAIR;
   inp.grounded = action !== A_AIR && !aerial;
-  actionTiming(TEST_FIGHTER, action, move, inp);
+  // Les spéciaux absents du combattant de test sont pris chez le spécialiste.
+  const def =
+    action === A_ATTACK && TEST_FIGHTER.moves[move] === undefined ? TEST_SPECIALIST : TEST_FIGHTER;
+  actionTiming(def, action, move, inp);
   return inp;
 }
 
@@ -68,7 +73,10 @@ function distance(a: Pose, b: Pose): number {
 const span = (action: number, move = 0): number => input(action, 0, move).total || 120;
 
 const usedMoves: number[] = [];
-for (let m = 0; m < MOVE_SLOTS; m++) if (TEST_FIGHTER.moves[m] !== undefined) usedMoves.push(m);
+for (let m = 0; m < MOVE_SLOTS; m++) {
+  if (TEST_FIGHTER.moves[m] !== undefined || TEST_SPECIALIST.moves[m] !== undefined)
+    usedMoves.push(m);
+}
 
 describe('actionTiming', () => {
   it("lit les phases d'une attaque dans MoveDef", () => {

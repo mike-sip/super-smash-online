@@ -62,6 +62,14 @@ export const A_LEDGE_ROLL = 30;
 export const A_ITEM_THROW = 40;
 /** Coup porté avec un objet à frapper ; la hitbox est celle de l'objet. */
 export const A_ITEM_SWING = 41;
+// Ajoutée pour le module `fighters` (SPEC-fighters.md, E2). Hors des plages ci-dessus : les tests
+// de plage (`>= A_SHIELD`, `>= A_LEDGE`) sont bornés à `A_LEDGE_ROLL` pour l'exclure.
+/**
+ * Chute impuissante, après un coup qui la déclare (`MoveDef.helpless`) terminé en l'air : dérive
+ * et accroche au rebord possibles, rien d'autre jusqu'à l'atterrissage. `state.move` garde le coup,
+ * dont le lag d'atterrissage s'applique.
+ */
+export const A_HELPLESS = 31;
 
 /**
  * Change d'action. `actionFrame` compte les frames passées dans l'action, frame du changement

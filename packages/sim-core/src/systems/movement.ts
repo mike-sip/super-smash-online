@@ -10,12 +10,14 @@ import {
   A_DASH,
   A_DEAD,
   A_DOWN,
+  A_HELPLESS,
   A_HITSTUN,
   A_IDLE,
   A_ITEM_SWING,
   A_ITEM_THROW,
   A_JUMPSQUAT,
   A_LAND,
+  A_LEDGE_ROLL,
   A_RUN,
   A_SHIELD,
   A_TECH,
@@ -53,9 +55,9 @@ import {
   M_NSPECIAL,
   M_SSPECIAL,
   M_UAIR,
+  M_ULTIMATE,
   M_USMASH,
   M_USPECIAL,
-  M_ULTIMATE,
   M_UTILT,
 } from '../moves.ts';
 import type { SimState } from '../state.ts';
@@ -180,6 +182,7 @@ function startMove(s: SimState, i: number, slot: number): void {
   else if (wantFrom === FROM_SPECIAL) s.bufSpecial[i] = 0;
   else if (wantFrom === FROM_CSTICK) s.bufC[i] = 0;
   if (wantFacing !== 0) s.facing[i] = wantFacing;
+  if (slot === M_ULTIMATE) s.ultimateReady[i] = 0;
   s.move[i] = slot;
   s.charge[i] = 0;
   s.hitMask[i] = 0;
@@ -206,14 +209,13 @@ function tryAttack(
 ): boolean {
   const s = sim.state;
   selectMove(s, i, grounded, running, stickX, stickY);
+  // Attaque ultime prête : elle prend la place du spécial neutre (SPEC-fighters.md, E6).
   if (wantSlot === M_NSPECIAL && s.ultimateReady[i] === 1 && def.moves[M_ULTIMATE] !== undefined) {
-    // Attaque ultime autorisée par les règles de match : elle remplace le spécial neutre.
     wantSlot = M_ULTIMATE;
-    s.ultimateReady[i] = 0;
-    emit(sim.events, EV_ULTIMATE, i, 0);
   }
   if (wantSlot < 0 || def.moves[wantSlot] === undefined) return false;
   startMove(s, i, wantSlot);
+  if (wantSlot === M_ULTIMATE) emit(sim.events, EV_ULTIMATE, i, 0);
   return true;
 }
 
@@ -273,7 +275,7 @@ export function updateMovement(sim: Sim, i: number): void {
     else airControl(s, def, i, stickX, dir, false);
     return;
   }
-  if (action >= A_SHIELD) {
+  if (action >= A_SHIELD && action <= A_LEDGE_ROLL) {
     // Bouclier, esquives, saisies, rebords : chacun a son propre système.
     updateDefense(sim, i);
     return;
@@ -316,7 +318,7 @@ export function updateMovement(sim: Sim, i: number): void {
     const move = def.moves[s.move[i]!]!;
     if (frames >= move.totalFrames) {
       // Fin de l'attaque : le combattant est libre dès cette frame.
-      setAction(s, i, grounded ? A_IDLE : A_AIR);
+      setAction(s, i, grounded ? A_IDLE : move.helpless === true ? A_HELPLESS : A_AIR);
       updateMovement(sim, i);
       return;
     }
@@ -386,6 +388,13 @@ export function updateMovement(sim: Sim, i: number): void {
       setAction(s, i, A_AIR);
     }
     airControl(s, def, i, stickX, dir, flickDown);
+    return;
+  }
+
+  if (action === A_HELPLESS) {
+    // Sur le sol par un autre chemin que l'atterrissage (téléportation) : plus rien à attendre.
+    if (grounded) setAction(s, i, A_IDLE);
+    else airControl(s, def, i, stickX, dir, flickDown);
     return;
   }
 

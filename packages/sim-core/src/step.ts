@@ -39,6 +39,7 @@ export interface SimRules {
   /** Appelée à la fin de chaque `step`, frame déjà avancée, événements de la frame lisibles. */
   afterStep(sim: Sim): void;
 }
+import { applyMoveEffects } from './systems/specials.ts';
 
 export interface SimConfig {
   readonly stage: StageDef;
@@ -189,6 +190,7 @@ export function step(sim: Sim, inputs: Uint32Array): void {
     } else {
       frozen[i] = 0;
       updateMovement(sim, i);
+      applyMoveEffects(sim, i);
     }
   }
 

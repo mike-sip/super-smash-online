@@ -33,7 +33,7 @@ export interface FighterView {
   intangible: boolean;
   /** Invincibilité de réapparition en cours (règles de match). */
   invincible: boolean;
-  /** Attaque ultime autorisée (règles de match). */
+  /** Attaque ultime prête (levée par les règles de match) : le prochain spécial neutre la lance. */
   ultimateReady: boolean;
   /** Sauts aériens restants. */
   jumpsLeft: number;

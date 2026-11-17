@@ -7,7 +7,7 @@
  */
 import { A_ATTACK, A_DEAD, A_ITEM_SWING } from '../actions.ts';
 import type { CapsuleDef, FighterDef } from '../defs.ts';
-import { EV_HIT, EV_PARRY, EV_SHIELD, emit } from '../events.ts';
+import { EV_COUNTER, EV_HIT, EV_PARRY, EV_SHIELD, emit } from '../events.ts';
 import { FX_ONE, fxMul } from '../fixed.ts';
 import { capsulesOverlap } from '../geometry.ts';
 import { G_PLAYERS, MAX_ENTITIES, MAX_PLAYERS, type SimState } from '../state.ts';
@@ -15,6 +15,7 @@ import type { Sim } from '../step.ts';
 import { PARRY_ATTACKER_LAG, blockHit, isParrying, isShielding, parryHit } from './defense.ts';
 import { ITEM_MODE_THROWN, heldSwing, itemHitFighter } from './items.ts';
 import { applyHit, hitlagFrames, knockback } from './knockback.ts';
+import { armorHolds, counterHit, isCountering } from './specials.ts';
 
 /** Tableaux de travail d'une frame. Hors de l'état : entièrement recalculés à chaque `step`. */
 export interface HitScratch {
@@ -252,6 +253,12 @@ export function resolveHits(sim: Sim): void {
     } else if (isParrying(sim, j)) {
       outcome = EV_PARRY;
       parryHit(sim, j);
+    } else if (isCountering(sim, j)) {
+      outcome = EV_COUNTER;
+      counterHit(sim, j, sc.pushDir[j]!, sc.targetLag[j]!);
+    } else if (armorHolds(sim, j, sc.kb[j]!)) {
+      s.damage[j] = s.damage[j]! + sc.damage[j]!;
+      if (sc.targetLag[j]! > s.hitlag[j]!) s.hitlag[j] = sc.targetLag[j]!;
     } else {
       applyHit(sim, j, sc.damage[j]!, sc.kb[j]!, sc.angle[j]!, sc.targetLag[j]!);
     }
@@ -259,8 +266,10 @@ export function resolveHits(sim: Sim): void {
     for (let i = 0; i < players; i++) {
       if ((by & (1 << i)) === 0) continue;
       emit(sim.events, outcome, i, j);
-      // Un attaquant paré reste gelé plus longtemps : c'est l'ouverture offerte au défenseur.
-      if (outcome === EV_PARRY) sc.attackerLag[i] = sc.attackerLag[i]! + PARRY_ATTACKER_LAG;
+      // Un attaquant paré ou contré reste gelé plus longtemps : c'est l'ouverture du défenseur.
+      if (outcome === EV_PARRY || outcome === EV_COUNTER) {
+        sc.attackerLag[i] = sc.attackerLag[i]! + PARRY_ATTACKER_LAG;
+      }
     }
     const entityOwner = sc.byEntity[j]!;
     if (entityOwner !== 0) emit(sim.events, outcome, entityOwner > 0 ? entityOwner - 1 : -1, j);

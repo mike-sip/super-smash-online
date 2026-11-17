@@ -133,6 +133,23 @@ export interface ItemDef {
   readonly burst?: number;
 }
 
+/** Fenêtre de frames d'une attaque, première et dernière incluses. */
+export interface FrameWindow {
+  readonly start: number;
+  readonly end: number;
+}
+
+/**
+ * Élan propre à une attaque (SPEC-fighters.md, E1) : pendant la fenêtre, la vitesse horizontale
+ * vaut `regard × velX` et la verticale vaut `velY`, sans gravité. Une composante absente laisse
+ * agir le reste du moteur (frottement au sol, dérive en l'air, gravité). Une vitesse verticale
+ * positive au sol fait décoller le combattant sans interrompre l'attaque.
+ */
+export interface MotionDef extends FrameWindow {
+  readonly velX?: Fx;
+  readonly velY?: Fx;
+}
+
 export interface MoveDef {
   readonly name: string;
   /** Durée totale. Le combattant redevient libre à la frame `totalFrames + 1`. */
@@ -144,6 +161,26 @@ export interface MoveDef {
   readonly spawn?: SpawnDef;
   /** Lag d'atterrissage si le combattant touche le sol pendant cette attaque aérienne. */
   readonly landingLag?: number;
+  /** Élan propre (E1). Si plusieurs fenêtres se chevauchent, la première de la liste l'emporte. */
+  readonly motion?: readonly MotionDef[];
+  /** Frames pendant lesquelles aucun coup ni saisie ne touche le combattant (E3). */
+  readonly intangible?: FrameWindow;
+  /** Si vrai et que le coup se termine en l'air, le combattant passe en chute impuissante (E2). */
+  readonly helpless?: boolean;
+  /** Armure (E4) : pendant la fenêtre, un coup reçu d'éjection au plus `maxKnockback` inflige ses
+   * dégâts et son gel, sans hitstun ni éjection : l'attaque continue. */
+  readonly armor?: ArmorDef;
+  /** Contre (E5) : frappé pendant la fenêtre, le combattant ne subit rien et lance l'emplacement `to`. */
+  readonly counter?: CounterDef;
+}
+
+export interface ArmorDef extends FrameWindow {
+  readonly maxKnockback: Fx;
+}
+
+export interface CounterDef extends FrameWindow {
+  /** Emplacement de la riposte, en général `M_EXTRA1` ou `M_EXTRA2`. */
+  readonly to: number;
 }
 
 export interface GrabDef {

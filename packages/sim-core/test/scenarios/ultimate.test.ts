@@ -21,9 +21,9 @@ import { countEvents, hold, newSim, press, stick, teleportAir } from './helpers.
 const B = press(BTN_SPECIAL);
 
 describe('attaque ultime', () => {
-  it('occupe le dernier emplacement d’attaque', () => {
+  it('occupe l’emplacement 20, avant les deux emplacements libres de `fighters`', () => {
     expect(M_ULTIMATE).toBe(20);
-    expect(MOVE_SLOTS).toBe(21);
+    expect(MOVE_SLOTS).toBe(23);
     expect(TEST_FIGHTER.moves[M_ULTIMATE]).toBeDefined();
   });
 

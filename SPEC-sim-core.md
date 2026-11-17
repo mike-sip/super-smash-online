@@ -101,6 +101,9 @@ export function respawn(sim: Sim, player: number): void;
 export function spawnEntity(sim: Sim, kind: number, owner: number, x: number, y: number, velX: number, velY: number): number;
 export function frame(sim: Sim): number;
 
+/** Ajouté pour le module `fighters` (SPEC-fighters.md, E6), approuvé le 2026-11-13 : */
+export function setUltimateReady(sim: Sim, player: number, ready: boolean): void;
+
 /** Avance d'une frame. `inputs[i]` est l'input du joueur i. N'alloue aucune mémoire. */
 export function step(sim: Sim, inputs: Uint32Array): void;
 
@@ -195,7 +198,7 @@ Mis à jour à chaque phase. Chaque point est soit une simplification assumée, 
 | Saisies | Deux saisies mutuelles s'annulent. Deux joueurs sur la même victime : le plus proche gagne, puis le plus petit index à distance égale. | — |
 | Rebords | Un seul occupant ; si deux joueurs l'atteignent à la même frame, le plus petit index l'obtient. Pas de vol de rebord. Les remontées téléportent le combattant à la fin de l'action : le mouvement intermédiaire est laissé au rendu. | Vol de rebord à décider. |
 | Entités | Seuls les blocs pleins les arrêtent, pas les plateformes. Elles ne peuvent être ni ramassées ni renvoyées. | Ramassage et lancer : module `stages-items`. |
-| Spéciaux | Un spécial est une attaque comme une autre, plus la création éventuelle d'une entité. Pas encore d'élan propre (spécial de retour au stage). | À ajouter avec le module `fighters`. |
+| Spéciaux | Un spécial est une attaque comme une autre, plus la création éventuelle d'une entité. Extensions demandées par [SPEC-fighters.md](SPEC-fighters.md) et approuvées le 2026-11-13, toutes optionnelles dans `MoveDef` : élan (`motion`), chute impuissante (`helpless`, action `A_HELPLESS` = 31), invincibilité (`intangible`), armure (`armor`), contre (`counter`, emplacements `M_EXTRA1`/`M_EXTRA2`, événement `EV_COUNTER`), attaque ultime (emplacement `M_ULTIMATE`, champ d'état `ultimateReady`, `setUltimateReady`, événement `EV_ULTIMATE`). Scénarios dans `test/scenarios/specials.test.ts`. | Le champ `ultimateReady` change la taille de l'état (2 796 octets) et les checksums de référence : à régénérer à la fusion avec les autres branches. |
 | Limite haute | Ne tue qu'un combattant en hitstun ou en chute désordonnée. | — |
 | Réapparition | Instantanée sur le point d'apparition, sans invincibilité. | Module `match-rules`. |
 | Corps des combattants | Ils se traversent : pas de poussée entre deux combattants au sol. | Hors périmètre, à décider. |
