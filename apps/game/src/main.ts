@@ -6,6 +6,7 @@ import { GAME_NAME } from './strings.ts';
 import { openLocal, openTraining } from './ui/local.ts';
 import { openOptions } from './ui/options.ts';
 import { openOnline } from './ui/online.ts';
+import { openProfile } from './ui/profile.ts';
 import { Online, shouldResumeOnline } from './online.ts';
 import { errorScreen, mainMenu, titleScreen, type MainMenuEntry } from './ui/screens-basic.ts';
 
@@ -28,7 +29,14 @@ const elements: AppElements = {
 };
 
 let online: Online | null = null;
-const getOnline = (a: App): Online => (online ??= new Online(a));
+function getOnline(a: App): Online {
+  if (online === null) {
+    online = new Online(a);
+    const o = online;
+    o.openProfile = () => openProfile(a, o);
+  }
+  return online;
+}
 /** Lien d'invitation `#rejoindre=CODE` : le code est lu puis retiré de l'adresse. */
 const invite = /^#rejoindre=([A-Za-z0-9-]{6,9})$/.exec(location.hash)?.[1];
 if (invite !== undefined) history.replaceState(null, '', location.pathname + location.search);
@@ -39,6 +47,12 @@ const entries: MainMenuEntry[] = [
     label: 'En ligne',
     detail: 'Salons privés et partie rapide',
     open: (a) => openOnline(a, getOnline(a)),
+  },
+  {
+    id: 'profile',
+    label: 'Profil et classement',
+    detail: 'Cote, historique, compte',
+    open: (a) => openProfile(a, getOnline(a)),
   },
   { id: 'local', label: 'Combat local', detail: '2 à 4 joueurs', open: openLocal },
   {

@@ -73,7 +73,7 @@
   - Vérification : Edge à deux onglets : salon par code et par lien, match jusqu'au bout, mêmes résultats, retour au salon ; partie rapide ; rechargement ; serveur de jeu arrêté puis relancé.
   - Fichiers : `apps/game/src/online-match.ts`, `src/ui/room.ts`, `src/ui/queue.ts`, `test/e2e/online.test.ts`
 
-- [ ] **T12 : Profil, historique, classement, compte**
+- [x] **T12 : Profil, historique, classement, compte**
   - Acceptation : profil (cote ou provisoire, rang, statistiques par personnage) ; historique paginé ; classement paginé avec ma position ; changement de pseudo et de mot de passe, déconnexion, suppression confirmée.
   - Vérification : Edge : après une partie rapide entre inscrits, cote et historique à jour dans les deux onglets ; suppression de compte.
   - Fichiers : `apps/game/src/ui/profile.ts`, `src/ui/leaderboard.ts`, `src/ui/account.ts`, `test/e2e/profile.test.ts`

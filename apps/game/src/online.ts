@@ -64,7 +64,9 @@ export class Online {
   }
 
   setMe(me: AccountView | null): void {
-    const changedIdentity = this.me?.id !== me?.id;
+    // Même identifiant après la conversion d'un invité : le statut et le pseudo comptent aussi.
+    const changedIdentity =
+      this.me?.id !== me?.id || this.me?.guest !== me?.guest || this.me?.pseudo !== me?.pseudo;
     this.me = me;
     // Nouveau compte (connexion, inscription) : le lobby doit reconnaître la nouvelle identité.
     if (changedIdentity && this.lobby !== null) {
