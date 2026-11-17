@@ -63,12 +63,12 @@
 
 ## Phase D — On joue en ligne
 
-- [ ] **T10 : Connexion et accueil en ligne**
+- [x] **T10 : Connexion et accueil en ligne**
   - Acceptation : invité automatique ; connexion, inscription, conversion d'invité (messages de validation d'`accounts`) ; accueil (salon privé, rejoindre, partie rapide) ; bandeau d'état du lobby (connexion, reconnexion, hors ligne) ; lien `#rejoindre=CODE`.
   - Vérification : Edge : invité puis conversion ; mauvais mot de passe affiché ; serveur des comptes absent : message et « Réessayer ».
   - Fichiers : `apps/game/src/online.ts`, `src/ui/auth.ts`, `src/ui/online-home.ts`, `src/ui/banner.ts`, `test/e2e/online.test.ts`
 
-- [ ] **T11 : Salon privé, partie rapide, match en ligne**
+- [x] **T11 : Salon privé, partie rapide, match en ligne**
   - Acceptation : salon (code, copie, lien, membres, sélection, prêt, règles et stage de l'hôte, expulsion, verrou, motifs de refus de lancement) ; file (attente, annulation, refus) ; match en ligne (netcode, déclaration sur état confirmé, joueurs partis et revenus, désync, « Quitter la partie ? ») ; résultats et retour au salon ; rechargement en pleine partie.
   - Vérification : Edge à deux onglets : salon par code et par lien, match jusqu'au bout, mêmes résultats, retour au salon ; partie rapide ; rechargement ; serveur de jeu arrêté puis relancé.
   - Fichiers : `apps/game/src/online-match.ts`, `src/ui/room.ts`, `src/ui/queue.ts`, `test/e2e/online.test.ts`

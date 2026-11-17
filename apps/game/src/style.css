@@ -546,3 +546,22 @@ tr.me td {
     grid-template-columns: 1fr;
   }
 }
+
+.banner-inline {
+  position: absolute;
+  top: 3.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.35rem 0.8rem;
+  border-radius: var(--radius);
+  background: rgb(14 18 32 / 0.8);
+}
+
+.banner-inline:empty {
+  display: none;
+}
+
+form.panel input {
+  width: 100%;
+}

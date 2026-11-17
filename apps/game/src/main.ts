@@ -5,7 +5,9 @@ import { createBackground } from './background.ts';
 import { GAME_NAME } from './strings.ts';
 import { openLocal, openTraining } from './ui/local.ts';
 import { openOptions } from './ui/options.ts';
-import { errorScreen, titleScreen, type MainMenuEntry } from './ui/screens-basic.ts';
+import { openOnline } from './ui/online.ts';
+import { Online, shouldResumeOnline } from './online.ts';
+import { errorScreen, mainMenu, titleScreen, type MainMenuEntry } from './ui/screens-basic.ts';
 
 function element<T extends HTMLElement>(id: string): T {
   const found = document.getElementById(id);
@@ -25,7 +27,19 @@ const elements: AppElements = {
   fps: element('fps'),
 };
 
+let online: Online | null = null;
+const getOnline = (a: App): Online => (online ??= new Online(a));
+/** Lien d'invitation `#rejoindre=CODE` : le code est lu puis retiré de l'adresse. */
+const invite = /^#rejoindre=([A-Za-z0-9-]{6,9})$/.exec(location.hash)?.[1];
+if (invite !== undefined) history.replaceState(null, '', location.pathname + location.search);
+
 const entries: MainMenuEntry[] = [
+  {
+    id: 'online',
+    label: 'En ligne',
+    detail: 'Salons privés et partie rapide',
+    open: (a) => openOnline(a, getOnline(a)),
+  },
   { id: 'local', label: 'Combat local', detail: '2 à 4 joueurs', open: openLocal },
   {
     id: 'training',
@@ -36,7 +50,18 @@ const entries: MainMenuEntry[] = [
   { id: 'options', label: 'Options', detail: 'Commandes, son, affichage', open: openOptions },
 ];
 
-const app = new App(elements, (a) => titleScreen(a, entries));
+const app = new App(elements, (a) =>
+  titleScreen(
+    a,
+    entries,
+    invite === undefined ? undefined : () => openOnline(a, getOnline(a), invite),
+  ),
+);
+// Page rechargée dans un salon ou en pleine partie : retour direct en ligne, le lobby renvoie la partie.
+if (invite === undefined && shouldResumeOnline()) {
+  app.replace(mainMenu(app, entries));
+  openOnline(app, getOnline(app));
+}
 /** Écrans qui ont leur propre rendu sur le canvas. */
 const MATCH_SCREENS = new Set(['match-local', 'training', 'match-online']);
 const background = createBackground(app, () => MATCH_SCREENS.has(app.top().id));

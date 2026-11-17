@@ -13,7 +13,11 @@ export interface MainMenuEntry {
   readonly open: (app: App) => void;
 }
 
-export function titleScreen(app: App, entries: readonly MainMenuEntry[]): Screen {
+export function titleScreen(
+  app: App,
+  entries: readonly MainMenuEntry[],
+  afterStart?: () => void,
+): Screen {
   const start = el('button', {
     className: 'btn primary press',
     id: 'press-start',
@@ -24,6 +28,7 @@ export function titleScreen(app: App, entries: readonly MainMenuEntry[]): Screen
     app.audio.unlock();
     app.audio.playMusic('arena');
     app.replace(mainMenu(app, entries));
+    afterStart?.();
   };
   start.addEventListener('click', go);
   const root = el(
