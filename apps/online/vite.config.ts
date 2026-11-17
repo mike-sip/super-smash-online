@@ -1,11 +1,11 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
-import { relayPlugin } from './src/relay-plugin.ts';
+import { onlineDevPlugin } from './src/dev-plugin.ts';
 
 const source = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
 
 export default defineConfig({
-  plugins: [relayPlugin()],
+  plugins: [onlineDevPlugin()],
   resolve: {
     // Comme apps/demo : les modules sont lus dans leurs sources, par leurs points d'entrée publics.
     alias: [

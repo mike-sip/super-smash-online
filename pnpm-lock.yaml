@@ -227,9 +227,21 @@ importers:
 
   apps/online:
     dependencies:
+      '@game/accounts':
+        specifier: workspace:*
+        version: link:../../packages/accounts
+      '@game/accounts-client':
+        specifier: workspace:*
+        version: link:../../packages/accounts-client
       '@game/input':
         specifier: workspace:*
         version: link:../../packages/input
+      '@game/lobby':
+        specifier: workspace:*
+        version: link:../../packages/lobby
+      '@game/match-rules':
+        specifier: workspace:*
+        version: link:../../packages/match-rules
       '@game/netcode':
         specifier: workspace:*
         version: link:../../packages/netcode
@@ -306,6 +318,40 @@ importers:
         specifier: workspace:*
         version: link:../sim-core
     devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^5.1.0
+        version: 5.1.0(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(vite@8.3.7(@types/node@26.6.6))
+
+  packages/lobby:
+    dependencies:
+      '@game/accounts':
+        specifier: workspace:*
+        version: link:../accounts
+      '@game/match-rules':
+        specifier: workspace:*
+        version: link:../match-rules
+      '@game/netcode':
+        specifier: workspace:*
+        version: link:../netcode
+      ws:
+        specifier: ^8.23.0
+        version: 8.23.0
+    devDependencies:
+      '@game/accounts-client':
+        specifier: workspace:*
+        version: link:../accounts-client
+      '@game/sim-core':
+        specifier: workspace:*
+        version: link:../sim-core
+      '@types/node':
+        specifier: ^26.6.6
+        version: 26.6.6
+      '@types/ws':
+        specifier: ^8.18.2
+        version: 8.18.2
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
