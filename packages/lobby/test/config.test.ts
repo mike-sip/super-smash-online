@@ -18,8 +18,47 @@ describe('configuration', () => {
         content: { fighters: ['vif', 'lourd'], stages: ['arene'] },
         regions: ['eu'],
         trustProxy: false,
+        maxGames: 200,
+        ranking: null,
       },
     });
+  });
+
+  it('envoi au classement : adresse et clés ensemble, ou rien', () => {
+    const key = 'r'.repeat(32);
+    const r = readConfig({
+      ...BASE,
+      RANKING_URL: 'http://accounts:8787',
+      RANKING_REPORT_SECRETS: `${key}, ${'s'.repeat(40)}`,
+    });
+    expect(r.ok && r.config.ranking).toEqual({
+      url: 'http://accounts:8787/api/ranking/v1/matches',
+      secret: key,
+    });
+    expect(readConfig({ ...BASE, RANKING_URL: 'http://accounts:8787' }).ok).toBe(false);
+    expect(readConfig({ ...BASE, RANKING_REPORT_SECRETS: key }).ok).toBe(false);
+    expect(
+      readConfig({ ...BASE, RANKING_URL: 'http://accounts:8787', RANKING_REPORT_SECRETS: 'court' })
+        .ok,
+    ).toBe(false);
+    expect(readConfig({ ...BASE, RANKING_URL: 'ftp://x', RANKING_REPORT_SECRETS: key }).ok).toBe(
+      false,
+    );
+    // Clé de rapport identique à une clé de ticket : refusée, comme chez ranking.
+    expect(
+      readConfig({
+        ...BASE,
+        RANKING_URL: 'http://accounts:8787',
+        RANKING_REPORT_SECRETS: 'x'.repeat(32),
+      }).ok,
+    ).toBe(false);
+  });
+
+  it('plafond de parties du relais', () => {
+    const r = readConfig({ ...BASE, RELAY_MAX_GAMES: '50' });
+    expect(r.ok && r.config.maxGames).toBe(50);
+    expect(readConfig({ ...BASE, RELAY_MAX_GAMES: '0' }).ok).toBe(false);
+    expect(readConfig({ ...BASE, RELAY_MAX_GAMES: 'beaucoup' }).ok).toBe(false);
   });
 
   it('refuse de démarrer sans clé, avec une clé courte, sans contenu ou avec un identifiant invalide', () => {

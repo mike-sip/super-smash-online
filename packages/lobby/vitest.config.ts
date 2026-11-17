@@ -19,6 +19,7 @@ export const aliases = [
   { find: /^@game\/accounts-client$/, replacement: source('../accounts-client/src/index.ts') },
   { find: /^@game\/ranking\/protocol$/, replacement: source('../ranking/src/protocol.ts') },
   { find: /^@game\/ranking\/report$/, replacement: source('../ranking/src/report.ts') },
+  { find: /^@game\/ranking$/, replacement: source('../ranking/src/index.ts') },
   { find: /^@game\/accounts$/, replacement: source('../accounts/src/index.ts') },
 ];
 

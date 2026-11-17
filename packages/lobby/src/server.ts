@@ -27,6 +27,10 @@ export interface GameServerConfig {
   readonly quick?: Partial<QuickMatchSettings>;
   readonly onMatchResult?: (record: MatchRecord) => void;
   readonly log?: (message: string) => void;
+  /** Parties simultanées au plus dans le relais (défaut du relais : 1 000). */
+  readonly maxGames?: number;
+  /** Compteurs ajoutés à la réponse de `/health` (ex. rapports en attente). */
+  readonly health?: () => Readonly<Record<string, number>>;
 }
 
 export interface GameServer {
@@ -55,6 +59,7 @@ export function attachGameServer(
     onGameEvent: (event) => lobby?.relayEvent(event),
     onDesync: (gameId) => lobby?.relayDesync(gameId),
     log: (m) => log(`[relais] ${m}`),
+    ...(config.maxGames === undefined ? {} : { maxGames: config.maxGames }),
   });
   const created = createLobby({
     now: () => Date.now(),
@@ -89,7 +94,7 @@ export function createGameServer(config: GameServerConfig): GameServer {
   const http = createServer((req, res) => {
     if (req.method === 'GET' && pathOf(req.url) === '/health') {
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
-      res.end('{"ok":true}');
+      res.end(JSON.stringify({ ok: true, ...attached.lobby.stats(), ...config.health?.() }));
       return;
     }
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
