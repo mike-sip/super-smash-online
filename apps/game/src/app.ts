@@ -94,6 +94,11 @@ export class App {
     this.input.assign(0, KEYBOARD_ID);
     this.audio = createGameAudio({ settings: this.audioSettings() });
     this.applyDisplay();
+    const probe = new Uint32Array(4);
+    this.test.sample = () => {
+      this.input.sample(probe);
+      return probe[0];
+    };
     this.test.devices = () => [0, 1, 2, 3].map((p) => this.input.assigned(p)?.id ?? null);
 
     const unlock = (): void => this.audio.unlock();
@@ -380,6 +385,8 @@ export class App {
     saveSettings(this.storage, next);
     this.audio.setSettings(this.audioSettings());
     this.applyDisplay();
+    // Résolution du rendu ou taille du texte : les renderers se recalent.
+    window.dispatchEvent(new Event('resize'));
   }
 
   /** Densité de pixels du rendu, plafonnée par le réglage. */

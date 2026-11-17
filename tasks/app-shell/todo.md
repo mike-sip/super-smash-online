@@ -54,7 +54,7 @@
   - Vérification : Edge : combat à deux (clavier et fausse manette) jusqu'aux résultats puis revanche ; chaque mode ; règles refusées affichées ; entraînement à 7 mannequins.
   - Fichiers : `apps/game/src/ui/local-setup.ts`, `src/ui/stage-select.ts`, `src/ui/rules.ts`, `src/ui/training.ts`, `src/ui/results.ts`, `src/local-setup.ts` (état pur), `test/local-setup.test.ts`, `test/e2e/local.test.ts`
 
-- [ ] **T9 : Options**
+- [x] **T9 : Options**
   - Acceptation : commandes (remappage clavier et manette par `captureNext`/`setBindings`, refus affichés, analogique, saut au stick, réinitialiser) ; son ; affichage (plein écran, résolution de rendu, grand texte, mouvements réduits, compteur d'images).
   - Vérification : Edge : une touche remappée sert en combat et survit au rechargement ; son coupé ; grand texte sans débordement ; stockage corrompu ignoré.
   - Fichiers : `apps/game/src/ui/options-*.ts`, `test/e2e/options.test.ts`

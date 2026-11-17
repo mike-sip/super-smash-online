@@ -4,6 +4,7 @@ import { App, type AppElements } from './app.ts';
 import { createBackground } from './background.ts';
 import { GAME_NAME } from './strings.ts';
 import { openLocal, openTraining } from './ui/local.ts';
+import { openOptions } from './ui/options.ts';
 import { errorScreen, titleScreen, type MainMenuEntry } from './ui/screens-basic.ts';
 
 function element<T extends HTMLElement>(id: string): T {
@@ -32,6 +33,7 @@ const entries: MainMenuEntry[] = [
     detail: 'Seul, contre des mannequins',
     open: openTraining,
   },
+  { id: 'options', label: 'Options', detail: 'Commandes, son, affichage', open: openOptions },
 ];
 
 const app = new App(elements, (a) => titleScreen(a, entries));
