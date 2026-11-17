@@ -225,6 +225,58 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(vite@8.3.7(@types/node@26.6.6))
 
+  apps/game:
+    dependencies:
+      '@game/accounts-client':
+        specifier: workspace:*
+        version: link:../../packages/accounts-client
+      '@game/fighters':
+        specifier: workspace:*
+        version: link:../../packages/fighters
+      '@game/input':
+        specifier: workspace:*
+        version: link:../../packages/input
+      '@game/lobby':
+        specifier: workspace:*
+        version: link:../../packages/lobby
+      '@game/match-rules':
+        specifier: workspace:*
+        version: link:../../packages/match-rules
+      '@game/netcode':
+        specifier: workspace:*
+        version: link:../../packages/netcode
+      '@game/ranking':
+        specifier: workspace:*
+        version: link:../../packages/ranking
+      '@game/render':
+        specifier: workspace:*
+        version: link:../../packages/render
+      '@game/sim-core':
+        specifier: workspace:*
+        version: link:../../packages/sim-core
+      '@game/stages-items':
+        specifier: workspace:*
+        version: link:../../packages/stages-items
+    devDependencies:
+      '@game/accounts':
+        specifier: workspace:*
+        version: link:../../packages/accounts
+      '@types/node':
+        specifier: ^26.6.6
+        version: 26.6.6
+      playwright-core:
+        specifier: ^1.65.0
+        version: 1.65.0
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.3.7
+        version: 8.3.7(@types/node@26.6.6)
+      vitest:
+        specifier: ^5.1.0
+        version: 5.1.0(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(vite@8.3.7(@types/node@26.6.6))
+
   apps/online:
     dependencies:
       '@game/accounts':
