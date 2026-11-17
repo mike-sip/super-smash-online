@@ -87,7 +87,7 @@
   - Vérification : test du contenu du build ; parcours de l'objectif dans Edge sur le build de production (titre, local, deux onglets en partie rapide, résultats, profil à jour), au clavier seul, sans erreur de console.
   - Fichiers : `apps/game/vite.config.ts`, `deploy/routes.ts`, `deploy/gateway.ts`, `apps/game/scripts/serve-prod.ts`, `apps/game/test/build.test.ts`, `apps/game/test/e2e/journey.test.ts`
 
-- [ ] **T14 : Performance**
+- [x] **T14 : Performance**
   - Acceptation : mesure dans Edge sur l'écran de combat de l'application (8 combattants, objets, son) et sur les menus au-dessus de la scène de fond ; taille du client compressé consignée.
   - Vérification : seuils de `render` tenus ; menus à 95 % sous 16,7 ms.
   - Fichiers : `apps/game/test/perf/perf.test.ts`, `apps/game/vitest.perf.config.ts`

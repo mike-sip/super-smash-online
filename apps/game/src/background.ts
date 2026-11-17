@@ -60,7 +60,7 @@ export function createBackground(app: App, inMatch: () => boolean): Background {
     }
     step(sim!, idle);
     renderer!.capture(sim!);
-    renderer!.draw(1);
+    app.timeDraw(() => renderer!.draw(1));
   });
 
   return { release };

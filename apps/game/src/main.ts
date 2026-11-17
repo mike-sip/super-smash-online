@@ -3,7 +3,7 @@ import './style.css';
 import { App, type AppElements } from './app.ts';
 import { createBackground } from './background.ts';
 import { GAME_NAME } from './strings.ts';
-import { openLocal, openTraining } from './ui/local.ts';
+import { openLocal, openTraining, perfTraining } from './ui/local.ts';
 import { openOptions } from './ui/options.ts';
 import { openOnline } from './ui/online.ts';
 import { openProfile } from './ui/profile.ts';
@@ -86,6 +86,7 @@ window.addEventListener('unhandledrejection', (event) => app.fail(event.reason))
 
 // Prise pour les tests automatiques, absente du build public (variable de build réservée aux tests).
 if (import.meta.env.VITE_TEST_HOOK === '1') {
+  app.test.perfTraining = (stage: string) => perfTraining(app, stage);
   const hook = {
     screen: () => app.top().id,
     screens: () => app.ids(),

@@ -271,7 +271,7 @@ export function localMatch(app: App, options: LocalMatchOptions): LocalMatch {
           app.announce('Fin du match !');
         }
       }
-      renderer.draw(alpha);
+      app.timeDraw(() => renderer.draw(alpha));
       if (endedAt !== null && now - endedAt >= END_DELAY_MS) {
         finished = true;
         options.onEnd(matchResult(sim)!);

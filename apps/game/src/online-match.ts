@@ -179,7 +179,7 @@ export function onlineMatch(
           }
         }
       }
-      renderer?.draw(alpha);
+      if (renderer !== null) app.timeDraw(() => renderer!.draw(alpha));
     },
     stop() {
       if (stopped) return;

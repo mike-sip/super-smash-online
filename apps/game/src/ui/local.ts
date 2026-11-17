@@ -547,6 +547,27 @@ function startLocalMatch(
   app.push(screen);
 }
 
+// --- Mesure de performance (prise de test) ---
+
+/** Scénario de la mesure : 8 combattants, mannequins à inputs aléatoires, objets fréquents. */
+export function perfTraining(app: App, stage: string): void {
+  app.input.assign(0, KEYBOARD_ID);
+  app.push(
+    localMatch(app, {
+      match: null,
+      stage,
+      hazards: true,
+      fighters: Array.from({ length: 8 }, (_, i) => ROSTER[i % ROSTER.length]!),
+      controllers: [0, -1, -1, -1, -1, -1, -1, -1],
+      dummyMode: 'random',
+      trainingItems: 'high',
+      seed: 1,
+      onEnd: () => {},
+      onQuit: () => app.pop(),
+    }),
+  );
+}
+
 // --- Entraînement ----------------------------------------------------------------------------
 
 export function openTraining(app: App): void {

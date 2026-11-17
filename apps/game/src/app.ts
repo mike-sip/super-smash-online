@@ -99,6 +99,14 @@ export class App {
       this.input.sample(probe);
       return probe[0];
     };
+    this.test.perfStart = () => {
+      this.perf = { frame: [], draw: [], interval: [], last: 0 };
+    };
+    this.test.perfStop = () => {
+      const p = this.perf;
+      this.perf = null;
+      return p;
+    };
     this.test.devices = () => [0, 1, 2, 3].map((p) => this.input.assigned(p)?.id ?? null);
 
     const unlock = (): void => this.audio.unlock();
@@ -332,7 +340,22 @@ export class App {
     return () => this.frameListeners.delete(listener);
   }
 
+  /** Mesure de performance (tests) : durée de chaque image, et du dessin seul. */
+  private perf: { frame: number[]; draw: number[]; interval: number[]; last: number } | null = null;
+
+  /** À appeler autour de `renderer.draw` : temps de dessin, pour la mesure de performance. */
+  timeDraw(draw: () => void): void {
+    if (this.perf === null) {
+      draw();
+      return;
+    }
+    const t = performance.now();
+    draw();
+    this.perf.draw.push(performance.now() - t);
+  }
+
   private tick(now: number): void {
+    const began = performance.now();
     try {
       const top = this.stack.top();
       if (top.capturesInput !== true) {
@@ -350,6 +373,11 @@ export class App {
       this.countFps(now);
     } catch (error) {
       this.fail(error);
+    }
+    if (this.perf !== null) {
+      this.perf.frame.push(performance.now() - began);
+      if (this.perf.last > 0) this.perf.interval.push(now - this.perf.last);
+      this.perf.last = now;
     }
     requestAnimationFrame((t) => this.tick(t));
   }
