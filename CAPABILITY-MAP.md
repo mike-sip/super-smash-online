@@ -2,7 +2,7 @@
 
 > Statut : **APPROUVÉE le 2026-11-11**. Les specs de module sont nommées `SPEC-<id du module>.md` à la racine.
 >
-> Specs existantes : [`sim-core`](SPEC-sim-core.md) (implémenté ; déterminisme dans Firefox encore à vérifier), [`render`](SPEC-render.md) (implémenté, audio compris ; ressenti, manette et écoute à valider à la main), [`input`](SPEC-input.md) (implémenté ; essai à la manette réelle, Firefox et Safari encore à faire), [`netcode`](SPEC-netcode.md) (implémenté ; un critère partiel à reformuler, essai en ligne à faire), [`match-rules`](SPEC-match-rules.md) (implémenté ; essai manette en main à faire), [`accounts`](SPEC-accounts.md) (implémenté ; essai du panneau Compte à faire). En cours sur leur branche : `fighters`, `stages-items`.
+> Specs existantes : [`sim-core`](SPEC-sim-core.md) (implémenté ; déterminisme dans Firefox encore à vérifier), [`render`](SPEC-render.md) (implémenté, audio compris ; ressenti, manette et écoute à valider à la main), [`input`](SPEC-input.md) (implémenté ; essai à la manette réelle, Firefox et Safari encore à faire), [`netcode`](SPEC-netcode.md) (implémenté ; critère 2 reformulé, encore partiel sur WebSocket avec pertes ; essai en ligne à faire), [`match-rules`](SPEC-match-rules.md) (implémenté ; essai manette en main à faire), [`accounts`](SPEC-accounts.md) (implémenté ; essai du panneau Compte à faire)., [`fighters`](SPEC-fighters.md) (implémenté ; quatre personnages validés en main), [`stages-items`](SPEC-stages-items.md) (implémenté ; ressenti à juger), [`ranking`](SPEC-ranking.md) (implémenté ; essai du panneau Classement à faire), [`lobby`](SPEC-lobby.md) (implémenté ; essai en ligne à faire, envoi des résultats à `ranking` à brancher). Reste : `app-shell`.
 
 ## Vision
 
