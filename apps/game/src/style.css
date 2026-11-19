@@ -511,6 +511,12 @@ tr.me td {
   background: rgb(0 0 0 / 0.55);
 }
 
+/* `display: grid` l'emporte sur l'attribut `hidden` : sans cette règle, le menu de pause masqué
+   assombrissait tout le combat. */
+.dialog[hidden] {
+  display: none;
+}
+
 .dialog > .panel {
   width: min(28rem, calc(100% - 2rem));
 }
@@ -564,4 +570,40 @@ tr.me td {
 
 form.panel input {
   width: 100%;
+}
+
+/* Portraits des figurines (SPEC-visuals.md, phase 7). */
+.card .portrait {
+  width: 100%;
+  max-width: 9rem;
+  aspect-ratio: 1;
+  justify-self: center;
+  object-fit: contain;
+  border-radius: var(--radius);
+  background: radial-gradient(circle at 50% 40%, rgb(255 255 255 / 0.16), transparent 70%);
+}
+
+.victory-art {
+  display: block;
+  height: min(42vh, 26rem);
+  margin: 0 auto -1rem;
+  filter: drop-shadow(0 0.6rem 1.2rem rgb(0 0 0 / 0.45));
+  animation: victory-in 0.7s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+@keyframes victory-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem) scale(0.85);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .victory-art {
+    animation: none;
+  }
+}
+
+:root[data-motion='reduced'] .victory-art {
+  animation: none;
 }

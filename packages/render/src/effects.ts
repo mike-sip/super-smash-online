@@ -1,182 +1,26 @@
 /**
- * Effets visuels : impacts, bouclier, parade, bris de bouclier, KO, saisie, accroche.
+ * Effets attachés aux combattants et à l'écran : tremblement de la victime, bulle de bouclier,
+ * éclair d'écran. Les effets d'événements (étincelles, KO, poussière…) sont des particules : voir
+ * `vfx/library.ts`.
  *
- * La première moitié du fichier est de la logique pure (quel effet, où, combien de temps) ; la
- * seconde le dessine. Les effets vivent dans une réserve de taille fixe et leur âge se compte en
- * frames de simulation : ils se figent en pause et ralentissent au ralenti, comme le reste.
+ * Le temps est celui de la simulation, en frames : tout se fige en pause et ralentit au ralenti.
  */
-import {
-  A_HITSTUN,
-  A_SHIELD,
-  A_SHIELDSTUN,
-  EV_GRAB,
-  EV_HIT,
-  EV_KO,
-  EV_LEDGE,
-  EV_PARRY,
-  EV_SHIELD,
-  EV_SHIELD_BREAK,
-  type FighterView,
-} from '@game/sim-core';
+import { A_HITSTUN, A_SHIELD, A_SHIELDSTUN } from '@game/sim-core';
 import {
   AdditiveBlending,
-  CircleGeometry,
   Color,
   Group,
+  InstancedBufferAttribute,
   InstancedMesh,
   Matrix4,
+  Mesh,
   MeshBasicMaterial,
-  RingGeometry,
+  PlaneGeometry,
+  ShaderMaterial,
   SphereGeometry,
+  type Camera,
 } from 'three';
 import { PLAYER_COLORS } from './fighters/visual.ts';
-
-/** Disque plein qui éclate puis s'éteint. */
-export const FX_DISC = 0;
-/** Anneau qui s'élargit en s'éteignant. */
-export const FX_RING = 1;
-
-export interface EffectPool {
-  readonly capacity: number;
-  /** Prochain emplacement à écrire : la réserve tourne en rond. */
-  next: number;
-  readonly shape: Uint8Array;
-  readonly x: Float32Array;
-  readonly y: Float32Array;
-  readonly size: Float32Array;
-  readonly color: Int32Array;
-  /** Frame de naissance et durée, en frames simulées. Une durée nulle marque un emplacement libre. */
-  readonly born: Int32Array;
-  readonly life: Int32Array;
-}
-
-export function createEffectPool(capacity = 48): EffectPool {
-  return {
-    capacity,
-    next: 0,
-    shape: new Uint8Array(capacity),
-    x: new Float32Array(capacity),
-    y: new Float32Array(capacity),
-    size: new Float32Array(capacity),
-    color: new Int32Array(capacity),
-    born: new Int32Array(capacity),
-    life: new Int32Array(capacity),
-  };
-}
-
-/** Ajoute un effet. Réserve pleine : le plus ancien est remplacé. N'alloue rien. */
-export function spawnEffect(
-  pool: EffectPool,
-  shape: number,
-  x: number,
-  y: number,
-  size: number,
-  life: number,
-  color: number,
-  frame: number,
-): void {
-  const i = pool.next;
-  pool.shape[i] = shape;
-  pool.x[i] = x;
-  pool.y[i] = y;
-  pool.size[i] = size;
-  pool.life[i] = life;
-  pool.color[i] = color;
-  pool.born[i] = frame;
-  pool.next = (i + 1) % pool.capacity;
-}
-
-/** Avancement de l'effet `i` à l'instant `time` (en frames), de 0 à 1 ; -1 s'il n'est pas visible. */
-export function effectProgress(pool: EffectPool, i: number, time: number): number {
-  const life = pool.life[i]!;
-  if (life === 0) return -1;
-  const age = time - pool.born[i]!;
-  return age < 0 || age >= life ? -1 : age / life;
-}
-
-export function liveEffects(pool: EffectPool, time: number): number {
-  let count = 0;
-  for (let i = 0; i < pool.capacity; i++) if (effectProgress(pool, i, time) >= 0) count++;
-  return count;
-}
-
-const WHITE = 0xffffff;
-const HIT_COLOR = 0xffe08a;
-const SHIELD_COLOR = 0x7dd3fc;
-const BREAK_COLOR = 0xc084fc;
-const GRAB_COLOR = 0xfda4af;
-const LEDGE_COLOR = 0x86efac;
-
-/**
- * Ajoute les effets de l'événement `type` (`a` et `b` comme dans `sim-core`). `views` donne
- * l'état des combattants à la frame de l'événement, `heights` leur taille.
- */
-export function spawnForEvent(
-  pool: EffectPool,
-  type: number,
-  a: number,
-  b: number,
-  views: readonly FighterView[],
-  heights: Float64Array,
-  frame: number,
-): void {
-  switch (type) {
-    case EV_HIT:
-    case EV_SHIELD:
-    case EV_PARRY: {
-      const victim = views[b];
-      if (victim === undefined) return;
-      let x = victim.x;
-      const y = victim.y + heights[b]! / 2;
-      // L'impact est sur la victime, du côté d'où vient le coup. Sans attaquant connu (entité
-      // sans propriétaire, `a` = -1), il est centré sur elle.
-      const attacker = views[a];
-      if (attacker !== undefined) x += (attacker.x - victim.x) * 0.3;
-      if (type === EV_HIT) {
-        // Le hitlag croît avec les dégâts : c'est la seule mesure de la force du coup lisible ici.
-        const power = 4 + victim.hitlag * 0.5;
-        spawnEffect(pool, FX_DISC, x, y, power, 10, HIT_COLOR, frame);
-        spawnEffect(pool, FX_RING, x, y, power * 1.3, 14, WHITE, frame);
-      } else if (type === EV_SHIELD) {
-        spawnEffect(pool, FX_RING, x, y, 7, 12, SHIELD_COLOR, frame);
-      } else {
-        spawnEffect(pool, FX_DISC, x, y, 9, 8, WHITE, frame);
-        spawnEffect(pool, FX_RING, x, y, 14, 20, WHITE, frame);
-      }
-      return;
-    }
-    case EV_SHIELD_BREAK: {
-      const who = views[a];
-      if (who === undefined) return;
-      const y = who.y + heights[a]! / 2;
-      spawnEffect(pool, FX_DISC, who.x, y, 14, 16, BREAK_COLOR, frame);
-      spawnEffect(pool, FX_RING, who.x, y, 22, 30, BREAK_COLOR, frame);
-      return;
-    }
-    case EV_KO: {
-      const who = views[a];
-      if (who === undefined) return;
-      const color = PLAYER_COLORS[a % PLAYER_COLORS.length]!;
-      spawnEffect(pool, FX_DISC, who.x, who.y, 45, 26, color, frame);
-      spawnEffect(pool, FX_RING, who.x, who.y, 70, 40, WHITE, frame);
-      return;
-    }
-    case EV_GRAB: {
-      const victim = views[b];
-      if (victim === undefined) return;
-      spawnEffect(pool, FX_DISC, victim.x, victim.y + heights[b]! * 0.6, 4, 8, GRAB_COLOR, frame);
-      return;
-    }
-    case EV_LEDGE: {
-      const who = views[a];
-      if (who === undefined) return;
-      // Le combattant est suspendu par les mains : le rebord est à hauteur de sa tête.
-      spawnEffect(pool, FX_RING, who.x, who.y + heights[a]!, 5, 10, LEDGE_COLOR, frame);
-      return;
-    }
-    default:
-  }
-}
 
 const SHAKE = 0.35;
 
@@ -197,103 +41,172 @@ export const showsShield = (action: number): boolean =>
 export const shieldRadius = (strength: number): number =>
   0.28 + 0.42 * (strength < 0 ? 0 : strength > 1 ? 1 : strength);
 
-/** Plan des effets, juste devant les combattants. */
-const EFFECT_Z = 6;
-const WHITE_COLOR = new Color(WHITE);
+/** Durée d'un éclair d'écran, en frames. */
+const FLASH_LIFE = 12;
+
+/** Intensité d'un éclair né à `born` avec l'intensité `amount`, à l'instant `time`. */
+export function flashLevel(amount: number, born: number, time: number): number {
+  const age = time - born;
+  if (amount <= 0 || age < 0 || age >= FLASH_LIFE) return 0;
+  const left = 1 - age / FLASH_LIFE;
+  return amount * left * left;
+}
+
+const SHIELD_VERTEX = /* glsl */ `
+attribute float aStrength;
+varying vec3 vNormal;
+varying vec3 vView;
+varying vec3 vLocal;
+varying vec3 vTint;
+varying float vStrength;
+void main() {
+  vec4 mv = modelViewMatrix * instanceMatrix * vec4( position, 1.0 );
+  vNormal = normalize( normalMatrix * mat3( instanceMatrix ) * normal );
+  vView = -mv.xyz;
+  vLocal = position;
+  #ifdef USE_INSTANCING_COLOR
+    vTint = instanceColor;
+  #else
+    vTint = vec3( 1.0 );
+  #endif
+  vStrength = aStrength;
+  gl_Position = projectionMatrix * mv;
+}`;
+
+const SHIELD_FRAGMENT = /* glsl */ `
+uniform float uTime;
+varying vec3 vNormal;
+varying vec3 vView;
+varying vec3 vLocal;
+varying vec3 vTint;
+varying float vStrength;
+void main() {
+  float facing = abs( dot( normalize( vNormal ), normalize( vView ) ) );
+  float rim = pow( 1.0 - facing, 2.2 );
+  // Plein : à la couleur du joueur ; presque épuisé : vire au rouge.
+  vec3 color = mix( vec3( 2.6, 0.55, 0.35 ), vTint * 1.7, smoothstep( 0.15, 0.6, vStrength ) );
+  // Fissures quand il faiblit : réseau de lignes fines, plus dense à mesure qu'il s'use.
+  float crack = 0.0;
+  if ( vStrength < 0.45 ) {
+    vec3 q = vLocal * 5.5;
+    float n = abs( sin( q.x * 1.7 + q.y * 2.3 ) * sin( q.y * 1.9 - q.z * 2.1 ) * sin( q.z * 2.2 + q.x * 1.3 ) );
+    crack = ( 1.0 - smoothstep( 0.0, 0.05, n ) ) * ( 0.45 - vStrength ) * 2.4;
+  }
+  float bands = 0.5 + 0.5 * sin( vLocal.y * 16.0 + uTime * 0.3 );
+  float glow = 0.08 + rim * 0.8 + crack + bands * 0.035;
+  gl_FragColor = vec4( color * glow, 1.0 );
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}`;
 
 export interface EffectVisuals {
   readonly root: Group;
-  /** Met les effets de `pool` à jour pour l'instant `time`, en frames. */
-  update(pool: EffectPool, time: number): void;
-  /** Bulle de bouclier du joueur ; `radius` = 0 la cache. */
-  shield(player: number, x: number, y: number, radius: number): void;
+  /** Bulle de bouclier du joueur ; `radius` = 0 la cache. `strength` de 0 à 1. */
+  shield(player: number, x: number, y: number, radius: number, strength: number): void;
+  /** Instant affiché, en frames : anime les bulles. */
+  update(time: number): void;
   dispose(): void;
 }
 
-export function createEffectVisuals(players: number, capacity: number): EffectVisuals {
+export function createEffectVisuals(players: number): EffectVisuals {
   const root = new Group();
   root.name = 'effects';
 
-  // Fondu additif : une couleur qui tend vers le noir disparaît, sans gérer de transparence.
-  const flash = new MeshBasicMaterial({
-    color: WHITE,
-    blending: AdditiveBlending,
-    depthWrite: false,
-    depthTest: false,
-  });
-  const discGeometry = new CircleGeometry(1, 24);
-  const ringGeometry = new RingGeometry(0.82, 1, 32);
-  const discs = new InstancedMesh(discGeometry, flash, capacity);
-  const rings = new InstancedMesh(ringGeometry, flash, capacity);
-
-  const bubbleGeometry = new SphereGeometry(1, 20, 14);
-  const bubbleMaterial = new MeshBasicMaterial({
-    color: WHITE,
+  const bubbleGeometry = new SphereGeometry(1, 28, 18);
+  const strength = new InstancedBufferAttribute(new Float32Array(players).fill(1), 1);
+  bubbleGeometry.setAttribute('aStrength', strength);
+  const bubbleMaterial = new ShaderMaterial({
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: SHIELD_VERTEX,
+    fragmentShader: SHIELD_FRAGMENT,
     transparent: true,
-    opacity: 0.38,
     depthWrite: false,
+    blending: AdditiveBlending,
   });
   const bubbles = new InstancedMesh(bubbleGeometry, bubbleMaterial, players);
   bubbles.name = 'shields';
-
+  bubbles.frustumCulled = false;
+  bubbles.renderOrder = 3;
   const matrix = new Matrix4();
-  const color = new Color();
   const hidden = new Matrix4().makeScale(0, 0, 0);
-  for (const mesh of [discs, rings, bubbles]) {
-    mesh.frustumCulled = false;
-    for (let i = 0; i < mesh.count; i++) {
-      mesh.setMatrixAt(i, hidden);
-      mesh.setColorAt(i, color.setHex(WHITE));
-    }
-  }
+  const color = new Color();
   for (let i = 0; i < players; i++) {
-    bubbles.setColorAt(
-      i,
-      color.setHex(PLAYER_COLORS[i % PLAYER_COLORS.length]!).lerp(WHITE_COLOR, 0.45),
-    );
+    bubbles.setMatrixAt(i, hidden);
+    bubbles.setColorAt(i, color.setHex(PLAYER_COLORS[i % PLAYER_COLORS.length]!));
   }
-  root.add(bubbles, discs, rings);
+  root.add(bubbles);
 
   return {
     root,
-    update(pool, time) {
-      for (let i = 0; i < pool.capacity; i++) {
-        const t = effectProgress(pool, i, time);
-        const isRing = pool.shape[i] === FX_RING;
-        const mesh = isRing ? rings : discs;
-        const other = isRing ? discs : rings;
-        other.setMatrixAt(i, hidden);
-        if (t < 0) {
-          mesh.setMatrixAt(i, hidden);
-          continue;
-        }
-        const fade = 1 - t;
-        // Un disque éclate d'un coup puis se rétracte ; un anneau s'élargit jusqu'au bout.
-        const scale = pool.size[i]! * (isRing ? 0.35 + 0.65 * (1 - fade * fade) : 0.5 + 0.5 * fade);
-        mesh.setMatrixAt(
-          i,
-          matrix.makeScale(scale, scale, 1).setPosition(pool.x[i]!, pool.y[i]!, EFFECT_Z),
-        );
-        mesh.setColorAt(i, color.setHex(pool.color[i]!).multiplyScalar(fade * fade));
-      }
-      discs.instanceMatrix.needsUpdate = true;
-      rings.instanceMatrix.needsUpdate = true;
-      discs.instanceColor!.needsUpdate = true;
-      rings.instanceColor!.needsUpdate = true;
-    },
-    shield(player, x, y, radius) {
-      bubbles.setMatrixAt(player, matrix.makeScale(radius, radius, radius).setPosition(x, y, 0));
+    shield(player, x, y, radius, s) {
+      bubbles.setMatrixAt(
+        player,
+        radius > 0 ? matrix.makeScale(radius, radius, radius).setPosition(x, y, 0) : hidden,
+      );
       bubbles.instanceMatrix.needsUpdate = true;
+      if (strength.array[player] !== s) {
+        strength.array[player] = s;
+        strength.needsUpdate = true;
+      }
+    },
+    update(time) {
+      bubbleMaterial.uniforms.uTime!.value = time;
     },
     dispose() {
-      discGeometry.dispose();
-      ringGeometry.dispose();
       bubbleGeometry.dispose();
-      flash.dispose();
       bubbleMaterial.dispose();
-      discs.dispose();
-      rings.dispose();
       bubbles.dispose();
+    },
+  };
+}
+
+/** Voile coloré devant la caméra, pour les éclairs d'écran (coups décisifs, KO, parades). */
+export interface ScreenFlash {
+  readonly mesh: Mesh;
+  /** Lance un éclair de couleur 0xRRGGBB et d'intensité `amount` (0 à 1) à la frame `frame`. */
+  start(color: number, amount: number, frame: number): void;
+  update(time: number): void;
+  dispose(): void;
+}
+
+export function createScreenFlash(camera: Camera): ScreenFlash {
+  const geometry = new PlaneGeometry(1, 1);
+  const material = new MeshBasicMaterial({
+    color: 0x000000,
+    blending: AdditiveBlending,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const mesh = new Mesh(geometry, material);
+  mesh.name = 'screen-flash';
+  // Juste au-delà du plan proche, assez grand pour couvrir tout écran.
+  mesh.position.set(0, 0, -2);
+  mesh.scale.set(20, 20, 1);
+  mesh.renderOrder = 10;
+  mesh.frustumCulled = false;
+  mesh.visible = false;
+  camera.add(mesh);
+  const tint = new Color();
+  let amount = 0;
+  let born = 0;
+  return {
+    mesh,
+    start(c, a, frame) {
+      if (a < flashLevel(amount, born, frame)) return;
+      tint.setHex(c);
+      amount = a;
+      born = frame;
+    },
+    update(time) {
+      const level = flashLevel(amount, born, time);
+      mesh.visible = level > 0;
+      if (level > 0) material.color.copy(tint).multiplyScalar(level);
+    },
+    dispose() {
+      camera.remove(mesh);
+      geometry.dispose();
+      material.dispose();
     },
   };
 }

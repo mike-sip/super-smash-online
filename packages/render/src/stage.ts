@@ -1,6 +1,6 @@
 /** Décor construit à partir de `StageDef` : blocs pleins et plateformes. */
 import { fxToFloat, type StageDef } from '@game/sim-core';
-import { BoxGeometry, Group, Mesh, MeshLambertMaterial } from 'three';
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 
 /** Profondeur des blocs pleins et des plateformes, de part et d'autre du plan de jeu. */
 const SOLID_DEPTH = 36;
@@ -83,7 +83,7 @@ export function buildStage(stage: StageDef): Group {
   const group = new Group();
   group.name = 'stage';
 
-  const solidMaterial = new MeshLambertMaterial({ color: 0x6b7280 });
+  const solidMaterial = new MeshStandardMaterial({ color: 0x6b7280 });
   for (const solid of stage.solids) {
     const x1 = fxToFloat(solid.x1);
     const x2 = fxToFloat(solid.x2);
@@ -94,7 +94,7 @@ export function buildStage(stage: StageDef): Group {
     group.add(mesh);
   }
 
-  const platformMaterial = new MeshLambertMaterial({ color: 0x9ca3af });
+  const platformMaterial = new MeshStandardMaterial({ color: 0x9ca3af });
   for (const platform of stage.platforms) {
     const x1 = fxToFloat(platform.x1);
     const x2 = fxToFloat(platform.x2);

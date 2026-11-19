@@ -29,7 +29,7 @@ import {
   InstancedMesh,
   Matrix4,
   MeshBasicMaterial,
-  MeshLambertMaterial,
+  MeshStandardMaterial,
   Quaternion,
   TetrahedronGeometry,
   Vector3,
@@ -119,7 +119,7 @@ function shapeMaterial(shape: ShapeId): Material {
       depthWrite: false,
     });
   }
-  return new MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  return new MeshStandardMaterial({ vertexColors: true, flatShading: true });
 }
 
 const SHAPES: readonly ShapeId[] = [

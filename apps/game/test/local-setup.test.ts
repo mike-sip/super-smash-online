@@ -5,6 +5,7 @@ import {
   canContinue,
   createLocalSetup,
   cycleFighter,
+  cyclePalette,
   join,
   joined,
   leave,
@@ -56,6 +57,17 @@ describe('sélection locale', () => {
     expect(s.slots[0]!.fighter).toBe('nacre');
   });
 
+  it('couleurs : huit par personnage, en boucle ; reprises par le tirage des joueurs', () => {
+    const s = createLocalSetup(ROSTER);
+    join(s, 'keyboard');
+    expect(s.slots[0]!.palette).toBe(0);
+    cyclePalette(s, 0, -1);
+    expect(s.slots[0]!.palette).toBe(7);
+    cyclePalette(s, 0, 2);
+    expect(s.slots[0]!.palette).toBe(1);
+    expect(resolveFighters(s, ROSTER, () => 0)[0]!.palette).toBe(1);
+  });
+
   it('prêt : changer de personnage retire « prêt » ; continuer avec au moins deux joueurs prêts', () => {
     const s = createLocalSetup(ROSTER);
     join(s, 'keyboard');
@@ -79,8 +91,8 @@ describe('sélection locale', () => {
     expect(s.slots[1]!.fighter).toBe('random');
     const picks = resolveFighters(s, ROSTER, () => 0.99);
     expect(picks).toEqual([
-      { slot: 0, device: 'keyboard', fighter: 'sorel' },
-      { slot: 1, device: 'gamepad-0', fighter: 'nacre' },
+      { slot: 0, device: 'keyboard', fighter: 'sorel', palette: 0 },
+      { slot: 1, device: 'gamepad-0', fighter: 'nacre', palette: 0 },
     ]);
   });
 

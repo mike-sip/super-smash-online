@@ -15,7 +15,10 @@ import {
   createMatchHud,
   createGameAudio,
   createRenderer,
-  createStyledMannequins,
+  QUALITIES,
+  type QualitySetting,
+  createFigurines,
+  distinctPalettes,
   type MatchHud,
   type Renderer,
 } from '@game/render';
@@ -27,6 +30,7 @@ import {
   createFighterView,
   createSim,
   frame,
+  fx,
   knockOut,
   readEntity,
   readFighter,
@@ -84,6 +88,8 @@ function intParam(params: URLSearchParams, name: string, min: number, max: numbe
 const params = new URLSearchParams(location.search);
 const dummyCount = intParam(params, 'dummies', 1, 7, 1);
 const mode: DummyMode = params.get('mode') === 'random' ? 'random' : 'idle';
+/** Qualité graphique : `?quality=low|medium|high|ultra`, automatique par défaut. */
+const quality: QualitySetting = QUALITIES.find((q) => q === params.get('quality')) ?? 'auto';
 const seed = intParam(params, 'seed', 1, 0x7fffffff, 1);
 /** Nombre d'entités maintenues en vie, pour le scénario de performance. */
 const entityTarget = intParam(params, 'entities', 0, 32, 0);
@@ -312,11 +318,17 @@ function start(): void {
   );
   // Le combattant de test garde le mannequin standard, aux couleurs du joueur.
   const styles = selection.map((id) => (id === 'test' ? undefined : findCharacter(id)!.look));
+  // Deux joueurs sur le même personnage : des couleurs différentes.
+  const palettes = distinctPalettes(selection);
   renderer = createRenderer({
     canvas,
     overlay,
     config: sim.config,
-    fighterVisuals: createStyledMannequins((p) => styles[p]),
+    fighterVisuals: createFigurines(
+      (p) => styles[p],
+      (p) => palettes[p] ?? 0,
+    ),
+    quality,
   });
   if (match !== null) {
     matchHud = createMatchHud(players, createMatchDomSink(overlay, players));
@@ -417,6 +429,18 @@ const testHook = {
   selection: () => [...selection],
   select: (ids: string[]) => select(ids),
   fighterName: (player: number) => sim.config.fighters[player]!.name,
+  /** Fige la caméra sur (x, y) à la distance donnée, ou la rend automatique (inspection visuelle). */
+  inspect(x: number | null, y = 0, distance = 40): void {
+    (renderer as unknown as { inspect(f: object | null): void }).inspect(
+      x === null ? null : { centerX: x, centerY: y, distance },
+    );
+  },
+  /** Place un joueur et règle ses dégâts, pour mettre en scène un coup (vérification des effets). */
+  place(player: number, x: number, y: number, damage: number): void {
+    sim.state.posX[player] = fx(x);
+    if (Number.isFinite(y)) sim.state.posY[player] = fx(y);
+    sim.state.damage[player] = fx(damage);
+  },
   players,
   paused: () => controls.paused,
   speed: () => controls.speed,

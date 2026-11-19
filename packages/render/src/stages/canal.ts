@@ -8,12 +8,10 @@ import {
   CylinderGeometry,
   Mesh,
   MeshBasicMaterial,
-  MeshLambertMaterial,
   OctahedronGeometry,
-  PlaneGeometry,
   type BufferGeometry,
 } from 'three';
-import { at, between, facets, gradient, merge, seeded } from './lowpoly.ts';
+import { at, between, facets, merge, seeded } from './lowpoly.ts';
 import { SOLID_DEPTH, type DecorContext, type Theme } from './theme.ts';
 
 const STONE = 0x8a7f74;
@@ -36,6 +34,31 @@ export const CANAL_THEME: Theme = {
   // Barge et nacelles : bois sombre.
   mover: 0xb07a45,
   seed: 37,
+  skyLook: {
+    zenith: 0x2a1f4a,
+    horizon: 0xf08a4b,
+    below: 0x3a2a4a,
+    sunDir: [0.4, 0.035, -1],
+    sunColor: 0xff9e6b,
+    sunSize: 0.05,
+    sunGlow: 0.08,
+    clouds: 0.35,
+    cloudColor: 0xd9708a,
+    stars: 0.3,
+  },
+  water: { y: WATER_Y, z: -200, width: 1600, depth: 900, color: 0x1c1636, waves: 0.35 },
+  motes: [
+    {
+      count: 160,
+      center: [0, 30, -60],
+      half: [200, 40, 90],
+      color: 0xffc06a,
+      intensity: 2.5,
+      size: 0.45,
+      drift: [0.02, 0.03],
+      seed: 37,
+    },
+  ],
 
   solidShape(x1, y1, x2, y2, ctx) {
     const w = x2 - x1;
@@ -54,13 +77,6 @@ export const CANAL_THEME: Theme = {
 
   decorate(ctx: DecorContext) {
     const { random } = ctx;
-    const sky = new Mesh(
-      gradient(at(new PlaneGeometry(2400, 1000, 1, 8), 0, 120, -700), 0x2a1f4a, 0xf08a4b),
-      new MeshBasicMaterial({ vertexColors: true, fog: false }),
-    );
-    sky.name = 'sky';
-    ctx.root.add(sky);
-
     // Façades en silhouette au fond, fenêtres allumées au hasard.
     for (let n = 0; n < 22; n++) {
       const w = between(random, 22, 42);
@@ -112,16 +128,8 @@ export const CANAL_THEME: Theme = {
     garland.position.set(0, 0, -32);
     ctx.root.add(garland);
 
-    const surface = new PlaneGeometry(1600, 900, 32, 16).rotateX(-Math.PI / 2);
-    const water = new Mesh(
-      facets(at(surface, 0, WATER_Y, -200), 0x2b2547, 0.1, random),
-      new MeshLambertMaterial({ vertexColors: true, flatShading: true }),
-    );
-    water.name = 'water';
-    ctx.root.add(water);
     ctx.animate((frame) => {
       garland.rotation.z = Math.sin(frame * 0.025) * 0.012;
-      water.position.y = Math.sin(frame * 0.018) * 0.5;
     });
   },
 };

@@ -200,6 +200,12 @@ export interface PoseInput {
   end: number;
   /** Durée de l'action, ou 0 si elle n'en a pas de fixe. */
   total: number;
+  /**
+   * Distance parcourue depuis le début de la marche, de la course ou du dash, en hauteurs de
+   * combattant : le cycle des jambes en dépend, pour que les pieds ne glissent pas. 0 : le cycle
+   * suit les frames (pas de vitesse connue).
+   */
+  stride: number;
   /** Distance parcourue par une remontée de rebord, en hauteurs de combattant. */
   travel: number;
 }
@@ -216,6 +222,7 @@ export function createPoseInput(): PoseInput {
     start: 0,
     end: 0,
     total: 0,
+    stride: 0,
     travel: 0,
   };
 }
@@ -359,6 +366,37 @@ const smooth = (t: number): number => {
   return c * c * (3 - 2 * c);
 };
 const mix = (a: number, b: number, t: number): number => a + (b - a) * t;
+
+/**
+ * Départ du coup : rapide d'emblée, freiné à l'arrivée (le membre claque). L'exposant reste modéré
+ * pour qu'aucun membre ne saute de plus de 2,6 radians d'une frame à l'autre.
+ */
+const SNAP_POWER = 1.6;
+export const snap = (t: number): number => 1 - Math.pow(1 - clamp01(t), SNAP_POWER);
+
+/** Dépassement de la retombée du coup : la pose va un peu au-delà avant de se poser. */
+const SETTLE_OVERSHOOT = 1.2;
+/** Retour au repos avec un léger dépassement (inertie du geste), puis immobile à 1. */
+export const settle = (t: number): number => {
+  const c = clamp01(t) - 1;
+  return 1 + (SETTLE_OVERSHOOT + 1) * c * c * c + SETTLE_OVERSHOOT * c * c;
+};
+
+/**
+ * Phase du cycle des jambes : d'après la distance parcourue quand elle est connue (un demi-cycle
+ * par pas de longueur `step`), sinon d'après les frames au rythme `rate`.
+ */
+const cycle = (input: PoseInput, step: number, rate: number): number =>
+  input.stride > 0 ? (input.stride * Math.PI) / step : input.frame * rate;
+
+/**
+ * Longueur d'un pas, en hauteurs de combattant : ce que parcourt un pied quand la jambe passe d'un
+ * angle à l'angle opposé (amplitude `swing` de part et d'autre de la verticale).
+ */
+const stepLength = (swing: number): number => 2 * HIP_HEIGHT * Math.sin(swing);
+const WALK_STEP = stepLength(0.45);
+const DASH_STEP = stepLength(0.9);
+const RUN_STEP = stepLength(0.85);
 /** Part écoulée de l'action, de 0 à 1 ; 1 pour une action sans durée. */
 const progress = (input: PoseInput): number =>
   input.total > 0 ? clamp01(input.frame / input.total) : 1;
@@ -556,13 +594,39 @@ function strike(input: PoseInput, w: Pose, s: Pose, out: Pose): void {
   neutral(keyN);
   if (f < start) {
     const turn = start * WINDUP_SHARE;
+    // Préparation tenue en douceur (anticipation), puis départ sec vers le coup.
     if (f < turn) lerpPose(keyN, w, smooth(f / turn), out);
-    else lerpPose(w, s, smooth((f - turn) / (start - turn)), out);
+    else lerpPose(w, s, snap((f - turn) / (start - turn)), out);
   } else if (f <= input.end || input.total <= input.end) {
     copyPose(s, out);
   } else {
-    lerpPose(s, keyN, smooth((f - input.end) / (input.total - input.end)), out);
+    lerpPose(s, keyN, settle((f - input.end) / (input.total - input.end)), out);
   }
+}
+
+/** Nombre de poses de victoire (SPEC-visuals.md, phase 7). */
+export const VICTORY_POSES = 3;
+
+/**
+ * Pose de victoire `index` (0 : poing levé, 1 : bras croisés, 2 : garde, bras tendu), légèrement
+ * animée par `time` (frames) : respiration, poing qui vibre.
+ */
+export function victoryPose(index: number, time: number, out: Pose): void {
+  const breath = Math.sin(time * 0.08);
+  switch (index % VICTORY_POSES) {
+    case 0:
+      limbs(out, -0.1, -0.25, 2.85, 0.35, -0.25, 0.45, 0.25, -0.15, -0.3, -0.1);
+      out.armF += 0.04 * breath;
+      break;
+    case 1:
+      limbs(out, -0.12, 0.05, 1.05, 1.95, 0.95, 1.95, 0.2, -0.05, -0.25, -0.05);
+      out.torso += 0.02 * breath;
+      break;
+    default:
+      limbs(out, 0.2, -0.05, 1.55, 0.05, -0.5, 1.2, 0.55, -0.7, -0.45, -0.2);
+      out.armF += 0.03 * breath;
+  }
+  plant(out);
 }
 
 /** Calcule la pose de l'action décrite par `input`. N'alloue rien. */
@@ -580,7 +644,7 @@ export function computePose(input: PoseInput, out: Pose): void {
       return;
     }
     case A_WALK: {
-      const c = Math.sin(f * 0.24);
+      const c = Math.sin(cycle(input, WALK_STEP, 0.24));
       limbs(
         out,
         0.08,
@@ -598,7 +662,7 @@ export function computePose(input: PoseInput, out: Pose): void {
       return;
     }
     case A_DASH: {
-      const c = Math.sin(f * 0.7);
+      const c = Math.sin(cycle(input, DASH_STEP, 0.7));
       limbs(
         out,
         0.5,
@@ -616,7 +680,7 @@ export function computePose(input: PoseInput, out: Pose): void {
       return;
     }
     case A_RUN: {
-      const c = Math.sin(f * 0.55);
+      const c = Math.sin(cycle(input, RUN_STEP, 0.55));
       limbs(
         out,
         0.38,

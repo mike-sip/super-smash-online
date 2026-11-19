@@ -3,7 +3,7 @@
  * libère le canvas quand un combat le prend (`release`), et revient d'elle-même ensuite. En
  * « mouvements réduits », une seule image est dessinée.
  */
-import { createRenderer, createStyledMannequins, type Renderer } from '@game/render';
+import { createRenderer, createFigurines, type Renderer } from '@game/render';
 import { createSim, step, type Sim } from '@game/sim-core';
 import type { App } from './app.ts';
 import { buildFreeConfig, lookOf } from './content.ts';
@@ -28,7 +28,8 @@ export function createBackground(app: App, inMatch: () => boolean): Background {
       canvas,
       overlay: app.elements.overlay,
       config: sim.config,
-      fighterVisuals: createStyledMannequins((p) => lookOf(FIGHTERS[p] ?? '')),
+      fighterVisuals: createFigurines((p) => lookOf(FIGHTERS[p] ?? '')),
+      ...app.qualityOptions(),
     });
     // Le HUD du renderer (pourcentages) n'a pas de sens derrière les menus.
     app.elements.overlay.hidden = true;
@@ -38,6 +39,7 @@ export function createBackground(app: App, inMatch: () => boolean): Background {
   }
 
   function resize(): void {
+    app.syncQuality(renderer);
     renderer?.resize(canvas.clientWidth, canvas.clientHeight, app.pixelRatio());
     drawnStill = false;
   }

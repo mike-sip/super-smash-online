@@ -4,17 +4,26 @@
  */
 import { KEYBOARD_ID, gamepadId, type Device } from '@game/input';
 import type { MatchConfig } from '@game/match-rules';
-import { TEAM_COLORS } from '@game/render';
+import { TEAM_COLORS, distinctPalettes } from '@game/render';
 import type { ItemFrequency } from '@game/stages-items';
 import type { App, Screen } from '../app.ts';
 import { CONTENT_IDS } from '../content-ids.ts';
-import { FIGHTER_INFO, RANDOM, STAGE_INFO, fighterName, stageName } from '../content.ts';
+import {
+  FIGHTER_INFO,
+  RANDOM,
+  STAGE_INFO,
+  fighterName,
+  paletteColor,
+  stageName,
+} from '../content.ts';
+import { portraitUrl } from '../portraits.ts';
 import { DUMMY_MODES, type DummyMode } from '../dummies.ts';
 import {
   PRESETS,
   canContinue,
   createLocalSetup,
   cycleFighter,
+  cyclePalette,
   join,
   joined,
   leave,
@@ -92,6 +101,7 @@ function localSetupScreen(app: App, plan: LocalPlan): Screen {
     // Souris seulement : au clavier et à la manette, chaque joueur commande sa carte par ses directions.
     for (const b of [prev, next, ready]) b.tabIndex = -1;
     const swatch = el('div', { className: 'swatch' });
+    const art = el('img', { className: 'portrait', attrs: { alt: '' } }) as HTMLImageElement;
     const card = el(
       'div',
       {
@@ -101,6 +111,7 @@ function localSetupScreen(app: App, plan: LocalPlan): Screen {
       },
       [
         el('strong', { text: `J${slot + 1}` }),
+        art,
         swatch,
         name,
         meta,
@@ -108,7 +119,7 @@ function localSetupScreen(app: App, plan: LocalPlan): Screen {
         el('div', { className: 'row' }, [prev, next, ready]),
       ],
     );
-    return { card, name, meta, status, prev, next, ready, swatch };
+    return { card, name, meta, status, prev, next, ready, swatch, art };
   });
   const cont = button('Choisir le stage', () => proceed(), { primary: true, id: 'local-continue' });
   const help = el('p', { className: 'muted', attrs: { 'aria-live': 'polite' } });
@@ -121,9 +132,15 @@ function localSetupScreen(app: App, plan: LocalPlan): Screen {
       c.name.textContent = present ? fighterName(s.fighter) : 'Libre';
       const info = FIGHTER_INFO[s.fighter];
       c.meta.textContent = present
-        ? `${deviceName(app, s.device!)} · ${info === undefined ? 'Tiré au lancement' : `${info.archetype} — ${info.summary}`}`
+        ? `${deviceName(app, s.device!)} · ${info === undefined ? 'Tiré au lancement' : `${info.archetype} — ${info.summary} · couleur ${s.palette + 1}/8`}`
         : 'Appuyez sur un bouton d’une manette (ou une touche du jeu) pour rejoindre.';
-      c.swatch.style.background = present ? (info?.color ?? '#888888') : 'transparent';
+      c.swatch.style.background = present
+        ? (paletteColor(s.fighter, s.palette) ?? info?.color ?? '#888888')
+        : 'transparent';
+      // Portrait de la figurine dans sa couleur ; rien pour « Au hasard » ou sans WebGL.
+      const url = present ? portraitUrl(s.fighter, s.palette, 'portrait', 192) : undefined;
+      c.art.hidden = url === undefined;
+      if (url !== undefined && c.art.src !== url) c.art.src = url;
       c.status.textContent = present ? (s.ready ? 'Prêt' : 'Choisit…') : '';
       c.status.className = `badge ${s.ready ? 'ok' : ''}`;
       for (const b of [c.prev, c.next, c.ready]) b.disabled = !present;
@@ -136,11 +153,16 @@ function localSetupScreen(app: App, plan: LocalPlan): Screen {
         ? 'Il faut au moins deux joueurs. Branchez une manette et appuyez sur un bouton. Seul ? Essayez l’Entraînement.'
         : canContinue(setup, 2)
           ? 'Tout le monde est prêt : Entrée ou A pour choisir le stage.'
-          : 'Chacun choisit son personnage (← →) et se déclare prêt (Entrée ou A).';
+          : 'Chacun choisit son personnage (← →) et sa couleur (↑ ↓), puis se déclare prêt (Entrée ou A).';
   }
 
   function change(slot: number, delta: number): void {
     cycleFighter(setup, slot, delta);
+    render();
+  }
+
+  function recolor(slot: number, delta: number): void {
+    cyclePalette(setup, slot, delta);
     render();
   }
 
@@ -241,6 +263,11 @@ function localSetupScreen(app: App, plan: LocalPlan): Screen {
           if (kb < 0) return false;
           change(kb, event.key === 'ArrowLeft' ? -1 : 1);
           return true;
+        case 'ArrowUp':
+        case 'ArrowDown':
+          if (kb < 0) return false;
+          recolor(kb, event.key === 'ArrowUp' ? -1 : 1);
+          return true;
         case 'Enter':
           confirmFrom(kb);
           return true;
@@ -257,6 +284,7 @@ function localSetupScreen(app: App, plan: LocalPlan): Screen {
       if (action.type === 'move') {
         if (action.dir === 'left' || action.dir === 'right')
           change(slot, action.dir === 'left' ? -1 : 1);
+        else recolor(slot, action.dir === 'up' ? -1 : 1);
         return true;
       }
       if (action.type === 'confirm' || action.type === 'start') confirmFrom(slot);
@@ -477,6 +505,7 @@ function rulesScreen(app: App, plan: LocalPlan): Screen {
       plan.hazards,
       picks.map((p) => p.fighter),
       picks.map((p) => p.slot),
+      picks.map((p) => p.palette),
     );
   }
 
@@ -508,6 +537,7 @@ function startLocalMatch(
   hazards: boolean,
   fighters: readonly string[],
   controllers: readonly number[],
+  palettes: readonly number[] = [],
 ): void {
   const names = fighters.map((_, i) => `J${controllers[i]! + 1}`);
   const screen = localMatch(app, {
@@ -515,6 +545,7 @@ function startLocalMatch(
     stage,
     hazards,
     fighters,
+    palettes,
     controllers,
     onQuit: () => app.popTo('local-setup'),
     onEnd: (result) =>
@@ -523,6 +554,7 @@ function startLocalMatch(
           result,
           names,
           fighters,
+          palettes: distinctPalettes(fighters, palettes),
           back: () => app.popTo('local-setup'),
           actions: [
             {
@@ -531,7 +563,7 @@ function startLocalMatch(
               primary: true,
               action: () => {
                 app.pop();
-                startLocalMatch(app, match, stage, hazards, fighters, controllers);
+                startLocalMatch(app, match, stage, hazards, fighters, controllers, palettes);
               },
             },
             {

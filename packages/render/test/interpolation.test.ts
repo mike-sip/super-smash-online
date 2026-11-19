@@ -18,7 +18,7 @@ import {
   type Sim,
 } from '@game/sim-core';
 import { testConfig } from '@game/sim-core/testing';
-import type { Object3D } from 'three';
+import type { DirectionalLight, Object3D } from 'three';
 import {
   createTrack,
   isTeleport,
@@ -27,6 +27,7 @@ import {
   sampleX,
   sampleY,
 } from '../src/interpolation.ts';
+import type { Quality } from '../src/quality.ts';
 import { createRendererWith } from '../src/renderer.ts';
 import { fakeBackend } from './helpers.ts';
 
@@ -95,11 +96,13 @@ describe('isTeleport', () => {
 });
 
 describe('renderer : positions affichées', () => {
-  function setup(players = 2) {
+  function setup(players = 2, quality: Quality = 'low') {
     const config = testConfig(players);
     const sim = createSim(config);
     const backend = fakeBackend();
-    const renderer = createRendererWith(config, backend);
+    const renderer = createRendererWith(config, backend, undefined, undefined, undefined, {
+      quality,
+    });
     const inputs = new Uint32Array(players);
     const object = (name: string): Object3D => {
       const found = backend.scene?.getObjectByName(name);
@@ -110,7 +113,7 @@ describe('renderer : positions affichées', () => {
       step(sim, inputs);
       renderer.capture(sim);
     };
-    return { sim, renderer, inputs, object, advance };
+    return { sim, renderer, inputs, object, advance, backend };
   }
 
   const posX = (sim: Sim, i: number): number => sim.state.posX[i]! / fx(1);
@@ -142,7 +145,19 @@ describe('renderer : positions affichées', () => {
     expect(t.object('fighter-0').position.x).toBeCloseTo(x2, 6);
   });
 
-  it('oriente la boîte et pose une ombre sous le combattant', () => {
+  it('avec une carte d’ombre, pas d’ombre ronde : le soleil porte la vraie ombre', () => {
+    const t = setup(2, 'high');
+    t.advance();
+    t.renderer.draw(1);
+    expect(t.object('shadow-0').visible).toBe(false);
+    const sun = t.object('sun') as DirectionalLight;
+    expect(sun.castShadow).toBe(true);
+    expect(t.object('fighters').getObjectsByProperty('castShadow', true).length).toBeGreaterThan(0);
+    // La carte d’ombre suit la caméra.
+    expect(Math.abs(sun.target.position.x - t.backend.camera!.position.x)).toBeLessThan(5);
+  });
+
+  it('en Bas, oriente la boîte et pose une ombre ronde sous le combattant', () => {
     const t = setup();
     t.advance();
     t.renderer.draw(1);

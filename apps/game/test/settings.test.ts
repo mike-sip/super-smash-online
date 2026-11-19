@@ -28,7 +28,13 @@ describe('réglages', () => {
     const changed: Settings = {
       ...DEFAULT_SETTINGS,
       audio: { enabled: false, music: 0.2, effects: 0.4, menuSounds: false },
-      display: { pixelRatio: 1, largeText: true, reducedMotion: true, showFps: true },
+      display: {
+        pixelRatio: 1,
+        quality: 'medium',
+        largeText: true,
+        reducedMotion: true,
+        showFps: true,
+      },
     };
     saveSettings(s, changed);
     expect(loadSettings(s)).toEqual(changed);
@@ -46,11 +52,12 @@ describe('réglages', () => {
     const raw = JSON.stringify({
       version: 1,
       audio: { enabled: true, music: 7, effects: -1, menuSounds: false },
-      display: { pixelRatio: 3, largeText: true },
+      display: { pixelRatio: 3, quality: 'extrême', largeText: true },
     });
     const s = loadSettings(memory({ [SETTINGS_KEY]: raw }));
     expect(s.audio).toEqual({ enabled: true, music: 1, effects: 0, menuSounds: false });
     expect(s.display.pixelRatio).toBe(DEFAULT_SETTINGS.display.pixelRatio);
+    expect(s.display.quality).toBe('auto');
     expect(s.display.largeText).toBe(true);
     expect(s.display.reducedMotion).toBe(DEFAULT_SETTINGS.display.reducedMotion);
   });

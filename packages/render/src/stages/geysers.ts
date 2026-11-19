@@ -11,11 +11,10 @@ import {
   Mesh,
   MeshBasicMaterial,
   OctahedronGeometry,
-  PlaneGeometry,
   TorusGeometry,
   type BufferGeometry,
 } from 'three';
-import { at, between, facets, gradient, hazardLevel, merge, seeded } from './lowpoly.ts';
+import { at, between, facets, hazardLevel, merge, seeded } from './lowpoly.ts';
 import { SOLID_DEPTH, type DecorContext, type Theme } from './theme.ts';
 
 const STRATA = [0xc98b4a, 0xd9a35e, 0xb8743c] as const;
@@ -37,6 +36,29 @@ export const GEYSERS_THEME: Theme = {
   platform: 0xf4e2bd,
   mover: 0xf4e2bd,
   seed: 41,
+  skyLook: {
+    zenith: 0x6faac2,
+    horizon: 0xf1e1c0,
+    below: 0xd9cfb4,
+    sunDir: [0.2, 0.6, -1],
+    sunColor: 0xfff4dc,
+    sunSize: 0.05,
+    sunGlow: 0.1,
+    clouds: 0.5,
+    cloudColor: 0xffffff,
+  },
+  motes: [
+    {
+      count: 140,
+      center: [0, 20, -30],
+      half: [200, 60, 80],
+      color: 0xffa050,
+      intensity: 2,
+      size: 0.3,
+      drift: [0, 0.05],
+      seed: 41,
+    },
+  ],
 
   solidShape(x1, y1, x2, y2, ctx) {
     const cx = (x1 + x2) / 2;
@@ -54,13 +76,6 @@ export const GEYSERS_THEME: Theme = {
 
   decorate(ctx: DecorContext) {
     const { random } = ctx;
-    const sky = new Mesh(
-      gradient(at(new PlaneGeometry(2400, 1000, 1, 8), 0, 120, -700), 0x7fb7c9, 0xf1e1c0),
-      new MeshBasicMaterial({ vertexColors: true, fog: false }),
-    );
-    sky.name = 'sky';
-    ctx.root.add(sky);
-
     // Terrasses en gradins au fond, chacune coiffée de son bassin.
     for (let row = 0; row < 5; row++) {
       const z = -220 - row * 80;

@@ -4,17 +4,14 @@
  */
 import {
   BoxGeometry,
-  CircleGeometry,
   CylinderGeometry,
   DodecahedronGeometry,
   IcosahedronGeometry,
   Mesh,
-  MeshBasicMaterial,
-  MeshLambertMaterial,
-  PlaneGeometry,
+  MeshStandardMaterial,
   type BufferGeometry,
 } from 'three';
-import { at, between, facets, gradient, merge, seeded } from './lowpoly.ts';
+import { at, between, facets, merge, seeded } from './lowpoly.ts';
 import { SOLID_DEPTH, type DecorContext, type Theme } from './theme.ts';
 
 const SAND = 0xd9a066;
@@ -34,6 +31,29 @@ export const BELVEDERE_THEME: Theme = {
   platform: 0xe4b47e,
   mover: 0xe4b47e,
   seed: 11,
+  skyLook: {
+    zenith: 0x4f63a8,
+    horizon: 0xf6c28b,
+    below: 0xeab995,
+    sunDir: [-0.3, 0.05, -1],
+    sunColor: 0xffd9a0,
+    sunSize: 0.06,
+    sunGlow: 0.12,
+    clouds: 0.42,
+    cloudColor: 0xfbe3d0,
+  },
+  motes: [
+    {
+      count: 260,
+      center: [0, 40, -40],
+      half: [220, 90, 120],
+      color: 0xffd59a,
+      intensity: 1.6,
+      size: 0.5,
+      drift: [0.05, 0.01],
+      seed: 11,
+    },
+  ],
 
   solidShape(x1, y1, x2, y2, ctx) {
     const w = x2 - x1;
@@ -58,14 +78,6 @@ export const BELVEDERE_THEME: Theme = {
 
   decorate(ctx: DecorContext) {
     const { random } = ctx;
-    const sky = new Mesh(
-      gradient(at(new PlaneGeometry(2400, 1000, 1, 8), 0, 60, -700), 0x5d6fa8, 0xf6c28b),
-      new MeshBasicMaterial({ vertexColors: true, fog: false }),
-    );
-    sky.name = 'sky';
-    ctx.root.add(sky);
-    ctx.glow.push(facets(at(new CircleGeometry(46, 10), -210, 0, -680), 0xffe6b0, 0.02, random));
-
     // Mer de nuages sous le stage.
     for (let n = 0; n < 46; n++) {
       const puff = new IcosahedronGeometry(1, 1);
@@ -128,7 +140,7 @@ export const BELVEDERE_THEME: Theme = {
     }
     const drift = new Mesh(
       merge(high),
-      new MeshLambertMaterial({ vertexColors: true, flatShading: true }),
+      new MeshStandardMaterial({ vertexColors: true, flatShading: true }),
     );
     drift.name = 'clouds';
     ctx.root.add(drift);

@@ -16,10 +16,11 @@ import {
 import type { StageId } from '@game/stages-items';
 import {
   BoxGeometry,
+  Color,
   Group,
   Mesh,
   MeshBasicMaterial,
-  MeshLambertMaterial,
+  MeshStandardMaterial,
   type BufferGeometry,
   type Object3D,
 } from 'three';
@@ -28,9 +29,15 @@ import { CANAL_THEME } from './canal.ts';
 import { GEYSERS_THEME } from './geysers.ts';
 import { facets, merge, seeded } from './lowpoly.ts';
 import { RECIF_THEME } from './recif.ts';
+import { createSky } from './sky.ts';
+import { addSurfaceDetail } from './surface.ts';
+import { createMotes, createWater, type Animated } from './water.ts';
 import { NEUTRAL_THEME, SOLID_DEPTH, slab, type DecorContext, type Theme } from './theme.ts';
 
 export { NEUTRAL_THEME, type Theme } from './theme.ts';
+
+/** Intensité des lueurs du décor quand le thème n'en précise pas. */
+const GLOW = 1.8;
 
 const THEMES: Readonly<Record<StageId, Theme>> = {
   belvedere: BELVEDERE_THEME,
@@ -89,7 +96,7 @@ export function createStageVisuals(stage: StageDef): StageVisuals {
   }
 
   const movers: MoverVisual[] = [];
-  const moverMaterial = new MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  const moverMaterial = new MeshStandardMaterial({ vertexColors: true, flatShading: true });
   stage.platforms.forEach((platform, index) => {
     const x1 = fxToFloat(platform.x1);
     const x2 = fxToFloat(platform.x2);
@@ -108,8 +115,27 @@ export function createStageVisuals(stage: StageDef): StageVisuals {
   });
 
   theme.decorate?.(ctx);
-  addMerged(root, ctx.lit, new MeshLambertMaterial({ vertexColors: true, flatShading: true }));
-  addMerged(root, ctx.glow, new MeshBasicMaterial({ vertexColors: true, fog: false }));
+  // Ciel, eau et particules d'ambiance (phase 6), animés par la frame affichée.
+  const living: Animated[] = [];
+  if (theme.skyLook !== undefined) living.push(createSky(theme.skyLook));
+  if (theme.water !== undefined) living.push(createWater(theme.water));
+  for (const motes of theme.motes ?? []) living.push(createMotes(motes));
+  for (const thing of living) {
+    root.add(thing.mesh);
+    animations.push((frame) => thing.update(frame));
+  }
+  // Grain des matières : pierre, bois et roche ne sont plus des aplats.
+  const litMaterial = new MeshStandardMaterial({ vertexColors: true, flatShading: true });
+  addSurfaceDetail(litMaterial, theme.surface);
+  addSurfaceDetail(moverMaterial, theme.surface);
+  addMerged(root, ctx.lit, litMaterial);
+  // Au-delà de 1, les lueurs rayonnent (bloom) ; sans bloom, le mappage de tons les adoucit.
+  const glow = theme.glow ?? GLOW;
+  addMerged(
+    root,
+    ctx.glow,
+    new MeshBasicMaterial({ vertexColors: true, fog: false, color: new Color(glow, glow, glow) }),
+  );
 
   const view: PlatformView = { x1: 0, x2: 0, y: 0 };
   const prevX = new Float64Array(movers.length);
@@ -146,7 +172,7 @@ export function createStageVisuals(stage: StageDef): StageVisuals {
 function addMerged(
   root: Object3D,
   parts: BufferGeometry[],
-  material: MeshLambertMaterial | MeshBasicMaterial,
+  material: MeshStandardMaterial | MeshBasicMaterial,
 ): void {
   if (parts.length === 0) {
     material.dispose();

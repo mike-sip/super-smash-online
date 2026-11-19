@@ -52,6 +52,78 @@ export interface FighterLook {
     readonly shoulderWidth: number;
   };
   readonly parts: readonly LookPart[];
+  /**
+   * Volumes de la figurine (SPEC-visuals.md, phase 3), ajoutés au corps commun ; ils remplacent les
+   * pièces du mannequin. Absents : la figurine reprend les pièces, arrondies.
+   */
+  readonly sculpt?: readonly LookSculptPart[];
+  /** Teintes des zones de la figurine que `primary` et `secondary` ne donnent pas. */
+  readonly palette?: Partial<Record<LookZone, number>>;
+  /**
+   * Couleurs alternatives choisies à la sélection (SPEC-visuals.md, phase 4) : huit, chacune
+   * remplace une partie des teintes ; la première est vide (les couleurs de base).
+   */
+  readonly palettes?: readonly Partial<Record<LookZone, number>>[];
+  /** Zone de la figurine qui rayonne, plus fort pendant la charge d'un smash. */
+  readonly emissive?: LookZone;
+  /** Zone irisée de la figurine. */
+  readonly iridescent?: LookZone;
+  /** Thème des effets du personnage. */
+  readonly vfx?: 'wind' | 'feather' | 'ember' | 'pearl';
+}
+
+/** Os de la figurine qui porte un volume ; « F » : du côté de la caméra quand il regarde à droite. */
+export type LookBone =
+  | 'hips'
+  | 'spine'
+  | 'neck'
+  | 'head'
+  | 'upperArmF'
+  | 'forearmF'
+  | 'handF'
+  | 'upperArmB'
+  | 'forearmB'
+  | 'handB'
+  | 'thighF'
+  | 'shinF'
+  | 'footF'
+  | 'thighB'
+  | 'shinB'
+  | 'footB'
+  // Os secondaires, animés par des ressorts : cheveux, pans de tissu, jupe.
+  | 'tail1'
+  | 'tail2'
+  | 'cloth1'
+  | 'cloth2'
+  | 'skirt';
+
+/** Zone de couleur d'un volume. */
+export type LookZone =
+  'primary' | 'secondary' | 'skin' | 'hair' | 'accent' | 'dark' | 'light' | 'player';
+
+type Vec3 = readonly [number, number, number];
+
+/**
+ * Volume de la figurine, dans le repère de son os en pose de référence (x vers l'avant, y vers le
+ * haut, un membre pend vers -y), en hauteurs de combattant. Le rendu le consomme par sa forme
+ * (`SculptPart` de `render`).
+ */
+export interface LookSculptPart {
+  readonly bone: LookBone;
+  /** Repère dans lequel la pièce est décrite, s'il diffère de l'os qui l'anime. */
+  readonly frame?: LookBone;
+  readonly shape: 'capsule' | 'ellipsoid' | 'box';
+  readonly zone: LookZone;
+  readonly from?: Vec3;
+  readonly to?: Vec3;
+  readonly radius?: number;
+  readonly radiusTo?: number;
+  readonly center?: Vec3;
+  readonly size?: Vec3;
+  readonly rotation?: number;
+  readonly round?: number;
+  readonly blend?: number;
+  readonly mirror?: boolean;
 }
 
 export interface Character {

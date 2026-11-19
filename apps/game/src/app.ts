@@ -6,7 +6,17 @@
  * l'élément qui avait le focus, et reviennent tels quels au retour.
  */
 import { KEYBOARD_ID, createInput, type Input } from '@game/input';
-import { SND_JUMP, SND_LEDGE, SND_SHIELD, createGameAudio, type GameAudio } from '@game/render';
+import {
+  SND_JUMP,
+  SND_LEDGE,
+  SND_SHIELD,
+  createGameAudio,
+  type GameAudio,
+  type Quality,
+  type QualityOptions,
+  type QualitySetting,
+  type Renderer,
+} from '@game/render';
 import type { Problem, ErrorAction } from './errors.ts';
 import { createMenuPad, readGamepads, type MenuAction } from './menu-pad.ts';
 import { nextFocus, type Direction } from './nav.ts';
@@ -85,6 +95,10 @@ export class App {
   private fpsFrames = 0;
   private fpsSince = 0;
   private readonly frameListeners = new Set<(now: number) => void>();
+  /** Réglage de qualité appliqué à chaque renderer vivant. */
+  private readonly appliedQuality = new WeakMap<Renderer, QualitySetting>();
+  /** Niveau retenu par la qualité automatique au dernier match. */
+  private autoQuality: Quality | undefined;
 
   constructor(elements: AppElements, root: (app: App) => Screen) {
     this.elements = elements;
@@ -409,12 +423,45 @@ export class App {
   }
 
   updateSettings(next: Settings): void {
+    if (next.display.quality !== this.settings.display.quality) this.autoQuality = undefined;
     this.settings = next;
     saveSettings(this.storage, next);
     this.audio.setSettings(this.audioSettings());
     this.applyDisplay();
     // Résolution du rendu ou taille du texte : les renderers se recalent.
     window.dispatchEvent(new Event('resize'));
+  }
+
+  /**
+   * Options graphiques d'un nouveau renderer : qualité, et effets d'écran (secousses, gros plans,
+   * éclairs) coupés quand les mouvements sont réduits.
+   */
+  qualityOptions(): QualityOptions & { screenEffects: boolean } {
+    return {
+      quality: this.settings.display.quality,
+      autoStart: this.autoQuality,
+      screenEffects: !this.reducedMotion(),
+    };
+  }
+
+  /**
+   * Applique le réglage de qualité à un renderer s'il a changé depuis la dernière fois. À appeler
+   * après la création du renderer et à chaque redimensionnement (`updateSettings` en déclenche un).
+   */
+  syncQuality(renderer: Renderer | null): void {
+    if (renderer === null) return;
+    const wanted = this.settings.display.quality;
+    const applied = this.appliedQuality.get(renderer);
+    if (applied === wanted) return;
+    if (applied !== undefined) renderer.setQuality(wanted);
+    this.appliedQuality.set(renderer, wanted);
+  }
+
+  /** Retient le niveau retenu par la qualité automatique en fin de match, pour les suivants. */
+  rememberQuality(renderer: Renderer | null): void {
+    if (renderer !== null && this.settings.display.quality === 'auto') {
+      this.autoQuality = renderer.quality;
+    }
   }
 
   /** Densité de pixels du rendu, plafonnée par le réglage. */

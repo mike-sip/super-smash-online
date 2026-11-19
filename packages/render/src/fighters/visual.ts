@@ -7,6 +7,7 @@
  */
 import type { FighterView, SimConfig } from '@game/sim-core';
 import type { Object3D } from 'three';
+import type { QualityPreset } from '../quality.ts';
 
 export interface FighterVisuals {
   /** Objet à placer dans la scène. */
@@ -22,6 +23,10 @@ export interface FighterVisuals {
    * Ne doit rien allouer.
    */
   update(player: number, x: number, y: number, view: FighterView, alpha: number): void;
+  /** Adapte le rendu au préréglage de qualité (contour, détails), si l'implémentation en a. */
+  setQuality?(preset: QualityPreset): void;
+  /** Thème des effets propres au personnage du joueur (rafales, plumes…), s'il en a un. */
+  theme?(player: number): string | undefined;
   dispose(): void;
 }
 

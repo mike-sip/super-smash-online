@@ -8,6 +8,10 @@
  * dessin, HUD), côté processeur. Build mesuré : `dist-e2e` (le build de production plus la prise
  * de test). Comme pour la démo, si Edge sans fenêtre dessine sans carte graphique, la mesure
  * recommence dans une fenêtre visible.
+ *
+ * Qualité graphique (SPEC-visuals.md, critère n° 1) : chaque combat est mesuré à chaque niveau,
+ * ou au seul niveau donné par la variable d'environnement PERF_QUALITY (low, medium, high, ultra).
+ * Seuil de dessin moyen : 4 ms en Bas (celui de SPEC-render.md), 8 ms au-dessus.
  */
 import { gzipSync } from 'node:zlib';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -24,6 +28,18 @@ const MAX_FRAME_MS = 16.7;
 const MAX_DRAW_MS = 4;
 const SOFTWARE = /swiftshader|llvmpipe|software|basic render/i;
 const STAGES = ['belvedere', 'recif', 'canal', 'geysers'];
+const LEVELS = ['low', 'medium', 'high', 'ultra'] as const;
+type Level = (typeof LEVELS)[number];
+const QUALITY_ENV = process.env.PERF_QUALITY;
+const MEASURED: readonly Level[] = LEVELS.filter(
+  (q) => QUALITY_ENV === undefined || q === QUALITY_ENV,
+);
+const MAX_DRAW_MS_BY_LEVEL: Record<Level, number> = {
+  low: MAX_DRAW_MS,
+  medium: 8,
+  high: 8,
+  ultra: 8,
+};
 
 const mean = (v: number[]): number => v.reduce((s, x) => s + x, 0) / Math.max(1, v.length);
 function percentile(v: number[], share: number): number {
@@ -57,7 +73,7 @@ afterAll(async () => {
   await new Promise<void>((r) => gateway.close(() => r()));
 });
 
-async function open(): Promise<{ page: Page; gpu: string; windowed: boolean }> {
+async function open(quality?: Level): Promise<{ page: Page; gpu: string; windowed: boolean }> {
   for (const headless of [true, false]) {
     await browser?.close();
     browser = await chromium.launch({ channel: 'msedge', headless });
@@ -65,6 +81,21 @@ async function open(): Promise<{ page: Page; gpu: string; windowed: boolean }> {
       await browser.newContext({ viewport: { width: 1280, height: 720 } })
     ).newPage();
     await page.goto(url);
+    if (quality !== undefined) {
+      // Réglage enregistré comme le ferait l'écran Affichage, puis relu au démarrage.
+      await page.evaluate((q) => {
+        const key = 'fracas.settings';
+        const saved = JSON.parse(localStorage.getItem(key) ?? 'null') as {
+          display?: object;
+        } | null;
+        const base = saved ?? { version: 1, audio: {}, display: {} };
+        localStorage.setItem(
+          key,
+          JSON.stringify({ ...base, display: { ...base.display, quality: q } }),
+        );
+      }, quality);
+      await page.reload();
+    }
     await page.waitForFunction(
       () => 'screen' in ((window as never as { __game?: object }).__game ?? {}),
     );
@@ -107,10 +138,10 @@ describe('performance de l’application', () => {
     expect(r.p95).toBeLessThan(MAX_FRAME_MS);
   }, 60_000);
 
-  it.each(STAGES)(
-    'combat à 8, objets fréquents, son actif : %s',
-    async (stage) => {
-      const { page } = await open();
+  it.each(MEASURED.flatMap((q) => STAGES.map((stage) => [stage, q] as const)))(
+    'combat à 8, objets fréquents, son actif : %s en qualité %s',
+    async (stage, quality) => {
+      const { page } = await open(quality);
       await page.keyboard.press('Enter'); // geste de l'utilisateur : le son démarre
       await hook(page, 'perfTraining', stage);
       await page.waitForFunction(
@@ -123,9 +154,9 @@ describe('performance de l’application', () => {
           (window as never as { __game: { match(): { players: number } } }).__game.match().players,
       );
       expect(audio).toBe(8);
-      const r = report(`Combat ${stage}`, await measure(page));
+      const r = report(`Combat ${stage} (${quality})`, await measure(page));
       expect(r.p95).toBeLessThan(MAX_FRAME_MS);
-      expect(r.drawMean).toBeLessThan(MAX_DRAW_MS);
+      expect(r.drawMean).toBeLessThan(MAX_DRAW_MS_BY_LEVEL[quality]);
     },
     60_000,
   );

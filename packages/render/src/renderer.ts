@@ -17,25 +17,33 @@ import {
 import {
   CircleGeometry,
   Color,
-  DirectionalLight,
   Fog,
-  HemisphereLight,
   Mesh,
   MeshBasicMaterial,
+  MeshStandardMaterial,
   PerspectiveCamera,
   Scene,
   WebGLRenderer,
   type BufferGeometry,
   type Camera,
   type Material,
+  type Object3D,
+  type Texture,
 } from 'three';
 import {
+  addShake,
+  applyCloseUp,
   approachFraming,
+  cameraPosition,
   copyFraming,
+  createCloseUp,
+  createShake,
   ensureVisible,
   frameFighters,
   projectX,
   projectY,
+  shakeOffset,
+  startCloseUp,
   type CameraBounds,
   type Framing,
 } from './camera.ts';
@@ -50,16 +58,16 @@ import {
   type DebugLayer,
 } from './debug.ts';
 import {
-  createEffectPool,
   createEffectVisuals,
+  createScreenFlash,
   hitShake,
-  liveEffects,
   shieldRadius,
   showsShield,
-  spawnForEvent,
 } from './effects.ts';
 import { createEntityVisuals, isNewEntity } from './entities.ts';
 import { createEventFilter, isNewFrame } from './events.ts';
+import { createVfx } from './vfx/library.ts';
+import { createParticleLayer, liveParticles } from './vfx/particles.ts';
 import { createMannequins } from './fighters/mannequin.ts';
 import type { FighterVisualsFactory } from './fighters/visual.ts';
 import { createDomSink, createHud, type HudSink } from './hud.ts';
@@ -71,17 +79,42 @@ import {
   sampleX,
   sampleY,
 } from './interpolation.ts';
+import { createLighting } from './lighting.ts';
+import { lookOf, type PostLook } from './post/grading.ts';
+import { createPostPipeline, skyEnvironment } from './post/pipeline.ts';
+import {
+  createAutoTuner,
+  guessQuality,
+  pixelRatioFor,
+  presetOf,
+  type AutoTuner,
+  type Quality,
+  type QualityPreset,
+  type QualitySetting,
+} from './quality.ts';
 import { groundBelow, stageSurfaces } from './stage.ts';
-import { createStageVisuals } from './stages/decor.ts';
+import { createStageVisuals, type Theme } from './stages/decor.ts';
 import { createItemVisuals, swingOf } from './stages/items.ts';
 
-export interface RendererOptions {
+export interface QualityOptions {
+  /** Niveau de qualité graphique ; `'auto'` par défaut. */
+  readonly quality?: QualitySetting;
+  /**
+   * En `'auto'`, niveau de départ à la place de l'estimation d'après la carte graphique : celui
+   * qu'a retenu le match précédent (`Renderer.quality`), pour ne pas réévaluer à chaque match.
+   */
+  readonly autoStart?: Quality;
+}
+
+export interface RendererOptions extends QualityOptions {
   readonly canvas: HTMLCanvasElement;
   /** Conteneur du HUD et de la vue technique, superposé au canvas. */
   readonly overlay: HTMLElement;
   readonly config: SimConfig;
   /** Représentation des combattants ; par défaut, le mannequin procédural sans style. */
   readonly fighterVisuals?: FighterVisualsFactory;
+  /** Secousses de caméra, gros plans et éclairs d'écran ; vrai par défaut (option de confort). */
+  readonly screenEffects?: boolean;
 }
 
 export interface Renderer {
@@ -96,6 +129,10 @@ export interface Renderer {
 
   resize(width: number, height: number, pixelRatio: number): void;
   setDebug(enabled: boolean): void;
+  /** Change le niveau de qualité (de préférence entre deux matchs). */
+  setQuality(quality: QualitySetting): void;
+  /** Niveau effectivement appliqué : celui qu'a choisi `'auto'`, le cas échéant. */
+  readonly quality: Quality;
   /** Libère les ressources GPU. */
   dispose(): void;
 }
@@ -109,10 +146,23 @@ export interface DrawBackend {
   /** Appels de dessin émis par le dernier `render`. */
   drawCalls(): number;
   setSize(width: number, height: number, pixelRatio: number): void;
+  /** Applique un préréglage : ombres, chaîne de post-traitement, réglages d'image. */
+  configure?(preset: QualityPreset, look: PostLook): void;
+  /** Lumière d'ambiance par image pour ce thème, ou rien. */
+  environment?(theme: Theme): { readonly texture: Texture; dispose(): void } | null;
+  /** Nom de la carte graphique, pour le choix automatique de la qualité. */
+  gpu?(): string;
   dispose(): void;
 }
 
 const FOV_DEGREES = 35;
+/** Inclinaison de la caméra vers le bas : le dessus des plateformes et les ombres se voient. */
+const CAMERA_TILT = (7 * Math.PI) / 180;
+/** Particules au plus, avant la limite fixée par la qualité : lumineuses et opaques. */
+const GLOW_CAPACITY = 7000;
+const PUFF_CAPACITY = 3000;
+/** Part des particules lumineuses dans le budget d'un préréglage. */
+const GLOW_SHARE = 0.7;
 /** Marges gardées autour des combattants par la caméra, en unités de jeu. */
 const CAMERA_MARGIN_X = 24;
 const CAMERA_MARGIN_TOP = 34;
@@ -137,21 +187,81 @@ export function createRenderer(options: RendererOptions): Renderer {
     antialias: true,
     powerPreference: 'high-performance',
   });
+  const pipeline = createPostPipeline(gl);
   return createRendererWith(
     options.config,
     {
-      render: (scene, camera) => gl.render(scene, camera),
+      render: (scene, camera) => pipeline.render(scene, camera),
       drawCalls: () => gl.info.render.calls,
-      setSize(width, height, pixelRatio) {
-        gl.setPixelRatio(pixelRatio);
-        gl.setSize(width, height, false);
+      setSize: (width, height, pixelRatio) => pipeline.setSize(width, height, pixelRatio),
+      configure: (preset, look) => pipeline.configure(preset, look),
+      environment(theme) {
+        const target = skyEnvironment(gl, {
+          sky: theme.sky,
+          horizon: theme.background,
+          ground: theme.ground,
+        });
+        return { texture: target.texture, dispose: () => target.dispose() };
       },
-      dispose: () => gl.dispose(),
+      gpu() {
+        const context = gl.getContext();
+        const info = context.getExtension('WEBGL_debug_renderer_info');
+        return String(
+          context.getParameter(info === null ? context.RENDERER : info.UNMASKED_RENDERER_WEBGL),
+        );
+      },
+      dispose() {
+        pipeline.dispose();
+        gl.dispose();
+      },
     },
     createDomSink(options.overlay, options.config.fighters.length),
     createDebugLayer(options.overlay),
     options.fighterVisuals,
+    {
+      quality: options.quality ?? 'auto',
+      autoStart: options.autoStart,
+      screenEffects: options.screenEffects ?? true,
+    },
   );
+}
+
+/** Part de lumière retirée au décor au plus fort de l'assombrissement d'une attaque ultime. */
+const DIM_DEPTH = 0.62;
+
+/** Poids de l'assombrissement `age` frames après son départ : montée, maintien, retour. */
+export function dimWeight(age: number, life: number): number {
+  if (life <= 0 || age < 0 || age >= life) return 0;
+  const w = Math.min(1, age / 6, (life - age) / 18);
+  return w * w * (3 - 2 * w);
+}
+
+/** Part de la lumière d'ambiance par image dans l'éclairage. */
+const ENVIRONMENT_INTENSITY = 0.3;
+
+/** Les combattants, objets et entités portent et reçoivent les ombres et la lumière de contour. */
+function prepareActors(root: Object3D, addRim: (material: Material) => void): void {
+  root.traverse((object) => {
+    if (!(object instanceof Mesh)) return;
+    // Contour et petits détails (yeux) : ni ombre portée ni ombre reçue.
+    const shadows = object.userData.noShadow !== true;
+    object.castShadow = shadows;
+    object.receiveShadow = shadows;
+    const material = object.material as Material | Material[];
+    for (const m of Array.isArray(material) ? material : [material]) {
+      if (m instanceof MeshStandardMaterial) addRim(m);
+    }
+  });
+}
+
+/** Le décor éclairé porte et reçoit les ombres ; ciel et lueurs non. */
+function prepareDecor(root: Object3D): void {
+  root.traverse((object) => {
+    if (!(object instanceof Mesh)) return;
+    const lit = object.material instanceof MeshStandardMaterial;
+    object.castShadow = lit;
+    object.receiveShadow = lit;
+  });
 }
 
 const silentSink: HudSink = {
@@ -165,6 +275,11 @@ const silentSink: HudSink = {
 export interface RendererInternals extends Renderer {
   /** Nombre d'effets visibles à la dernière frame capturée. */
   effectCount(): number;
+  /**
+   * Fige la caméra sur un cadrage donné (centre et distance au plan de jeu), ou rend le cadrage
+   * automatique avec `null`. Outil d'inspection (démo, vérification visuelle, portraits).
+   */
+  inspect(framing: Framing | null): void;
 }
 
 /** Construit le renderer sur un backend donné. Interne : l'API publique est `createRenderer`. */
@@ -174,6 +289,7 @@ export function createRendererWith(
   hudSink: HudSink = silentSink,
   debugLayer?: DebugLayer,
   fighterVisuals: FighterVisualsFactory = createMannequins,
+  qualityOptions: QualityOptions & { readonly screenEffects?: boolean } = {},
 ): RendererInternals {
   const players = config.fighters.length;
 
@@ -183,11 +299,16 @@ export function createRendererWith(
   const theme = stageVisuals.theme;
   scene.background = new Color(theme.background);
   if (theme.fog !== undefined) scene.fog = new Fog(theme.fog.color, theme.fog.near, theme.fog.far);
-  scene.add(new HemisphereLight(theme.sky, theme.ground, theme.ambient));
-  const sun = new DirectionalLight(theme.sun, theme.sunIntensity);
-  sun.position.set(40, 120, 90);
-  scene.add(sun);
+  const lighting = createLighting(theme);
+  scene.add(lighting.root);
+  const environment = backend.environment?.(theme) ?? null;
+  if (environment !== null) {
+    scene.environment = environment.texture;
+    scene.environmentIntensity = ENVIRONMENT_INTENSITY;
+  }
+  const look = lookOf(theme.look);
 
+  prepareDecor(stageVisuals.root);
   scene.add(stageVisuals.root);
   const surfaces = stageSurfaces(config.stage);
 
@@ -204,8 +325,17 @@ export function createRendererWith(
     marginBottom: CAMERA_MARGIN_BOTTOM,
     minViewHeight: CAMERA_MIN_VIEW_HEIGHT,
     tanHalfFov: Math.tan((FOV_DEGREES * Math.PI) / 360),
+    tilt: CAMERA_TILT,
     aspect: 16 / 9,
   };
+  camera.rotation.x = -CAMERA_TILT;
+  // La caméra porte le voile des éclairs d'écran : elle doit être dans la scène.
+  scene.add(camera);
+  const screenEffects = qualityOptions.screenEffects ?? true;
+  const shake = createShake();
+  const closeUp = createCloseUp();
+  const cameraAt = { x: 0, y: 0, z: 0 };
+  const shakeAt = { x: 0, y: 0 };
   const framingTarget: Framing = { centerX: 0, centerY: 0, distance: 0 };
   const framingPrev: Framing = { centerX: 0, centerY: 0, distance: 0 };
   const framingCurr: Framing = { centerX: 0, centerY: 0, distance: 0 };
@@ -224,12 +354,17 @@ export function createRendererWith(
 
   const visuals = fighterVisuals(config);
   scene.add(visuals.root);
-  const entities = createEntityVisuals(config);
+  const entities = createEntityVisuals(config, (owner) =>
+    owner < 0 ? undefined : visuals.theme?.(owner),
+  );
   scene.add(entities.mesh);
   // Objets et dangers : chacun sous sa forme ; les autres entités restent des sphères.
   const itemVisuals = createItemVisuals(config);
   const swing = swingOf(config);
   scene.add(itemVisuals.root);
+  for (const root of [visuals.root, entities.mesh, itemVisuals.root]) {
+    prepareActors(root, (m) => lighting.addRim(m));
+  }
 
   const views: FighterView[] = [];
   const heights = new Float64Array(players);
@@ -254,9 +389,22 @@ export function createRendererWith(
     shadows.push(shadow);
   }
 
-  const effectPool = createEffectPool();
-  const effects = createEffectVisuals(players, effectPool.capacity);
+  const effects = createEffectVisuals(players);
   scene.add(effects.root);
+  const flash = createScreenFlash(camera);
+  const glowLayer = createParticleLayer(GLOW_CAPACITY, false);
+  const puffLayer = createParticleLayer(PUFF_CAPACITY, true);
+  scene.add(glowLayer.mesh, puffLayer.mesh);
+  const gravities = new Float64Array(players);
+  for (let i = 0; i < players; i++) gravities[i] = fxToFloat(config.fighters[i]!.gravity);
+  const vfx = createVfx({
+    glow: glowLayer.pool,
+    puff: puffLayer.pool,
+    heights,
+    gravities,
+    blast: { left: bounds.minX, right: bounds.maxX, top: bounds.maxY, bottom: bounds.minY },
+    themes: Array.from({ length: players }, (_, i) => visuals.theme?.(i)),
+  });
   const eventFilter = createEventFilter();
 
   // Vue technique. Ses textes sont recréés à chaque image : elle seule déroge à la règle
@@ -282,15 +430,58 @@ export function createRendererWith(
   const entityView = createEntityView();
   const entityKind = new Int32Array(MAX_ENTITIES);
   const entityLife = new Int32Array(MAX_ENTITIES);
+  const entityOwner = new Int32Array(MAX_ENTITIES).fill(-1);
+  const entityDefs = config.entities ?? [];
+  // Assombrissement du décor pendant une attaque ultime (frame de départ et durée).
+  let dimBorn = 0;
+  let dimLife = 0;
+  const background = new Color(theme.background);
+  const fogColor = theme.fog === undefined ? null : new Color(theme.fog.color);
   let lastFrame = -1;
   let captured = false;
+  let inspected: Framing | null = null;
 
   function applyCamera(framing: Framing): void {
-    camera.position.set(framing.centerX, framing.centerY, framing.distance);
+    cameraPosition(framing, bounds, cameraAt);
+    camera.position.set(cameraAt.x, cameraAt.y, cameraAt.z);
   }
   applyCamera(framingCurr);
 
+  // Qualité : préréglage appliqué aux lumières et au backend ; en `auto`, réévaluée pendant les
+  // premières secondes d'après l'intervalle entre deux images dessinées.
+  let tuner: AutoTuner | null = null;
+  let quality: Quality = 'high';
+  let preset = presetOf(quality);
+  let requestedRatio = 1;
+  let lastDrawAt = 0;
+
+  function applyQuality(q: Quality): void {
+    quality = q;
+    preset = presetOf(q);
+    lighting.configure(preset);
+    visuals.setQuality?.(preset);
+    glowLayer.setLimit(Math.round(preset.particles * GLOW_SHARE));
+    puffLayer.setLimit(preset.particles - Math.round(preset.particles * GLOW_SHARE));
+    backend.configure?.(preset, look);
+    backend.setSize(viewWidth, viewHeight, pixelRatioFor(preset, requestedRatio));
+  }
+
+  function setQuality(setting: QualitySetting, autoStart?: Quality): void {
+    if (setting === 'auto') {
+      tuner = createAutoTuner(autoStart ?? guessQuality(backend.gpu?.() ?? ''));
+      applyQuality(tuner.quality);
+    } else {
+      tuner = null;
+      applyQuality(setting);
+    }
+  }
+  setQuality(qualityOptions.quality ?? 'high', qualityOptions.autoStart);
+
   return {
+    get quality() {
+      return quality;
+    },
+    setQuality: (setting) => setQuality(setting),
     capture(sim) {
       const now = frame(sim);
       // Hors séquence (première capture, saut dans le temps) : rien à interpoler.
@@ -321,11 +512,35 @@ export function createRendererWith(
       }
 
       // Événements : une frame re-simulée après un rollback ne redéclenche rien.
-      if (isNewFrame(eventFilter, now)) {
+      const newFrame = isNewFrame(eventFilter, now);
+      if (newFrame) {
+        // Zone visible, pour ramener à l'écran l'effet d'un KO.
+        const halfH = framingCurr.distance * bounds.tanHalfFov;
+        vfx.view.minX = framingCurr.centerX - halfH * bounds.aspect;
+        vfx.view.maxX = framingCurr.centerX + halfH * bounds.aspect;
+        vfx.view.minY = framingCurr.centerY - halfH;
+        vfx.view.maxY = framingCurr.centerY + halfH;
+        if (!sequential) vfx.forget();
         const queue = events(sim);
         for (let e = 0; e < queue.count; e++) {
-          spawnForEvent(effectPool, queue.type[e]!, queue.a[e]!, queue.b[e]!, views, heights, now);
+          vfx.event(queue.type[e]!, queue.a[e]!, queue.b[e]!, views, now);
         }
+        for (let i = 0; i < players; i++) vfx.fighter(i, views[i]!, now);
+        const cues = vfx.cues;
+        if (screenEffects) {
+          if (cues.shake > 0) addShake(shake, cues.shake, cues.shakeLife, now);
+          if (cues.closeLife > 0)
+            startCloseUp(closeUp, cues.closeX, cues.closeY, cues.closeLife, now);
+          if (cues.flash > 0) flash.start(cues.flashColor, cues.flash, now);
+        }
+        if (cues.dimLife > 0) {
+          dimBorn = now;
+          dimLife = cues.dimLife;
+        }
+        cues.shake = 0;
+        cues.closeLife = 0;
+        cues.flash = 0;
+        cues.dimLife = 0;
       }
 
       for (let slot = 0; slot < MAX_ENTITIES; slot++) {
@@ -342,6 +557,20 @@ export function createRendererWith(
         pushSample(entityTrack, slot, entityView.x, entityView.y, fresh);
         entityKind[slot] = entityView.kind;
         entityLife[slot] = entityView.life;
+        entityOwner[slot] = entityView.owner;
+        // Traînée des projectiles (les objets ont leur propre rendu).
+        if (newFrame && !itemVisuals.handles(entityView.kind)) {
+          const def = entityDefs[entityView.kind - 1];
+          vfx.projectile(
+            entityView.x,
+            entityView.y,
+            entityView.velX,
+            entityView.velY,
+            entityView.owner,
+            def === undefined ? 1 : fxToFloat(def.radius),
+            now,
+          );
+        }
       }
 
       // Caméra : la cible suit les combattants vivants, le cadrage affiché la rejoint en douceur.
@@ -358,7 +587,12 @@ export function createRendererWith(
     },
 
     draw(alpha) {
-      const started = debugEnabled ? performance.now() : 0;
+      const started = debugEnabled || tuner !== null ? performance.now() : 0;
+      if (tuner !== null && !tuner.done) {
+        const changed = lastDrawAt > 0 ? tuner.sample(started - lastDrawAt) : null;
+        if (changed !== null) applyQuality(changed);
+        lastDrawAt = started;
+      }
       if (captured) {
         debugFrame.shapes.count = 0;
         const t = alpha < 0 ? 0 : alpha > 1 ? 1 : alpha;
@@ -368,7 +602,18 @@ export function createRendererWith(
           framingPrev.centerY + (framingCurr.centerY - framingPrev.centerY) * t;
         framingShown.distance =
           framingPrev.distance + (framingCurr.distance - framingPrev.distance) * t;
+        if (inspected !== null) copyFraming(inspected, framingShown);
+        const time = lastFrame + t;
+        // Gros plan et secousse : purement visuels, coupés dans la vue technique pour qu'elle
+        // reste lisible.
+        if (!debugEnabled) applyCloseUp(closeUp, time, bounds, framingShown);
         applyCamera(framingShown);
+        if (!debugEnabled) {
+          shakeOffset(shake, time, framingShown.distance, bounds, shakeAt);
+          camera.position.x += shakeAt.x;
+          camera.position.y += shakeAt.y;
+        }
+        lighting.follow(framingShown, bounds.tanHalfFov, bounds.aspect);
         stageVisuals.update(lastFrame, t);
 
         for (let i = 0; i < players; i++) {
@@ -384,6 +629,7 @@ export function createRendererWith(
             x,
             y + height / 2,
             alive && showsShield(view.action) ? shieldRadius(view.shield) * height : 0,
+            view.shield,
           );
           if (debugEnabled) {
             const def = config.fighters[i]!;
@@ -394,7 +640,7 @@ export function createRendererWith(
           }
           hud.tag(
             i,
-            projectX(framingShown, bounds, x, viewWidth),
+            projectX(framingShown, bounds, x, y + heights[i]! + TAG_GAP, viewWidth),
             projectY(framingShown, bounds, y + heights[i]! + TAG_GAP, viewHeight),
             alive,
           );
@@ -402,7 +648,8 @@ export function createRendererWith(
           const shadow = shadows[i]!;
           const ground = groundBelow(surfaces, x, y);
           const fade = 1 - (y - ground) / SHADOW_FADE_HEIGHT;
-          if (!alive || fade <= 0) {
+          // Ombre ronde seulement sans carte d'ombre : sinon le combattant porte sa vraie ombre.
+          if (!alive || fade <= 0 || preset.shadowMapSize > 0) {
             shadow.visible = false;
           } else {
             const radius = shadowRadius[i]! * (0.5 + 0.5 * fade);
@@ -413,17 +660,16 @@ export function createRendererWith(
           }
         }
 
-        const entityDefs = config.entities ?? [];
         itemVisuals.begin();
         for (let slot = 0; slot < MAX_ENTITIES; slot++) {
           const kind = entityKind[slot]!;
           const x = sampleX(entityTrack, slot, t);
           const y = sampleY(entityTrack, slot, t);
           if (itemVisuals.handles(kind)) {
-            entities.set(slot, 0, x, y);
+            entities.set(slot, 0, x, y, -1);
             itemVisuals.set(slot, x, y, lastFrame + t);
           } else {
-            entities.set(slot, kind, x, y);
+            entities.set(slot, kind, x, y, entityOwner[slot]!);
           }
           if (debugEnabled && kind !== 0) {
             const def = entityDefs[kind - 1];
@@ -431,7 +677,18 @@ export function createRendererWith(
           }
         }
         itemVisuals.end();
-        effects.update(effectPool, lastFrame + t);
+        effects.update(time);
+        glowLayer.update(time);
+        puffLayer.update(time);
+        flash.update(time);
+        // Ultime : le décor s'assombrit, les combattants (lumière de contour) ressortent.
+        const dim = DIM_DEPTH * dimWeight(time - dimBorn, dimLife);
+        lighting.setDim(1 - dim);
+        if (environment !== null) scene.environmentIntensity = ENVIRONMENT_INTENSITY * (1 - dim);
+        (scene.background as Color).copy(background).multiplyScalar(1 - dim);
+        if (fogColor !== null && scene.fog !== null) {
+          (scene.fog as Fog).color.copy(fogColor).multiplyScalar(1 - dim);
+        }
       }
       backend.render(scene, camera);
 
@@ -447,7 +704,8 @@ export function createRendererWith(
 
     resize(width, height, pixelRatio) {
       if (width <= 0 || height <= 0) return;
-      backend.setSize(width, height, pixelRatio);
+      requestedRatio = pixelRatio;
+      backend.setSize(width, height, pixelRatioFor(preset, pixelRatio));
       debugLayer?.resize(width, height, pixelRatio);
       viewWidth = width;
       viewHeight = height;
@@ -467,14 +725,21 @@ export function createRendererWith(
       debugLayer?.setEnabled(enabled);
     },
 
+    inspect(framing) {
+      inspected = framing === null ? null : { ...framing };
+    },
+
     effectCount() {
-      return liveEffects(effectPool, lastFrame);
+      return liveParticles(glowLayer.pool, lastFrame) + liveParticles(puffLayer.pool, lastFrame);
     },
 
     dispose() {
       visuals.dispose();
       entities.dispose();
       effects.dispose();
+      flash.dispose();
+      glowLayer.dispose();
+      puffLayer.dispose();
       debugLayer?.dispose();
       hud.dispose();
       const geometries = new Set<BufferGeometry>();
@@ -488,6 +753,8 @@ export function createRendererWith(
       for (const geometry of geometries) geometry.dispose();
       for (const material of materials) material.dispose();
       scene.clear();
+      lighting.dispose();
+      environment?.dispose();
       backend.dispose();
     },
   };

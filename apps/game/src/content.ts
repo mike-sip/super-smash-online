@@ -75,6 +75,15 @@ export function stageName(id: string | null): string {
 }
 
 /** Apparence d'un personnage pour le rendu, ou `undefined` (mannequin standard). */
+/** Couleur principale d'une couleur alternative du personnage, en CSS. */
+export function paletteColor(id: string, variant: number): string | undefined {
+  const look = lookOf(id);
+  if (look === undefined) return undefined;
+  const alternatives = look.palettes ?? [];
+  const alt = alternatives.length > 0 ? alternatives[variant % alternatives.length] : undefined;
+  return hex(alt?.primary ?? look.primary);
+}
+
 export function lookOf(id: string): Character['look'] | undefined {
   return isFighterId(id) ? character(id).look : undefined;
 }

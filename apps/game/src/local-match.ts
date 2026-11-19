@@ -9,7 +9,8 @@ import {
   createMatchDomSink,
   createMatchHud,
   createRenderer,
-  createStyledMannequins,
+  createFigurines,
+  distinctPalettes,
   type MatchHud,
   type Renderer,
 } from '@game/render';
@@ -34,6 +35,7 @@ import {
 } from '@game/sim-core';
 import type { ItemFrequency } from '@game/stages-items';
 import type { App, Screen } from './app.ts';
+import { portraitUrl } from './portraits.ts';
 import { buildFreeConfig, buildSimConfig, fighterName, lookOf } from './content.ts';
 import { createDummyInputs, type DummyMode } from './dummies.ts';
 import { createMenuPad, readGamepads } from './menu-pad.ts';
@@ -54,6 +56,8 @@ export interface LocalMatchOptions {
   readonly hazards: boolean;
   /** Un personnage par joueur de la simulation. */
   readonly fighters: readonly string[];
+  /** Couleur alternative voulue par joueur ; deux joueurs sur le même personnage diffèrent toujours. */
+  readonly palettes?: readonly number[];
   /** Pour chaque joueur de la simulation, l'emplacement `input` qui le pilote, ou -1 (mannequin). */
   readonly controllers: readonly number[];
   readonly dummyMode?: DummyMode;
@@ -71,6 +75,7 @@ export interface LocalMatch extends Screen {
 export function localMatch(app: App, options: LocalMatchOptions): LocalMatch {
   app.releaseCanvas();
   const players = options.fighters.length;
+  const palettes = distinctPalettes(options.fighters, options.palettes ?? []);
   const canvas = app.elements.canvas;
   const overlay = app.elements.overlay;
   const local = new Uint32Array(4);
@@ -125,9 +130,16 @@ export function localMatch(app: App, options: LocalMatchOptions): LocalMatch {
       canvas,
       overlay,
       config: sim.config,
-      fighterVisuals: createStyledMannequins((p) => lookOf(options.fighters[p] ?? '')),
+      fighterVisuals: createFigurines(
+        (p) => lookOf(options.fighters[p] ?? ''),
+        (p) => palettes[p] ?? 0,
+      ),
+      ...app.qualityOptions(),
     });
-    if (options.match !== null) hud = createMatchHud(players, createMatchDomSink(overlay, players));
+    if (options.match !== null) {
+      const icons = options.fighters.map((id, p) => portraitUrl(id, palettes[p] ?? 0, 'stock', 72));
+      hud = createMatchHud(players, createMatchDomSink(overlay, players, icons));
+    }
     resize();
     renderer.capture(sim);
     app.audio.capture(sim);
@@ -139,6 +151,7 @@ export function localMatch(app: App, options: LocalMatchOptions): LocalMatch {
   }
 
   function resize(): void {
+    app.syncQuality(renderer);
     renderer?.resize(canvas.clientWidth, canvas.clientHeight, app.pixelRatio());
   }
 
@@ -283,6 +296,7 @@ export function localMatch(app: App, options: LocalMatchOptions): LocalMatch {
     dispose() {
       window.removeEventListener('resize', resize);
       hud?.dispose();
+      app.rememberQuality(renderer);
       renderer.dispose();
       hud = null;
     },

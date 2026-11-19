@@ -40,12 +40,13 @@ describe('décor des stages', () => {
     for (const stage of STAGES) {
       const visuals = createStageVisuals(applyStage(testConfig(2), stage.id).stage);
       const count = meshes(visuals.root).length;
-      // Décor fusionné (éclairé, lumineux), ciel, eau, éléments animés, plateformes mobiles.
-      expect(count, stage.id).toBeLessThanOrEqual(8);
+      // Décor fusionné (éclairé, lumineux), ciel par shader, eau animée, particules d'ambiance,
+      // éléments animés, plateformes mobiles.
+      expect(count, stage.id).toBeLessThanOrEqual(10);
       expect(count, stage.id).toBeGreaterThanOrEqual(2);
     }
-    // Le décor neutre : une seule géométrie fusionnée pour les blocs et les plateformes.
-    expect(meshes(createStageVisuals(TEST_STAGE).root)).toHaveLength(1);
+    // La salle d'entraînement : blocs et plateformes fusionnés, quadrillage du fond, ciel.
+    expect(meshes(createStageVisuals(TEST_STAGE).root)).toHaveLength(3);
   });
 
   it('place les plateformes mobiles là où la simulation les a mises, interpolées', () => {

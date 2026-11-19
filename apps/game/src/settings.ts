@@ -10,8 +10,13 @@ export interface StorageLike {
   removeItem(key: string): void;
 }
 
+import { QUALITIES, type QualitySetting } from '@game/render';
+
 export type PixelRatioCap = 1 | 1.5 | 2;
 export const PIXEL_RATIOS: readonly PixelRatioCap[] = [1, 1.5, 2];
+
+/** Qualité graphique : automatique d'abord, puis du moins cher au plus cher. */
+export const QUALITY_SETTINGS: readonly QualitySetting[] = ['auto', ...QUALITIES];
 
 export interface AudioPrefs {
   readonly enabled: boolean;
@@ -24,6 +29,8 @@ export interface AudioPrefs {
 export interface DisplayPrefs {
   /** Densité de pixels du rendu, plafonnée (moins = plus rapide). */
   readonly pixelRatio: PixelRatioCap;
+  /** Qualité graphique (SPEC-visuals.md) ; automatique par défaut. */
+  readonly quality: QualitySetting;
   readonly largeText: boolean;
   readonly reducedMotion: boolean;
   readonly showFps: boolean;
@@ -40,7 +47,13 @@ export const SETTINGS_KEY = 'fracas.settings';
 export const DEFAULT_SETTINGS: Settings = {
   version: 1,
   audio: { enabled: true, music: 0.6, effects: 0.8, menuSounds: true },
-  display: { pixelRatio: 2, largeText: false, reducedMotion: false, showFps: false },
+  display: {
+    pixelRatio: 2,
+    quality: 'auto',
+    largeText: false,
+    reducedMotion: false,
+    showFps: false,
+  },
 };
 
 type Bag = Record<string, unknown>;
@@ -86,6 +99,7 @@ export function loadSettings(storage: StorageLike | undefined): Settings {
     },
     display: {
       pixelRatio: ratio,
+      quality: QUALITY_SETTINGS.find((q) => q === d.quality) ?? dd.quality,
       largeText: bool(d, 'largeText', dd.largeText),
       reducedMotion: bool(d, 'reducedMotion', dd.reducedMotion),
       showFps: bool(d, 'showFps', dd.showFps),

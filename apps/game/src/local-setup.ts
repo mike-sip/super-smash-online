@@ -3,6 +3,7 @@
  * chaque place, « prêt » ; préréglages de règles ; derniers réglages gardés dans le navigateur.
  */
 import { validateMatchConfig, type MatchConfig } from '@game/match-rules';
+import { PALETTE_COUNT } from '@game/render';
 import type { StorageLike } from './settings.ts';
 
 export const RANDOM = 'random';
@@ -11,6 +12,8 @@ export const MAX_LOCAL = 4;
 export interface LocalSlot {
   device: string | null;
   fighter: string;
+  /** Couleur alternative choisie (0 à 7). */
+  palette: number;
   ready: boolean;
 }
 
@@ -30,6 +33,7 @@ export function createLocalSetup(
     slots: Array.from({ length: MAX_LOCAL }, (_, i) => ({
       device: null,
       fighter: order.includes(previous[i] ?? '') ? previous[i]! : roster[i % roster.length]!,
+      palette: 0,
       ready: false,
     })),
   };
@@ -69,6 +73,14 @@ export function cycleFighter(setup: LocalSetup, slot: number, delta: number): vo
   s.ready = false;
 }
 
+/** Change la couleur alternative de la place (↑ ↓), en boucle sur les huit. */
+export function cyclePalette(setup: LocalSetup, slot: number, delta: number): void {
+  const s = setup.slots[slot];
+  if (s === undefined) return;
+  s.palette = (s.palette + delta + PALETTE_COUNT) % PALETTE_COUNT;
+  s.ready = false;
+}
+
 export function toggleReady(setup: LocalSetup, slot: number): void {
   const s = setup.slots[slot];
   if (s !== undefined && s.device !== null) s.ready = !s.ready;
@@ -85,15 +97,15 @@ export function resolveFighters(
   setup: LocalSetup,
   roster: readonly string[],
   random: () => number,
-): { slot: number; device: string; fighter: string }[] {
-  const out: { slot: number; device: string; fighter: string }[] = [];
+): { slot: number; device: string; fighter: string; palette: number }[] {
+  const out: { slot: number; device: string; fighter: string; palette: number }[] = [];
   setup.slots.forEach((s, slot) => {
     if (s.device === null) return;
     const fighter =
       s.fighter === RANDOM
         ? roster[Math.min(roster.length - 1, Math.floor(random() * roster.length))]!
         : s.fighter;
-    out.push({ slot, device: s.device, fighter });
+    out.push({ slot, device: s.device, fighter, palette: s.palette });
   });
   return out;
 }

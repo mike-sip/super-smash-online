@@ -18,13 +18,15 @@ import {
   createMatchDomSink,
   createMatchHud,
   createRenderer,
-  createStyledMannequins,
+  createFigurines,
+  distinctPalettes,
   type MatchHud,
   type Renderer,
 } from '@game/render';
 import { STICK_MAX, checksum, createSim, encodeInput, type Sim } from '@game/sim-core';
 import type { App, Screen } from './app.ts';
 import { buildSimConfig, lookOf } from './content.ts';
+import { portraitUrl } from './portraits.ts';
 import { el } from './ui/dom.ts';
 
 export interface OnlineMatch extends Screen {
@@ -90,6 +92,7 @@ export function onlineMatch(
   );
 
   function resize(): void {
+    app.syncQuality(renderer);
     renderer?.resize(canvas.clientWidth, canvas.clientHeight, app.pixelRatio());
   }
   window.addEventListener('resize', resize);
@@ -108,9 +111,19 @@ export function onlineMatch(
         canvas,
         overlay,
         config: sim.config,
-        fighterVisuals: createStyledMannequins((p) => lookOf(info.players[p]?.fighter ?? '')),
+        fighterVisuals: createFigurines(
+          (p) => lookOf(info.players[p]?.fighter ?? ''),
+          (p) => distinctPalettes(info.players.map((q) => q.fighter))[p] ?? 0,
+        ),
+        ...app.qualityOptions(),
       });
-      hud = createMatchHud(info.players.length, createMatchDomSink(overlay, info.players.length));
+      const ids = info.players.map((q) => q.fighter);
+      const colors = distinctPalettes(ids);
+      const icons = ids.map((id, p) => portraitUrl(id, colors[p] ?? 0, 'stock', 72));
+      hud = createMatchHud(
+        info.players.length,
+        createMatchDomSink(overlay, info.players.length, icons),
+      );
       resize();
       renderer.capture(sim);
       app.audio.capture(sim);
@@ -190,6 +203,7 @@ export function onlineMatch(
       screen.stop();
       window.removeEventListener('resize', resize);
       hud?.dispose();
+      app.rememberQuality(renderer);
       renderer?.dispose();
       hud = null;
       renderer = null;

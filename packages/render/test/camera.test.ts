@@ -1,10 +1,20 @@
+import { PerspectiveCamera, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import {
   approachFraming,
   copyFraming,
   ensureVisible,
   frameFighters,
+  addShake,
+  applyCloseUp,
+  cameraPosition,
+  closeUpWeight,
+  createCloseUp,
+  createShake,
   projectX,
+  shakeLevel,
+  shakeOffset,
+  startCloseUp,
   projectY,
   type CameraBounds,
   type Framing,
@@ -12,7 +22,7 @@ import {
 
 const TAN = Math.tan((35 * Math.PI) / 360);
 
-function bounds(aspect = 16 / 9): CameraBounds {
+function bounds(aspect = 16 / 9, tilt = 0): CameraBounds {
   return {
     minX: -150,
     maxX: 150,
@@ -23,6 +33,7 @@ function bounds(aspect = 16 / 9): CameraBounds {
     marginBottom: 14,
     minViewHeight: 80,
     tanHalfFov: TAN,
+    tilt,
     aspect,
   };
 }
@@ -228,16 +239,87 @@ describe('projection', () => {
   it('place le centre de la vue au milieu de l’écran et les bords aux bords', () => {
     const b = bounds();
     const f: Framing = { centerX: 10, centerY: 20, distance: 200 };
-    expect(projectX(f, b, 10, 1280)).toBeCloseTo(640, 6);
+    expect(projectX(f, b, 10, 20, 1280)).toBeCloseTo(640, 6);
     expect(projectY(f, b, 20, 720)).toBeCloseTo(360, 6);
-    expect(projectX(f, b, 10 - halfWidth(f, b), 1280)).toBeCloseTo(0, 6);
+    expect(projectX(f, b, 10 - halfWidth(f, b), 20, 1280)).toBeCloseTo(0, 6);
     // L'axe vertical de l'écran pointe vers le bas.
     expect(projectY(f, b, 20 + halfHeight(f, b), 720)).toBeCloseTo(0, 6);
+  });
+
+  it('caméra inclinée : la projection est celle de la vraie caméra Three.js', () => {
+    const tilt = (7 * Math.PI) / 180;
+    const b = bounds(16 / 9, tilt);
+    const f: Framing = { centerX: 10, centerY: 20, distance: 200 };
+    const camera = new PerspectiveCamera((Math.atan(TAN) * 360) / Math.PI, 16 / 9, 1, 5000);
+    const at = { x: 0, y: 0, z: 0 };
+    cameraPosition(f, b, at);
+    camera.position.set(at.x, at.y, at.z);
+    camera.rotation.x = -tilt;
+    camera.updateMatrixWorld();
+    for (const [x, y] of [
+      [10, 20],
+      [-60, 70],
+      [90, -30],
+    ] as const) {
+      const v = new Vector3(x, y, 0).project(camera);
+      expect(projectX(f, b, x, y, 1280)).toBeCloseTo(((v.x + 1) / 2) * 1280, 3);
+      expect(projectY(f, b, y, 720)).toBeCloseTo(((1 - v.y) / 2) * 720, 3);
+    }
   });
 
   it('copie un cadrage', () => {
     const to = framing();
     copyFraming({ centerX: 1, centerY: 2, distance: 3 }, to);
     expect(to).toEqual({ centerX: 1, centerY: 2, distance: 3 });
+  });
+});
+
+describe('secousse', () => {
+  it('s’éteint dans sa durée et se fige avec le temps de la simulation', () => {
+    const shake = createShake();
+    addShake(shake, 0.02, 20, 100);
+    expect(shakeLevel(shake, 100)).toBeCloseTo(0.02, 6);
+    expect(shakeLevel(shake, 110)).toBeLessThan(0.02);
+    expect(shakeLevel(shake, 120)).toBe(0);
+    const a = { x: 0, y: 0 };
+    const b2 = { x: 0, y: 0 };
+    shakeOffset(shake, 105, 200, bounds(), a);
+    shakeOffset(shake, 105, 200, bounds(), b2);
+    expect(a).toEqual(b2);
+    expect(Math.hypot(a.x, a.y)).toBeGreaterThan(0);
+  });
+
+  it('une impulsion plus faible que le reste de la précédente est ignorée', () => {
+    const shake = createShake();
+    addShake(shake, 0.03, 30, 0);
+    addShake(shake, 0.005, 30, 2);
+    expect(shake.amount).toBe(0.03);
+    addShake(shake, 0.04, 10, 3);
+    expect(shake.amount).toBe(0.04);
+  });
+});
+
+describe('gros plan', () => {
+  it('se resserre, tient, puis revient à la vue normale', () => {
+    const c = createCloseUp();
+    startCloseUp(c, 50, 30, 30, 100);
+    expect(closeUpWeight(c, 99)).toBe(0);
+    expect(closeUpWeight(c, 110)).toBe(1);
+    expect(closeUpWeight(c, 125)).toBeGreaterThan(0);
+    expect(closeUpWeight(c, 125)).toBeLessThan(1);
+    expect(closeUpWeight(c, 130)).toBe(0);
+  });
+
+  it('rapproche la vue du point visé sans passer sous le zoom minimal', () => {
+    const b = bounds();
+    const c = createCloseUp();
+    startCloseUp(c, 50, 30, 30, 0);
+    const f: Framing = { centerX: 0, centerY: 0, distance: 300 };
+    applyCloseUp(c, 10, b, f);
+    expect(f.centerX).toBeCloseTo(50, 6);
+    expect(f.distance).toBeLessThan(300);
+    const close: Framing = { centerX: 0, centerY: 0, distance: 130 };
+    applyCloseUp(c, 10, b, close);
+    expect(close.distance).toBeGreaterThanOrEqual((b.minViewHeight / 2 / TAN) * 0.8 - 1e-9);
   });
 });

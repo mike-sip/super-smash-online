@@ -15,7 +15,7 @@ import {
   Group,
   InstancedMesh,
   Matrix4,
-  MeshLambertMaterial,
+  MeshStandardMaterial,
   SphereGeometry,
 } from 'three';
 import { isTeleport } from '../interpolation.ts';
@@ -94,9 +94,9 @@ const TORSO_DEPTH = 0.22;
 const ARM_THICKNESS = 0.07;
 const LEG_THICKNESS = 0.085;
 const ARM_SIDE = 0.15;
-const LEG_SIDE = 0.065;
+export const LEG_SIDE = 0.065;
 /** Les épaules sont un peu sous le haut du torse. */
-const SHOULDER = TORSO - 0.04;
+export const SHOULDER = TORSO - 0.04;
 /** Part de blanc mêlée à la couleur d'un combattant intangible. */
 const PALE_MIX = 0.7;
 /** Assombrissement des membres du côté opposé à la caméra, pour lire la profondeur. */
@@ -108,7 +108,7 @@ const ANCHOR_TORSO = 1;
 const ANCHOR_HIPS = 2;
 
 /** Dimensions d'un mannequin, déduites de son style. */
-interface Dims {
+export interface Dims {
   readonly torsoWidth: number;
   readonly torsoDepth: number;
   readonly armThickness: number;
@@ -126,7 +126,7 @@ interface Dims {
   readonly normalize: number;
 }
 
-function dimsOf(style: MannequinStyle | undefined): Dims {
+export function dimsOf(style: MannequinStyle | undefined): Dims {
   const b = style?.build;
   const torso = b?.torsoWidth ?? 1;
   const limb = b?.limbThickness ?? 1;
@@ -227,7 +227,7 @@ export function createStyledMannequins(
 
     const boxGeometry = new BoxGeometry(1, 1, 1);
     const headGeometry = new SphereGeometry(0.5, 16, 12);
-    const material = new MeshLambertMaterial({ color: 0xffffff });
+    const material = new MeshStandardMaterial({ color: 0xffffff, roughness: 0.55 });
     // Boîtes du corps de tous les joueurs d'abord, puis leurs pièces ajoutées.
     const boxes = new InstancedMesh(boxGeometry, material, players * (BOXES + MAX_PARTS));
     const heads = new InstancedMesh(headGeometry, material, players);

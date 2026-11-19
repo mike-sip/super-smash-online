@@ -1,6 +1,16 @@
 /** API publique de `render`. Tout ce qui n'est pas exporté ici est un détail interne. */
-export { createRenderer, type Renderer, type RendererOptions } from './renderer.ts';
+export {
+  createRenderer,
+  type QualityOptions,
+  type Renderer,
+  type RendererOptions,
+} from './renderer.ts';
+export { QUALITIES, guessQuality, type Quality, type QualitySetting } from './quality.ts';
 export type { FighterVisuals, FighterVisualsFactory } from './fighters/visual.ts';
+export { createFigurines } from './fighters/figurine.ts';
+export { PALETTE_COUNT, distinctPalettes } from './fighters/body.ts';
+export type { FigurineStyle, VfxTheme } from './fighters/body.ts';
+export type { BoneName, Sculpt, SculptPart, ZoneName } from './fighters/sdf.ts';
 export {
   DEFAULT_AUDIO_SETTINGS,
   createGameAudio,
@@ -52,3 +62,4 @@ export {
   type MannequinPart,
   type MannequinStyle,
 } from './fighters/mannequin.ts';
+export { createPortraitStudio, type PortraitKind, type PortraitStudio } from './portraits.ts';

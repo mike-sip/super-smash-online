@@ -290,7 +290,7 @@ export function createDebugLayer(overlay: HTMLElement): DebugLayer {
     draw(frame) {
       if (!enabled || context === null) return;
       const { shapes, ledges, framing, bounds } = frame;
-      const px = (x: number): number => projectX(framing, bounds, x, width);
+      const px = (x: number, y: number): number => projectX(framing, bounds, x, y, width);
       const py = (y: number): number => projectY(framing, bounds, y, height);
       // Pixels par unité de jeu, pour les rayons.
       const scale = height / (2 * framing.distance * bounds.tanHalfFov);
@@ -303,19 +303,21 @@ export function createDebugLayer(overlay: HTMLElement): DebugLayer {
       context.setLineDash([8, 6]);
       context.lineWidth = 2;
       context.strokeStyle = '#f97316';
-      context.strokeRect(
-        px(bounds.minX),
-        py(bounds.maxY),
-        px(bounds.maxX) - px(bounds.minX),
-        py(bounds.minY) - py(bounds.maxY),
-      );
+      // Caméra inclinée : le rectangle des zones limites se projette en trapèze.
+      context.beginPath();
+      context.moveTo(px(bounds.minX, bounds.maxY), py(bounds.maxY));
+      context.lineTo(px(bounds.maxX, bounds.maxY), py(bounds.maxY));
+      context.lineTo(px(bounds.maxX, bounds.minY), py(bounds.minY));
+      context.lineTo(px(bounds.minX, bounds.minY), py(bounds.minY));
+      context.closePath();
+      context.stroke();
       context.setLineDash([]);
 
       // Rebords : un repère au coin, et un trait du côté où l'on s'y suspend.
       context.strokeStyle = '#22c55e';
       context.fillStyle = '#22c55e';
       for (let l = 0; l < ledges.count; l++) {
-        const x = px(ledges.x[l]!);
+        const x = px(ledges.x[l]!, ledges.y[l]!);
         const y = py(ledges.y[l]!);
         context.beginPath();
         context.arc(x, y, 4, 0, Math.PI * 2);
@@ -329,9 +331,9 @@ export function createDebugLayer(overlay: HTMLElement): DebugLayer {
       // Capsules : un trait épais aux bouts ronds a exactement la forme d'une capsule.
       for (let s = 0; s < shapes.count; s++) {
         const kind = shapes.kind[s]!;
-        const x1 = px(shapes.x1[s]!);
+        const x1 = px(shapes.x1[s]!, shapes.y1[s]!);
         const y1 = py(shapes.y1[s]!);
-        const x2 = px(shapes.x2[s]!);
+        const x2 = px(shapes.x2[s]!, shapes.y2[s]!);
         const y2 = py(shapes.y2[s]!);
         const r = shapes.radius[s]! * scale;
         context.beginPath();

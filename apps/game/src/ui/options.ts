@@ -1,7 +1,7 @@
 /** Options : commandes (remappage par l'API d'`input`), son et affichage. */
 import { ACTIONS, KEYBOARD_ID, type Action } from '@game/input';
 import type { App, Screen } from '../app.ts';
-import { PIXEL_RATIOS, type Settings } from '../settings.ts';
+import { PIXEL_RATIOS, QUALITY_SETTINGS, type Settings } from '../settings.ts';
 import { STANDARD_HINTS, button, choice, hints, menu, slider, toggle } from './components.ts';
 import { el } from './dom.ts';
 
@@ -222,6 +222,14 @@ function soundScreen(app: App): Screen {
 
 // --- Affichage -------------------------------------------------------------------------------
 
+const QUALITY_LABELS: Readonly<Record<Settings['display']['quality'], string>> = {
+  auto: 'Automatique',
+  low: 'Basse',
+  medium: 'Moyenne',
+  high: 'Haute',
+  ultra: 'Ultra',
+};
+
 function displayScreen(app: App): Screen {
   const update = (display: Partial<Settings['display']>): void =>
     app.updateSettings({ ...app.settings, display: { ...app.settings.display, ...display } });
@@ -245,6 +253,13 @@ function displayScreen(app: App): Screen {
       el('h1', { id: 'display-title', text: 'Affichage' }),
       el('div', { className: 'panel' }, [
         fullscreen,
+        choice(
+          'Qualité graphique',
+          QUALITY_SETTINGS.map((q) => ({ value: q, label: QUALITY_LABELS[q] })),
+          d.quality,
+          (q) => update({ quality: q }),
+          'display-quality',
+        ).element,
         choice(
           'Résolution du rendu',
           PIXEL_RATIOS.map((r) => ({

@@ -8,7 +8,10 @@ export {
   type FighterLook,
   type LookAnchor,
   type LookColor,
+  type LookBone,
   type LookPart,
+  type LookSculptPart,
+  type LookZone,
 } from './character.ts';
 export { ROSTER, character, isFighterId } from './roster.ts';
 export { buildMatchConfig, type MatchOptions } from './match.ts';

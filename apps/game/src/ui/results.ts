@@ -2,6 +2,7 @@
 import type { MatchResult } from '@game/match-rules';
 import type { App, Screen } from '../app.ts';
 import { fighterName } from '../content.ts';
+import { portraitUrl } from '../portraits.ts';
 import { button, menu } from './components.ts';
 import { el } from './dom.ts';
 
@@ -18,6 +19,8 @@ export interface ResultsOptions {
   /** Nom de chaque joueur, dans l'ordre des places (« J1 », pseudo…). */
   readonly names: readonly string[];
   readonly fighters: readonly string[];
+  /** Couleur alternative de chaque joueur, pour le portrait du vainqueur. */
+  readonly palettes?: readonly number[];
   /** Place du joueur de ce navigateur (en ligne), mise en valeur. */
   readonly me?: number;
   readonly note?: string | null;
@@ -68,6 +71,18 @@ export function resultsScreen(app: App, options: ResultsOptions): Screen {
     ]),
     el('tbody', {}, rows),
   ]);
+  // Le vainqueur en figurine, dans une pose de victoire tirée au hasard.
+  const champion = result.winners[0];
+  const art =
+    champion === undefined
+      ? undefined
+      : portraitUrl(
+          options.fighters[champion] ?? '',
+          options.palettes?.[champion] ?? 0,
+          'victory',
+          420,
+          Math.floor(Math.random() * 3),
+        );
   const buttons = options.actions.map((a) =>
     button(a.label, a.action, { id: a.id, primary: a.primary === true }),
   );
@@ -76,6 +91,9 @@ export function resultsScreen(app: App, options: ResultsOptions): Screen {
     'section',
     { className: 'screen', attrs: { 'aria-labelledby': 'results-title' } },
     [
+      art === undefined
+        ? null
+        : el('img', { className: 'victory-art', attrs: { src: art, alt: '' } }),
       el('header', {}, [
         el('h1', { id: 'results-title', text: title }),
         el('span', { className: 'muted', text: REASONS[result.reason] }),

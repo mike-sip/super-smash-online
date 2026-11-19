@@ -258,9 +258,11 @@ describe('HUD du renderer', () => {
     t.advance();
     t.renderer.draw(1);
     const [x, y] = sink.tags.get(0)!;
-    const feet = t.onScreen(-35, 0);
+    // Point de l'étiquette : 2,5 unités au-dessus de la tête (caméra inclinée : l'abscisse à
+    // l'écran dépend un peu de la hauteur).
+    const tag = t.onScreen(-35, 14.5);
     const head = t.onScreen(-35, 12);
-    expect(x).toBeCloseTo((feet.x + 1) * 640, 0);
+    expect(x).toBeCloseTo((tag.x + 1) * 640, 0);
     // Au-dessus de la tête : plus haut à l'écran, donc une ordonnée plus petite.
     expect(y).toBeLessThan((1 - head.y) * 360);
     expect(y).toBeGreaterThan((1 - head.y) * 360 - 40);

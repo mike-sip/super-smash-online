@@ -123,7 +123,15 @@ const cssColor = (hex: number): string => `#${hex.toString(16).padStart(6, '0')}
 const MAX_STOCK_DOTS = 5;
 
 /** Construit le HUD de match dans `overlay` (bas de l'écran et coin haut droit). */
-export function createMatchDomSink(overlay: HTMLElement, players: number): MatchHudSink {
+/**
+ * HUD de match en DOM. `icons` : portrait de tête de chaque joueur (URL d'image), affiché en haut de
+ * sa carte (SPEC-visuals.md, phase 7).
+ */
+export function createMatchDomSink(
+  overlay: HTMLElement,
+  players: number,
+  icons: readonly (string | undefined)[] = [],
+): MatchHudSink {
   const doc = overlay.ownerDocument;
   const root = doc.createElement('div');
   root.dataset.hud = 'match';
@@ -175,6 +183,15 @@ export function createMatchDomSink(overlay: HTMLElement, players: number): Match
     const fill = doc.createElement('div');
     fill.style.cssText = 'height:100%;width:0;background:#94a3b8;';
     meter.append(fill);
+    const icon = icons[i];
+    if (icon !== undefined) {
+      const img = doc.createElement('img');
+      img.src = icon;
+      img.alt = '';
+      img.dataset.hud = `icon-${i}`;
+      img.style.cssText = 'display:block;width:34px;height:34px;margin:-18px auto 0;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.5));';
+      panel.append(img);
+    }
     panel.append(stocks, hp, score, meter);
     bar.append(panel);
     cards.push({ panel, stocks, hp, score, meter, fill });

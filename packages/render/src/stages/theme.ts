@@ -2,6 +2,11 @@
 import type { StageDef } from '@game/sim-core';
 import type { StageId } from '@game/stages-items';
 import { BoxGeometry, type BufferGeometry, type Group } from 'three';
+import type { PostLook } from '../post/grading.ts';
+import type { SkyLook } from './sky.ts';
+import type { SurfaceLook } from './surface.ts';
+import type { MotesLook, WaterLook } from './water.ts';
+import { createGrid } from './grid.ts';
 import { facets } from './lowpoly.ts';
 
 /** Profondeur des blocs pleins et des plateformes, de part et d'autre du plan de jeu. */
@@ -38,6 +43,20 @@ export interface Theme {
   readonly platform: number;
   readonly mover: number;
   readonly seed: number;
+  /** Couleur de la lumière de contour des combattants ; par défaut, celle du soleil éclaircie. */
+  readonly rim?: number;
+  /** Intensité des éléments lumineux du décor (1 = couleur telle quelle) ; au-delà, ils rayonnent. */
+  readonly glow?: number;
+  /** Réglages d'image du stage (exposition, bloom, étalonnage) ; le reste par défaut. */
+  readonly look?: Partial<PostLook>;
+  /** Ciel dessiné par shader (phase 6) : dégradé, nuages, étoiles, astre. */
+  readonly skyLook?: SkyLook;
+  /** Plan d'eau animé. */
+  readonly water?: WaterLook;
+  /** Particules d'ambiance (poussière, lucioles, plancton, braises). */
+  readonly motes?: readonly MotesLook[];
+  /** Grain des matières du décor ; un grain par défaut sinon. */
+  readonly surface?: SurfaceLook;
   /** Ajoute le décor propre au thème. */
   decorate?(ctx: DecorContext): void;
   /** Remplace le bloc plein par défaut (une boîte) par une forme à soi. */
@@ -57,6 +76,21 @@ export const NEUTRAL_THEME: Theme = {
   platform: 0x9ca3af,
   mover: 0xa8b0bd,
   seed: 1,
+  // Salle d'entraînement : ciel clair et quadrillage au fond, pour juger distances et hauteurs.
+  skyLook: {
+    zenith: 0x7fa9de,
+    horizon: 0xdfe9f5,
+    below: 0xb9c6d6,
+    sunDir: [0.3, 0.55, -1],
+    sunColor: 0xffffff,
+    sunSize: 0.035,
+    sunGlow: 0.06,
+    clouds: 0.25,
+    cloudColor: 0xffffff,
+  },
+  decorate(ctx) {
+    ctx.root.add(createGrid());
+  },
 };
 
 /** Dalle d'une plateforme, dessus à y = 0, centrée en x. */

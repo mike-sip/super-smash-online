@@ -2,19 +2,8 @@
  * Récif Nocturne : dalle de basalte vert au milieu d'un lagon, de nuit. Coraux luminescents,
  * colonnes de basalte dans l'eau, lune en croissant, étoiles. L'eau ondule doucement.
  */
-import {
-  BoxGeometry,
-  CircleGeometry,
-  ConeGeometry,
-  CylinderGeometry,
-  Mesh,
-  MeshBasicMaterial,
-  MeshLambertMaterial,
-  OctahedronGeometry,
-  PlaneGeometry,
-  TetrahedronGeometry,
-} from 'three';
-import { at, between, facets, gradient } from './lowpoly.ts';
+import { BoxGeometry, ConeGeometry, CylinderGeometry, OctahedronGeometry } from 'three';
+import { at, between, facets } from './lowpoly.ts';
 import { SOLID_DEPTH, type DecorContext, type Theme } from './theme.ts';
 
 const BASALT_TOP = 0x5b8a78;
@@ -35,6 +24,32 @@ export const RECIF_THEME: Theme = {
   platform: BASALT_TOP,
   mover: BASALT_TOP,
   seed: 23,
+  skyLook: {
+    zenith: 0x050a1c,
+    horizon: 0x1d3463,
+    below: 0x0d1834,
+    sunDir: [0.3, 0.22, -1],
+    sunColor: 0xf3f0d0,
+    sunSize: 0.045,
+    sunGlow: 0.05,
+    crescent: true,
+    stars: 1,
+    clouds: 0.15,
+    cloudColor: 0x2a3c6a,
+  },
+  water: { y: WATER_Y, z: -250, width: 1600, depth: 900, color: 0x0f3456, waves: 0.45 },
+  motes: [
+    {
+      count: 300,
+      center: [0, 0, -40],
+      half: [240, 50, 120],
+      color: 0x5ff0e0,
+      intensity: 2.2,
+      size: 0.35,
+      drift: [0.01, 0.02],
+      seed: 23,
+    },
+  ],
 
   solidShape(x1, y1, x2, y2, ctx) {
     const w = x2 - x1;
@@ -57,23 +72,6 @@ export const RECIF_THEME: Theme = {
 
   decorate(ctx: DecorContext) {
     const { random } = ctx;
-    const sky = new Mesh(
-      gradient(at(new PlaneGeometry(2400, 1000, 1, 8), 0, 150, -700), 0x050a1c, 0x1d3463),
-      new MeshBasicMaterial({ vertexColors: true, fog: false }),
-    );
-    sky.name = 'sky';
-    ctx.root.add(sky);
-
-    // Lune en croissant : un disque pâle, mordu par un disque couleur de ciel.
-    ctx.glow.push(facets(at(new CircleGeometry(30, 18), 230, 170, -690), 0xf3f0d0, 0, random));
-    ctx.glow.push(facets(at(new CircleGeometry(28, 18), 244, 178, -688), 0x0f1d42, 0, random));
-    for (let n = 0; n < 140; n++) {
-      const star = new TetrahedronGeometry(between(random, 0.8, 1.8));
-      const x = between(random, -900, 900);
-      const y = between(random, 60, 420);
-      ctx.glow.push(facets(at(star, x, y, -690), 0xdfe8ff, 0.1, random));
-    }
-
     // Coraux luminescents, hors de la zone de jeu.
     for (let n = 0; n < 40; n++) {
       const x = between(random, -380, 380);
@@ -98,16 +96,5 @@ export const RECIF_THEME: Theme = {
       const column = new CylinderGeometry(4, 4.5, h, 6);
       ctx.lit.push(facets(at(column, x, WATER_Y + h / 2 - 3, z), BASALT, 0.15, random));
     }
-
-    const surface = new PlaneGeometry(1600, 900, 32, 16).rotateX(-Math.PI / 2);
-    const water = new Mesh(
-      facets(at(surface, 0, WATER_Y, -250), 0x1d5a86, 0.08, random),
-      new MeshLambertMaterial({ vertexColors: true, flatShading: true }),
-    );
-    water.name = 'water';
-    ctx.root.add(water);
-    ctx.animate((frame) => {
-      water.position.y = Math.sin(frame * 0.02) * 0.6;
-    });
   },
 };
