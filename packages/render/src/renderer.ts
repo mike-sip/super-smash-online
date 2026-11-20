@@ -22,8 +22,10 @@ import {
   MeshBasicMaterial,
   MeshStandardMaterial,
   PerspectiveCamera,
+  PMREMGenerator,
   Scene,
   WebGLRenderer,
+  type WebGLRenderTarget,
   type BufferGeometry,
   type Camera,
   type Material,
@@ -82,6 +84,7 @@ import {
 import { createLighting } from './lighting.ts';
 import { lookOf, type PostLook } from './post/grading.ts';
 import { createPostPipeline, skyEnvironment } from './post/pipeline.ts';
+import { loadHdri } from './assets/loader.ts';
 import {
   createAutoTuner,
   guessQuality,
@@ -115,6 +118,11 @@ export interface RendererOptions extends QualityOptions {
   readonly fighterVisuals?: FighterVisualsFactory;
   /** Secousses de caméra, gros plans et éclairs d'écran ; vrai par défaut (option de confort). */
   readonly screenEffects?: boolean;
+  /**
+   * Vrai si l'éjection de ce joueur finirait le match : le coup final a son gros plan et son
+   * ralenti (`Renderer.timeScale`). Le match local seulement ; absent en ligne.
+   */
+  readonly isFinal?: (player: number) => boolean;
 }
 
 export interface Renderer {
@@ -133,6 +141,11 @@ export interface Renderer {
   setQuality(quality: QualitySetting): void;
   /** Niveau effectivement appliqué : celui qu'a choisi `'auto'`, le cas échéant. */
   readonly quality: Quality;
+  /**
+   * Vitesse d'affichage conseillée (SPEC-finition.md, phase 3) : 1, ou moins pendant le ralenti
+   * du coup final. Le match local multiplie le temps écoulé par cette valeur avant de simuler.
+   */
+  timeScale(): number;
   /** Libère les ressources GPU. */
   dispose(): void;
 }
@@ -148,8 +161,14 @@ export interface DrawBackend {
   setSize(width: number, height: number, pixelRatio: number): void;
   /** Applique un préréglage : ombres, chaîne de post-traitement, réglages d'image. */
   configure?(preset: QualityPreset, look: PostLook): void;
-  /** Lumière d'ambiance par image pour ce thème, ou rien. */
-  environment?(theme: Theme): { readonly texture: Texture; dispose(): void } | null;
+  /**
+   * Lumière d'ambiance par image pour ce thème, ou rien. `upgrade` reçoit plus tard l'éclairage
+   * tiré de l'image HDRI du thème, quand elle est chargée.
+   */
+  environment?(
+    theme: Theme,
+    upgrade?: (texture: Texture) => void,
+  ): { readonly texture: Texture; dispose(): void } | null;
   /** Nom de la carte graphique, pour le choix automatique de la qualité. */
   gpu?(): string;
   dispose(): void;
@@ -164,10 +183,10 @@ const PUFF_CAPACITY = 3000;
 /** Part des particules lumineuses dans le budget d'un préréglage. */
 const GLOW_SHARE = 0.7;
 /** Marges gardées autour des combattants par la caméra, en unités de jeu. */
-const CAMERA_MARGIN_X = 24;
-const CAMERA_MARGIN_TOP = 34;
-const CAMERA_MARGIN_BOTTOM = 14;
-const CAMERA_MIN_VIEW_HEIGHT = 90;
+const CAMERA_MARGIN_X = 20;
+const CAMERA_MARGIN_TOP = 30;
+const CAMERA_MARGIN_BOTTOM = 12;
+const CAMERA_MIN_VIEW_HEIGHT = 72;
 
 const SHADOW_OPACITY = 0.35;
 /** Hauteur au-dessus du sol à laquelle l'ombre a perdu toute sa taille et son opacité. */
@@ -195,13 +214,31 @@ export function createRenderer(options: RendererOptions): Renderer {
       drawCalls: () => gl.info.render.calls,
       setSize: (width, height, pixelRatio) => pipeline.setSize(width, height, pixelRatio),
       configure: (preset, look) => pipeline.configure(preset, look),
-      environment(theme) {
+      environment(theme, upgrade) {
         const target = skyEnvironment(gl, {
           sky: theme.sky,
           horizon: theme.background,
           ground: theme.ground,
         });
-        return { texture: target.texture, dispose: () => target.dispose() };
+        let hdr: WebGLRenderTarget | null = null;
+        let alive = true;
+        if (theme.hdri !== undefined && upgrade !== undefined) {
+          void loadHdri(theme.hdri.file).then((image) => {
+            if (image === null || !alive) return;
+            const pmrem = new PMREMGenerator(gl);
+            hdr = pmrem.fromEquirectangular(image);
+            pmrem.dispose();
+            upgrade(hdr.texture);
+          });
+        }
+        return {
+          texture: target.texture,
+          dispose() {
+            alive = false;
+            target.dispose();
+            hdr?.dispose();
+          },
+        };
       },
       gpu() {
         const context = gl.getContext();
@@ -222,8 +259,25 @@ export function createRenderer(options: RendererOptions): Renderer {
       quality: options.quality ?? 'auto',
       autoStart: options.autoStart,
       screenEffects: options.screenEffects ?? true,
+      ...(options.isFinal === undefined ? {} : { isFinal: options.isFinal }),
     },
   );
+}
+
+/** Ralenti du coup final : vitesse tenue, frames de maintien, frames du retour à la normale. */
+const FINALE_SPEED = 0.2;
+const FINALE_HOLD = 10;
+const FINALE_RAMP = 40;
+
+/**
+ * Vitesse d'affichage `age` frames de simulation après le départ du coup final : très lente,
+ * tenue, puis retour en douceur. 1 hors du ralenti.
+ */
+export function finaleScale(age: number): number {
+  if (!(age >= 0) || age >= FINALE_HOLD + FINALE_RAMP) return 1;
+  if (age < FINALE_HOLD) return FINALE_SPEED;
+  const t = (age - FINALE_HOLD) / FINALE_RAMP;
+  return FINALE_SPEED + (1 - FINALE_SPEED) * t * t * (3 - 2 * t);
 }
 
 /** Part de lumière retirée au décor au plus fort de l'assombrissement d'une attaque ultime. */
@@ -289,7 +343,10 @@ export function createRendererWith(
   hudSink: HudSink = silentSink,
   debugLayer?: DebugLayer,
   fighterVisuals: FighterVisualsFactory = createMannequins,
-  qualityOptions: QualityOptions & { readonly screenEffects?: boolean } = {},
+  qualityOptions: QualityOptions & {
+    readonly screenEffects?: boolean;
+    readonly isFinal?: (player: number) => boolean;
+  } = {},
 ): RendererInternals {
   const players = config.fighters.length;
 
@@ -301,13 +358,30 @@ export function createRendererWith(
   if (theme.fog !== undefined) scene.fog = new Fog(theme.fog.color, theme.fog.near, theme.fog.far);
   const lighting = createLighting(theme);
   scene.add(lighting.root);
-  const environment = backend.environment?.(theme) ?? null;
+  // Ambiance : d'abord tirée des couleurs du thème, puis de son image HDRI quand elle arrive.
+  let environmentIntensity = ENVIRONMENT_INTENSITY;
+  const environment =
+    backend.environment?.(theme, (texture) => {
+      scene.environment = texture;
+      environmentIntensity = theme.hdri?.intensity ?? ENVIRONMENT_INTENSITY;
+      scene.environmentIntensity = environmentIntensity;
+      scene.environmentRotation.set(0, theme.hdri?.rotation ?? 0, 0);
+    }) ?? null;
   if (environment !== null) {
     scene.environment = environment.texture;
     scene.environmentIntensity = ENVIRONMENT_INTENSITY;
   }
   const look = lookOf(theme.look);
 
+  // L'eau reflète le ciel du thème par sa propre carte : sa force de reflet (`reflect`) s'applique alors,
+  // ce que la lumière d'ambiance de la scène ne permet pas.
+  if (environment !== null) {
+    stageVisuals.root.traverse((object) => {
+      if (object instanceof Mesh && object.userData.skyReflection === true) {
+        (object.material as MeshStandardMaterial).envMap = environment.texture;
+      }
+    });
+  }
   prepareDecor(stageVisuals.root);
   scene.add(stageVisuals.root);
   const surfaces = stageSurfaces(config.stage);
@@ -404,7 +478,10 @@ export function createRendererWith(
     gravities,
     blast: { left: bounds.minX, right: bounds.maxX, top: bounds.maxY, bottom: bounds.minY },
     themes: Array.from({ length: players }, (_, i) => visuals.theme?.(i)),
+    ...(qualityOptions.isFinal === undefined ? {} : { isFinal: qualityOptions.isFinal }),
   });
+  /** Frame du dernier coup final, ou -Infinity. */
+  let finaleAt = Number.NEGATIVE_INFINITY;
   const eventFilter = createEventFilter();
 
   // Vue technique. Ses textes sont recréés à chaque image : elle seule déroge à la règle
@@ -460,6 +537,7 @@ export function createRendererWith(
     preset = presetOf(q);
     lighting.configure(preset);
     visuals.setQuality?.(preset);
+    stageVisuals.setQuality(preset);
     glowLayer.setLimit(Math.round(preset.particles * GLOW_SHARE));
     puffLayer.setLimit(preset.particles - Math.round(preset.particles * GLOW_SHARE));
     backend.configure?.(preset, look);
@@ -482,6 +560,7 @@ export function createRendererWith(
       return quality;
     },
     setQuality: (setting) => setQuality(setting),
+    timeScale: () => finaleScale(lastFrame - finaleAt),
     capture(sim) {
       const now = frame(sim);
       // Hors séquence (première capture, saut dans le temps) : rien à interpoler.
@@ -532,6 +611,7 @@ export function createRendererWith(
           if (cues.closeLife > 0)
             startCloseUp(closeUp, cues.closeX, cues.closeY, cues.closeLife, now);
           if (cues.flash > 0) flash.start(cues.flashColor, cues.flash, now);
+          if (cues.finale) finaleAt = now;
         }
         if (cues.dimLife > 0) {
           dimBorn = now;
@@ -541,6 +621,7 @@ export function createRendererWith(
         cues.closeLife = 0;
         cues.flash = 0;
         cues.dimLife = 0;
+        cues.finale = false;
       }
 
       for (let slot = 0; slot < MAX_ENTITIES; slot++) {
@@ -684,7 +765,7 @@ export function createRendererWith(
         // Ultime : le décor s'assombrit, les combattants (lumière de contour) ressortent.
         const dim = DIM_DEPTH * dimWeight(time - dimBorn, dimLife);
         lighting.setDim(1 - dim);
-        if (environment !== null) scene.environmentIntensity = ENVIRONMENT_INTENSITY * (1 - dim);
+        if (environment !== null) scene.environmentIntensity = environmentIntensity * (1 - dim);
         (scene.background as Color).copy(background).multiplyScalar(1 - dim);
         if (fogColor !== null && scene.fog !== null) {
           (scene.fog as Fog).color.copy(fogColor).multiplyScalar(1 - dim);
@@ -755,6 +836,7 @@ export function createRendererWith(
       scene.clear();
       lighting.dispose();
       environment?.dispose();
+      stageVisuals.dispose();
       backend.dispose();
     },
   };

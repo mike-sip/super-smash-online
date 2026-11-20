@@ -11,6 +11,7 @@ import {
   type MatchConfig,
 } from '@game/match-rules';
 import {
+  configureAssets,
   createMatchDomSink,
   createMatchHud,
   createGameAudio,
@@ -84,6 +85,9 @@ function intParam(params: URLSearchParams, name: string, min: number, max: numbe
   const value = Number.parseInt(params.get(name) ?? '', 10);
   return Number.isNaN(value) ? def : Math.max(min, Math.min(max, value));
 }
+
+// Textures et éclairages libres (assets/), servis à la racine par Vite.
+configureAssets('/');
 
 const params = new URLSearchParams(location.search);
 const dummyCount = intParam(params, 'dummies', 1, 7, 1);

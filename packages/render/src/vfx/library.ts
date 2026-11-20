@@ -44,11 +44,15 @@ import {
 } from '@game/sim-core';
 import { PLAYER_COLORS } from '../fighters/visual.ts';
 import {
+  P_BURST,
   P_DOT,
   P_FLARE,
   P_PUFF,
   P_RING,
+  P_SHARD,
+  P_SPLAT,
   P_STREAK,
+  P_TWINKLE,
   createSpec,
   emit,
   hash01,
@@ -70,6 +74,11 @@ export interface Cues {
   flash: number;
   /** Assombrissement du décor (attaque ultime) : durée en frames (0 = aucun). */
   dimLife: number;
+  /**
+   * Coup final (SPEC-finition.md, phase 3) : vrai à la frame où part l'éjection qui doit finir le
+   * match. Le match local en tire un ralenti d'affichage.
+   */
+  finale: boolean;
 }
 
 export function createCues(): Cues {
@@ -82,6 +91,7 @@ export function createCues(): Cues {
     flashColor: 0xffffff,
     flash: 0,
     dimLife: 0,
+    finale: false,
   };
 }
 
@@ -91,6 +101,7 @@ export function clearCues(c: Cues): void {
   c.closeLife = 0;
   c.flash = 0;
   c.dimLife = 0;
+  c.finale = false;
 }
 
 function cueShake(c: Cues, amount: number, life: number): void {
@@ -192,6 +203,8 @@ export interface VfxOptions {
   readonly blast: Blast;
   /** Thème des effets propres à chaque joueur ('wind', 'feather', 'ember', 'pearl'), s'il en a. */
   readonly themes?: readonly (string | undefined)[];
+  /** Vrai si l'éjection de ce joueur finirait le match (dernière vie du dernier duel). */
+  readonly isFinal?: (player: number) => boolean;
 }
 
 // Couleurs en lumière (au-delà de 1, elles rayonnent).
@@ -215,6 +228,10 @@ const TRAIL_SPEED = 1.6;
 /** Écart minimal entre deux gros plans, en frames. */
 const CLOSE_UP_GAP = 90;
 const CLOSE_UP_LIFE = 26;
+/** Gros plan du coup final : plus long. */
+const FINALE_CLOSE_UP_LIFE = 46;
+/** Encre des éclaboussures, par thème (en lumière, sombre et dense). */
+const INK: readonly [number, number, number] = [0.25, 0.08, 0.06];
 /** Durée de l'assombrissement du décor après le départ d'une attaque ultime, en frames. */
 const DIM_LIFE = 80;
 
@@ -314,6 +331,73 @@ export function createVfx(options: VfxOptions): Vfx {
     p.life = life;
     paint(c as [number, number, number], 1);
     emit(glow, p, f);
+  }
+
+  /** Éclat à pointes (impact de bande dessinée). */
+  function burst(
+    x: number,
+    y: number,
+    size: number,
+    life: number,
+    c: readonly number[],
+    f: number,
+  ) {
+    reset(x, y, FRONT_Z + 0.3);
+    p.shape = P_BURST;
+    p.sizeStart = size * 0.6;
+    p.sizeEnd = size;
+    p.life = life;
+    // Plus grand que l'éclair et moins vif : ses pointes dépassent du halo blanc.
+    paint(c as [number, number, number], 0.42);
+    emit(glow, p, f);
+  }
+
+  /** Anneau brisé qui s'élargit en tournant. */
+  function shards(
+    x: number,
+    y: number,
+    size: number,
+    life: number,
+    c: readonly number[],
+    f: number,
+  ) {
+    reset(x, y, FRONT_Z + 0.2);
+    p.shape = P_SHARD;
+    p.sizeStart = size * 0.4;
+    p.sizeEnd = size * 1.3;
+    p.life = life;
+    paint(c as [number, number, number], 1);
+    emit(glow, p, f);
+  }
+
+  /** Éclaboussures d'encre (couche opaque) projetées dans le sens du coup, à la couleur du thème. */
+  function splats(
+    x: number,
+    y: number,
+    count: number,
+    angle: number,
+    c: readonly number[],
+    f: number,
+  ): void {
+    for (let n = 0; n < count; n++) {
+      const a = angle + (rand(f) - 0.5) * 1.4;
+      const v = 0.8 + rand(f) * 1.4;
+      reset(x, y, FRONT_Z - 0.5);
+      p.vx = Math.cos(a) * v;
+      p.vy = Math.sin(a) * v;
+      p.drag = 0.18;
+      p.gravity = 0.01;
+      p.shape = P_SPLAT;
+      p.sizeStart = 1.2 + rand(f) * 1.6;
+      p.sizeEnd = p.sizeStart * 1.25;
+      p.life = 16 + rand(f) * 8;
+      // Teinte du thème assombrie : l'encre se lit sur les décors clairs comme sombres.
+      p.r = INK[0] + c[0]! * 0.18;
+      p.g = INK[1] + c[1]! * 0.18;
+      p.b = INK[2] + c[2]! * 0.18;
+      p.a = 0.85;
+      emit(puff, p, f);
+    }
   }
 
   /** Gerbe de traits autour de `angle` (radians), d'ouverture `spread`. */
@@ -512,7 +596,13 @@ export function createVfx(options: VfxOptions): Vfx {
     }
   }
 
-  function hit(attacker: FighterView | undefined, victim: FighterView, b: number, f: number): void {
+  function hit(
+    attacker: FighterView | undefined,
+    a: number,
+    victim: FighterView,
+    b: number,
+    f: number,
+  ): void {
     const h = heights[b]!;
     const power = Math.min(1, Math.max(0, (victim.hitlag - 4) / 16));
     const side =
@@ -520,6 +610,8 @@ export function createVfx(options: VfxOptions): Vfx {
     const x = victim.x - side * h * 0.15;
     const y = victim.y + h * 0.55;
     const away = side > 0 ? 0.3 : Math.PI - 0.3;
+    // Éclat à pointes, de bande dessinée, derrière le flash : sa taille dit la force du coup.
+    burst(x, y, 8 + power * 13, 7 + power * 5, HOT, f);
     flare(x, y, 5 + power * 9, 7 + power * 4, HOT, f);
     flare(x, y, 2.5 + power * 3, 5, WHITE, f);
     ring(x, y, 1.5, 8 + power * 14, 11 + power * 6, WHITE, f);
@@ -537,8 +629,11 @@ export function createVfx(options: VfxOptions): Vfx {
       f,
     );
     if (power > 0.4) {
-      // Coup fort : traits rayonnants autour de la victime.
+      // Coup fort : traits rayonnants, anneau qui se brise en éclats, encre projetée.
       sparks(x, y, 10, 0, Math.PI * 2, 2.6 + power * 2, 1.4, 9, 0, WHITE, f);
+      shards(x, y, 6 + power * 10, 14, WHITE, f);
+      const color = attacker === undefined ? HOT : themeColor(a);
+      splats(x, y, 2 + Math.round(power * 3), away, color, f);
     }
     if (victim.hitlag >= STRONG_HITLAG) cueShake(cues, 0.004 + power * 0.016, 8 + power * 12);
   }
@@ -553,19 +648,57 @@ export function createVfx(options: VfxOptions): Vfx {
     sparks(v.x, y, 16, Math.atan2(v.velY, v.velX), 0.5, 4.5, 2.2, 14, 0, WHITE, f);
     cueShake(cues, 0.02, 18);
     cueFlash(cues, PLAYER_COLORS[i % PLAYER_COLORS.length]!, 0.22);
-    if (f - lastCloseUp >= CLOSE_UP_GAP) {
+    const final = options.isFinal?.(i) === true;
+    if (final || f - lastCloseUp >= CLOSE_UP_GAP) {
       lastCloseUp = f;
       cues.closeX = v.x;
       cues.closeY = y;
-      cues.closeLife = CLOSE_UP_LIFE;
+      cues.closeLife = final ? FINALE_CLOSE_UP_LIFE : CLOSE_UP_LIFE;
     }
+    if (final) {
+      // Coup final : éclat plus grand, anneau brisé, éclair blanc ; le match local ralentit.
+      burst(v.x, y, 26, 18, WHITE, f);
+      shards(v.x, y, 30, 22, playerGlow[i % playerGlow.length]!, f);
+      cueFlash(cues, 0xffffff, 0.4);
+      cues.finale = true;
+    }
+  }
+
+  /** Étoile lointaine, en haut de l'écran, à la couleur du joueur, avec un éclat blanc. */
+  function twinkle(i: number, x: number, f: number): void {
+    const height = view.maxY - view.minY;
+    const sx = Math.min(view.maxX - height * 0.1, Math.max(view.minX + height * 0.1, x));
+    const sy = view.maxY - height * 0.12;
+    reset(sx, sy, FRONT_Z);
+    p.shape = P_TWINKLE;
+    p.sizeStart = height * 0.07;
+    p.sizeEnd = height * 0.02;
+    p.life = 46;
+    paint(playerGlow[i % playerGlow.length]!, 1.4);
+    emit(glow, p, f);
+    flare(sx, sy, height * 0.05, 14, WHITE, f);
+    ring(sx, sy, height * 0.01, height * 0.08, 18, WHITE, f);
   }
 
   function trail(i: number, v: FighterView, f: number): void {
     const speed = Math.hypot(v.velX, v.velY);
     if (speed < TRAIL_SPEED) return;
     const y = v.y + heights[i]! * 0.5;
-    puffs(v.x, y, 1, -v.velX * 0.05, -v.velY * 0.05, 1, 3 + speed * 0.6, 26, SMOKE, 0.5, f);
+    // Fumée dense, et des braises pour les éjections violentes.
+    puffs(v.x, y, 2, -v.velX * 0.05, -v.velY * 0.05, 1.5, 3 + speed * 0.7, 30, SMOKE, 0.55, f);
+    if (speed > 2.2) {
+      reset(v.x, y, FRONT_Z - 1);
+      p.vx = -v.velX * 0.1 + (rand(f) - 0.5) * 0.6;
+      p.vy = -v.velY * 0.1 + (rand(f) - 0.5) * 0.6;
+      p.drag = 0.08;
+      p.gravity = 0.006;
+      p.shape = P_DOT;
+      p.sizeStart = 0.7;
+      p.sizeEnd = 0.1;
+      p.life = 18 + rand(f) * 10;
+      paint(HOT, 1);
+      emit(glow, p, f);
+    }
     if (speed > 2.6) {
       reset(v.x, y, FRONT_Z - 2);
       p.vx = v.velX * 0.25;
@@ -587,7 +720,7 @@ export function createVfx(options: VfxOptions): Vfx {
       switch (type) {
         case EV_HIT: {
           const victim = views[b];
-          if (victim !== undefined) hit(views[a], victim, b, f);
+          if (victim !== undefined) hit(views[a], a, victim, b, f);
           return;
         }
         case EV_SHIELD: {
@@ -597,6 +730,8 @@ export function createVfx(options: VfxOptions): Vfx {
           const x = d.x - side * heights[b]! * 0.3;
           const y = d.y + heights[b]! * 0.5;
           ring(x, y, 2, 9, 12, SHIELD, f);
+          // Le bouclier encaisse : un anneau d'éclats bleutés à l'impact.
+          shards(x, y, 7, 10, SHIELD, f);
           sparks(x, y, 6, side >= 0 ? Math.PI : 0, 1.6, 1.4, 0.7, 10, 0.02, SHIELD, f);
           return;
         }
@@ -617,8 +752,10 @@ export function createVfx(options: VfxOptions): Vfx {
           const d = views[a];
           if (d === undefined) return;
           const y = d.y + heights[a]! * 0.55;
+          burst(d.x, y, 16, 14, BREAK, f);
           flare(d.x, y, 14, 14, BREAK, f);
           ring(d.x, y, 6, 30, 24, BREAK, f);
+          shards(d.x, y, 28, 26, BREAK, f);
           sparks(d.x, y, 22, Math.PI / 2, Math.PI * 2, 2.2, 1.3, 30, 0.06, BREAK, f);
           cueShake(cues, 0.02, 20);
           cueFlash(cues, 0xc084fc, 0.18);
@@ -627,6 +764,12 @@ export function createVfx(options: VfxOptions): Vfx {
         case EV_KO: {
           const d = views[a];
           if (d === undefined) return;
+          if (d.y > view.maxY && d.x > view.minX && d.x < view.maxX) {
+            // KO par le haut : le combattant devient une étoile qui scintille au fond du ciel.
+            twinkle(a, d.x, f);
+            cueShake(cues, 0.01, 12);
+            return;
+          }
           // Le KO a lieu hors de l'écran : l'explosion part du bord, vers l'intérieur.
           const inset = (view.maxY - view.minY) * 0.04;
           const x = Math.min(view.maxX - inset, Math.max(view.minX + inset, d.x));
@@ -692,6 +835,19 @@ export function createVfx(options: VfxOptions): Vfx {
         case EV_HEAL: {
           const d = views[a];
           if (d === undefined) return;
+          ring(d.x, d.y + heights[a]! * 0.5, 2, 14, 20, HEAL, f);
+          // Quelques scintillements montent avec les points de soin.
+          for (let n = 0; n < 4; n++) {
+            reset(d.x + (rand(f) - 0.5) * 8, d.y + rand(f) * heights[a]!, FRONT_Z + 0.2);
+            p.vy = 0.3 + rand(f) * 0.2;
+            p.drag = 0.05;
+            p.shape = P_TWINKLE;
+            p.sizeStart = 2.2;
+            p.sizeEnd = 0.4;
+            p.life = 26 + rand(f) * 10;
+            paint(HEAL, 1.2);
+            emit(glow, p, f);
+          }
           for (let n = 0; n < 14; n++) {
             reset(d.x + (rand(f) - 0.5) * 8, d.y + rand(f) * heights[a]!, FRONT_Z);
             p.vy = 0.25 + rand(f) * 0.35;

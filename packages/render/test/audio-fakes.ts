@@ -41,6 +41,15 @@ export class FakePanner extends FakeNode {
   readonly pan = new FakeParam(0);
 }
 
+export class FakeFilter extends FakeNode {
+  type = 'lowpass';
+  readonly frequency = new FakeParam(20000);
+}
+
+export class FakeConvolver extends FakeNode {
+  buffer: FakeBuffer | null = null;
+}
+
 export class FakeBuffer {
   readonly data: Float32Array[];
   readonly numberOfChannels: number;
@@ -78,6 +87,7 @@ export class FakeSource extends FakeNode {
 
 export class FakeContext {
   currentTime = 0;
+  readonly sampleRate = 8000;
   state: 'suspended' | 'running' | 'closed' = 'suspended';
   /** Faux : le navigateur refuse de démarrer le son (pas d'action de l'utilisateur). */
   allowResume = true;
@@ -85,6 +95,18 @@ export class FakeContext {
   readonly gains: FakeGain[] = [];
   readonly panners: FakePanner[] = [];
   readonly sources: FakeSource[] = [];
+  readonly filters: FakeFilter[] = [];
+  readonly convolvers: FakeConvolver[] = [];
+  createBiquadFilter(): FakeFilter {
+    const node = new FakeFilter();
+    this.filters.push(node);
+    return node;
+  }
+  createConvolver(): FakeConvolver {
+    const node = new FakeConvolver();
+    this.convolvers.push(node);
+    return node;
+  }
   createGain(): FakeGain {
     const node = new FakeGain();
     this.gains.push(node);

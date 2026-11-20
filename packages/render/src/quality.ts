@@ -27,11 +27,17 @@ export interface QualityPreset {
   readonly grading: boolean;
   /** Particules d'effets visibles en même temps, au plus. */
   readonly particles: number;
+  /** Matières du décor texturées (SPEC-finition.md) ; sinon couleurs et grain calculé. */
+  readonly textures: boolean;
+  /** Filtrage anisotrope des textures du décor (1 = aucun). */
+  readonly anisotropy: number;
 }
 
 const PRESETS: Record<Quality, QualityPreset> = {
   low: {
     quality: 'low',
+    textures: false,
+    anisotropy: 1,
     particles: 1000,
     resolutionScale: 0.75,
     maxPixelRatio: 1,
@@ -44,6 +50,8 @@ const PRESETS: Record<Quality, QualityPreset> = {
   },
   medium: {
     quality: 'medium',
+    textures: true,
+    anisotropy: 4,
     particles: 3000,
     resolutionScale: 1,
     maxPixelRatio: 1.25,
@@ -56,6 +64,8 @@ const PRESETS: Record<Quality, QualityPreset> = {
   },
   high: {
     quality: 'high',
+    textures: true,
+    anisotropy: 8,
     particles: 6000,
     resolutionScale: 1,
     maxPixelRatio: 1.5,
@@ -68,6 +78,8 @@ const PRESETS: Record<Quality, QualityPreset> = {
   },
   ultra: {
     quality: 'ultra',
+    textures: true,
+    anisotropy: 16,
     particles: 10000,
     resolutionScale: 1,
     maxPixelRatio: 2,

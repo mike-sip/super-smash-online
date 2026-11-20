@@ -8,6 +8,10 @@ import type { StorageLike } from './settings.ts';
 
 export const RANDOM = 'random';
 export const MAX_LOCAL = 4;
+/** « Périphérique » d'une place tenue par l'ordinateur (SPEC-finition.md, phase 6). */
+export const CPU_DEVICE = 'cpu';
+/** Niveau de l'ordinateur par défaut. */
+export const DEFAULT_CPU_LEVEL = 5;
 
 export interface LocalSlot {
   device: string | null;
@@ -15,6 +19,8 @@ export interface LocalSlot {
   /** Couleur alternative choisie (0 à 7). */
   palette: number;
   ready: boolean;
+  /** Niveau de l'ordinateur (1 à 9), pour une place tenue par lui. */
+  level: number;
 }
 
 export interface LocalSetup {
@@ -35,6 +41,7 @@ export function createLocalSetup(
       fighter: order.includes(previous[i] ?? '') ? previous[i]! : roster[i % roster.length]!,
       palette: 0,
       ready: false,
+      level: DEFAULT_CPU_LEVEL,
     })),
   };
 }
@@ -47,11 +54,52 @@ export function slotOf(setup: LocalSetup, device: string): number {
 export function join(setup: LocalSetup, device: string): number {
   const existing = slotOf(setup, device);
   if (existing >= 0) return existing;
-  const free = setup.slots.findIndex((s) => s.device === null);
+  let free = setup.slots.findIndex((s) => s.device === null);
+  // Plus de place libre : un joueur humain prend celle d'un ordinateur.
+  if (free < 0) free = lastCpu(setup);
   if (free < 0) return -1;
   setup.slots[free]!.device = device;
   setup.slots[free]!.ready = false;
   return free;
+}
+
+export const isCpu = (slot: LocalSlot): boolean => slot.device === CPU_DEVICE;
+
+/** Dernière place tenue par l'ordinateur, ou -1. */
+function lastCpu(setup: LocalSetup): number {
+  for (let i = setup.slots.length - 1; i >= 0; i--) if (isCpu(setup.slots[i]!)) return i;
+  return -1;
+}
+
+/** Nombre de places tenues par l'ordinateur. */
+export function cpuCount(setup: LocalSetup): number {
+  return setup.slots.filter(isCpu).length;
+}
+
+/**
+ * Règle le nombre d'ordinateurs : ils prennent les places libres (les dernières d'abord libérées).
+ * Les places des joueurs humains ne sont jamais touchées. Renvoie le nombre obtenu.
+ */
+export function setCpuCount(setup: LocalSetup, count: number, level: number): number {
+  while (cpuCount(setup) > count) {
+    const last = lastCpu(setup);
+    setup.slots[last]!.device = null;
+    setup.slots[last]!.ready = false;
+  }
+  while (cpuCount(setup) < count) {
+    const free = setup.slots.findIndex((s) => s.device === null);
+    if (free < 0) break;
+    const s = setup.slots[free]!;
+    s.device = CPU_DEVICE;
+    s.ready = true;
+    s.level = level;
+  }
+  return cpuCount(setup);
+}
+
+/** Niveau de tous les ordinateurs. */
+export function setCpuLevel(setup: LocalSetup, level: number): void {
+  for (const s of setup.slots) if (isCpu(s)) s.level = level;
 }
 
 export function leave(setup: LocalSetup, slot: number): void {
@@ -70,7 +118,7 @@ export function cycleFighter(setup: LocalSetup, slot: number, delta: number): vo
   if (s === undefined) return;
   const at = Math.max(0, setup.order.indexOf(s.fighter));
   s.fighter = setup.order[(at + delta + setup.order.length) % setup.order.length]!;
-  s.ready = false;
+  s.ready = isCpu(s);
 }
 
 /** Change la couleur alternative de la place (↑ ↓), en boucle sur les huit. */
@@ -78,12 +126,13 @@ export function cyclePalette(setup: LocalSetup, slot: number, delta: number): vo
   const s = setup.slots[slot];
   if (s === undefined) return;
   s.palette = (s.palette + delta + PALETTE_COUNT) % PALETTE_COUNT;
-  s.ready = false;
+  s.ready = isCpu(s);
 }
 
 export function toggleReady(setup: LocalSetup, slot: number): void {
   const s = setup.slots[slot];
-  if (s !== undefined && s.device !== null) s.ready = !s.ready;
+  // L'ordinateur est toujours prêt.
+  if (s !== undefined && s.device !== null && !isCpu(s)) s.ready = !s.ready;
 }
 
 /** Au moins `min` joueurs, tous prêts. */
@@ -97,15 +146,27 @@ export function resolveFighters(
   setup: LocalSetup,
   roster: readonly string[],
   random: () => number,
-): { slot: number; device: string; fighter: string; palette: number }[] {
-  const out: { slot: number; device: string; fighter: string; palette: number }[] = [];
+): { slot: number; device: string; fighter: string; palette: number; cpu: number | null }[] {
+  const out: {
+    slot: number;
+    device: string;
+    fighter: string;
+    palette: number;
+    cpu: number | null;
+  }[] = [];
   setup.slots.forEach((s, slot) => {
     if (s.device === null) return;
     const fighter =
       s.fighter === RANDOM
         ? roster[Math.min(roster.length - 1, Math.floor(random() * roster.length))]!
         : s.fighter;
-    out.push({ slot, device: s.device, fighter, palette: s.palette });
+    out.push({
+      slot,
+      device: s.device,
+      fighter,
+      palette: s.palette,
+      cpu: isCpu(s) ? s.level : null,
+    });
   });
   return out;
 }

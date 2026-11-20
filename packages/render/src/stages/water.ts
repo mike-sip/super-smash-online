@@ -27,6 +27,8 @@ export interface WaterLook {
   readonly color: number;
   /** Amplitude des vagues, en unités de jeu. */
   readonly waves: number;
+  /** Force du reflet du ciel (lumière par image) ; 2,2 par défaut. */
+  readonly reflect?: number;
 }
 
 export interface Animated {
@@ -43,7 +45,7 @@ export function createWater(look: WaterLook): Animated {
     color: look.color,
     roughness: 0.14,
     metalness: 0.1,
-    envMapIntensity: 2.2,
+    envMapIntensity: look.reflect ?? 2.2,
   });
   material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
     shader.uniforms.uTime = time;
@@ -81,6 +83,8 @@ export function createWater(look: WaterLook): Animated {
   material.customProgramCacheKey = () => 'water';
   const mesh = new Mesh(geometry, material);
   mesh.name = 'water';
+  // Reflète le ciel du stage (renderer.ts), pas l'image HDRI : son horizon clair blanchirait l'eau.
+  mesh.userData.skyReflection = true;
   mesh.receiveShadow = true;
   return {
     mesh,

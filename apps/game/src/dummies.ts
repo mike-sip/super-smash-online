@@ -1,6 +1,7 @@
 /**
- * Mannequins de l'entraînement : ils ne décident rien (pas d'IA, hors v1). Immobiles, ils sautent
- * en rythme, ou tiennent leur bouclier ; « aléatoire » ne sert qu'à la mesure de performance.
+ * Mannequins de l'entraînement : immobiles, ils sautent en rythme, ou tiennent leur bouclier ;
+ * « aléatoire » ne sert qu'à la mesure de performance. Les modes « ordinateur » confient les
+ * mannequins à l'adversaire ordinateur (`@game/cpu`, SPEC-finition.md, phase 6).
  */
 import {
   BTN_ATTACK,
@@ -12,13 +13,21 @@ import {
   type InputFrame,
 } from '@game/sim-core';
 
-export type DummyMode = 'idle' | 'jump' | 'shield' | 'random';
+export type DummyMode = 'idle' | 'jump' | 'shield' | 'random' | 'cpu3' | 'cpu6' | 'cpu9';
 
 export const DUMMY_MODES: readonly { value: DummyMode; label: string }[] = [
   { value: 'idle', label: 'Immobiles' },
   { value: 'jump', label: 'Sauteurs' },
   { value: 'shield', label: 'Bouclier' },
+  { value: 'cpu3', label: 'Ordinateur facile (niv. 3)' },
+  { value: 'cpu6', label: 'Ordinateur moyen (niv. 6)' },
+  { value: 'cpu9', label: 'Ordinateur difficile (niv. 9)' },
 ];
+
+/** Niveau de l'ordinateur d'un mode de mannequins, ou `null` pour un vrai mannequin. */
+export function dummyCpuLevel(mode: DummyMode): number | null {
+  return mode === 'cpu3' ? 3 : mode === 'cpu6' ? 6 : mode === 'cpu9' ? 9 : null;
+}
 
 const STICK_X = [-127, -127, -56, 0, 0, 56, 127, 127];
 const STICK_Y = [-127, 0, 0, 0, 0, 127];
@@ -47,6 +56,9 @@ export function createDummyInputs(
   return (frame, d) => {
     switch (mode) {
       case 'idle':
+      case 'cpu3':
+      case 'cpu6':
+      case 'cpu9':
         return 0;
       case 'jump':
         // Un saut toutes les 90 frames, décalé d'un mannequin à l'autre.

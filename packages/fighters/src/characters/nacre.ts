@@ -472,6 +472,8 @@ export const NACRE: Character = defineCharacter({
     palette: { skin: 0xc99b7a, hair: 0x1d3b5a, accent: 0xe9f1f0, light: 0xfffaf0, dark: 0xe25a5a },
     iridescent: 'accent',
     vfx: 'pearl',
+    // Robe de soie irisée ; couronne et bâton de corail, lisses.
+    materials: { accent: 'silk', light: 'silk', player: 'plain', dark: 'plain' },
     palettes: [
       {},
       { primary: 0xe2708a, hair: 0x5a1d3b, dark: 0x2ec4c4 },

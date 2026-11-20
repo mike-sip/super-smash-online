@@ -8,6 +8,13 @@
 import {
   SND_DOUBLE_JUMP,
   SND_ENTITY_BREAK,
+  SND_FINALE,
+  SND_STAR,
+  SND_THEME_EMBER,
+  SND_THEME_FEATHER,
+  SND_THEME_PEARL,
+  SND_THEME_WIND,
+  SND_WHOOSH,
   SND_ENTITY_SPAWN,
   SND_GRAB,
   SND_HIT_MEDIUM,
@@ -177,6 +184,98 @@ function entityBreak(b: Builder): void {
   tone(b, { wave: WAVE_SINE, freq: 700, freqEnd: 180, sweep: 0.08, ...perc(0.001, 0.09, 0.5) });
 }
 
+// --- Couches de la phase 5 (SPEC-finition.md) ------------------------------------------------
+
+/** Souffle d'un coup fort : bruit filtré qui monte puis retombe, sous l'impact. */
+function whoosh(b: Builder): void {
+  noise(
+    b,
+    { attack: 0.03, decay: 0.22, sustain: 0, gate: 0.25, gain: 1 },
+    FILTER_BAND,
+    500,
+    2600,
+    1.4,
+  );
+  noise(
+    b,
+    { seed: 4, attack: 0.05, decay: 0.2, sustain: 0, gate: 0.25, gain: 0.5 },
+    FILTER_LOW,
+    1800,
+    400,
+  );
+}
+
+/** Rafale (Sorel) : souffle aigu qui file, avec un sifflement. */
+function themeWind(b: Builder): void {
+  noise(
+    b,
+    { attack: 0.02, decay: 0.3, sustain: 0, gate: 0.32, gain: 1 },
+    FILTER_BAND,
+    3000,
+    900,
+    2.2,
+  );
+  tone(b, { wave: WAVE_SINE, freq: 1800, freqEnd: 1100, sweep: 0.25, ...perc(0.02, 0.25, 0.25) });
+}
+
+/** Plume (Zéphine) : froissement léger et deux notes claires. */
+function themeFeather(b: Builder): void {
+  noise(b, perc(0.005, 0.12, 0.6), FILTER_HIGH, 5000);
+  tone(b, { wave: WAVE_TRIANGLE, freq: 1318, ...perc(0.003, 0.18, 0.4) });
+  tone(b, { wave: WAVE_TRIANGLE, freq: 1976, ...perc(0.003, 0.16, 0.3, 0.06) });
+}
+
+/** Braise (Ferroc) : crépitement de feu et souffle de forge. */
+function themeEmber(b: Builder): void {
+  const crackle = createNoise(9);
+  for (let n = 0; n < 12; n++) {
+    const start = (nextNoise(crackle) + 1) * 0.12;
+    noise(b, { seed: 10 + n, ...perc(0, 0.01, 0.5, start) }, FILTER_HIGH, 2500);
+  }
+  noise(
+    b,
+    { seed: 30, attack: 0.02, decay: 0.3, sustain: 0, gate: 0.32, gain: 0.7 },
+    FILTER_LOW,
+    900,
+    300,
+  );
+}
+
+/** Perle (Nacre) : tintement nacré, partiels doux. */
+function themePearl(b: Builder): void {
+  tone(b, { wave: WAVE_SINE, freq: 1046, ...perc(0.002, 0.4, 0.5) });
+  tone(b, { wave: WAVE_SINE, freq: 1568, ...perc(0.002, 0.32, 0.32, 0.03) });
+  tone(b, { wave: WAVE_SINE, freq: 2637, ...perc(0.002, 0.24, 0.2, 0.06) });
+}
+
+/** Coup final : grondement grave, éclat montant et souffle qui se fige. */
+function finale(b: Builder): void {
+  tone(b, { wave: WAVE_SINE, freq: 70, freqEnd: 30, sweep: 1.2, ...perc(0.005, 1.4, 1.3) });
+  noise(b, perc(0.002, 0.6, 0.9), FILTER_LOW, 5000, 200);
+  tone(b, { wave: WAVE_SAW, freq: 220, freqEnd: 880, sweep: 0.5, ...perc(0.01, 0.6, 0.18) });
+  noise(
+    b,
+    { seed: 6, attack: 0.2, decay: 0.9, sustain: 0, gate: 1.1, gain: 0.4 },
+    FILTER_BAND,
+    800,
+    3000,
+    1,
+  );
+  softClip(b.out, 2);
+}
+
+/** Étoile : scintillement aigu qui s'éloigne. */
+function star(b: Builder): void {
+  for (let n = 0; n < 5; n++) {
+    tone(b, {
+      wave: WAVE_SINE,
+      freq: 2093 + n * 349,
+      ...perc(0.002, 0.25, 0.4 - n * 0.06, n * 0.07),
+    });
+  }
+  tone(b, { wave: WAVE_TRIANGLE, freq: 1046, freqEnd: 1568, sweep: 0.3, ...perc(0.01, 0.4, 0.3) });
+}
+
 /** Recette et durée de chaque son, dans l'ordre des identifiants `SND_*`. */
 const RECIPES: Record<number, [seconds: number, build: (b: Builder) => void]> = {
   [SND_HIT_WEAK]: [0.14, hitWeak],
@@ -193,6 +292,13 @@ const RECIPES: Record<number, [seconds: number, build: (b: Builder) => void]> = 
   [SND_LAND]: [0.1, land],
   [SND_ENTITY_SPAWN]: [0.16, entitySpawn],
   [SND_ENTITY_BREAK]: [0.14, entityBreak],
+  [SND_WHOOSH]: [0.3, whoosh],
+  [SND_THEME_WIND]: [0.36, themeWind],
+  [SND_THEME_FEATHER]: [0.26, themeFeather],
+  [SND_THEME_EMBER]: [0.36, themeEmber],
+  [SND_THEME_PEARL]: [0.45, themePearl],
+  [SND_FINALE]: [1.5, finale],
+  [SND_STAR]: [0.7, star],
 };
 
 /** Calcule les échantillons (mono) du son `id`. */

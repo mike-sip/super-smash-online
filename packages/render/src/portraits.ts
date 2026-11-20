@@ -119,7 +119,8 @@ export function createPortraitStudio(): PortraitStudio {
       }
       const frame = FRAMES[kind];
       model.root.rotation.y = frame.yaw;
-      model.apply(p, frame.head, 1, kind === 'victory' ? 0.5 : 0);
+      // Victoire : bouche ouverte, poings serrés ; ailleurs, visage au repos.
+      model.apply(p, frame.head, 1, kind === 'victory' ? 0.5 : 0, 0, kind === 'victory' ? 1 : 0.45);
       scene.add(model.root);
       camera.position.set(0, frame.y + frame.distance * 0.08, frame.distance);
       camera.lookAt(0, frame.y, 0);

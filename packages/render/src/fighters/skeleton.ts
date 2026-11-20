@@ -8,6 +8,7 @@
  * du profil.
  */
 import { Bone, Group, Skeleton } from 'three';
+import { HAND_BOOST, handJoints } from './body.ts';
 import { LEG_SIDE, SHOULDER, type Dims } from './mannequin.ts';
 import { HIP_HEIGHT, TORSO, type Pose } from './poses.ts';
 import { BONES, type BoneName } from './sdf.ts';
@@ -15,6 +16,9 @@ import { BONES, type BoneName } from './sdf.ts';
 /** Écartement des bras et des jambes en pose de référence, en radians. */
 const ARM_SPREAD = 0.42;
 const LEG_SPREAD = 0.12;
+/** Repli des doigts et du pouce, poing serré, en radians. */
+const FINGER_CURL = 1.7;
+const THUMB_CURL = 0.9;
 /** Part de la flexion de la jambe que le pied compense pour rester à plat. */
 const FOOT_LEVEL = 0.85;
 
@@ -31,6 +35,11 @@ export interface Rig {
    * caméra), sans changer la silhouette du corps. N'alloue rien.
    */
   apply(pose: Pose, headTurn: number): void;
+  /**
+   * Fermeture des mains, de 0 (ouverte) à 1 (poing serré), côté caméra et côté opposé
+   * (SPEC-finition.md, phase 2).
+   */
+  setHands(front: number, back: number): void;
 }
 
 export function createRig(d: Dims): Rig {
@@ -64,6 +73,17 @@ export function createRig(d: Dims): Rig {
     upper.position.set(0, SHOULDER, d.armSide * sign);
     fore.position.set(0, -d.upperArm, 0);
     hand.position.set(0, -d.forearm, 0);
+    // Doigts aux jointures, pouce sur le côté de la paume (main agrandie autour du poignet).
+    const joints = handJoints(d);
+    const fingers = by(`fingers${side}`);
+    const thumb = by(`thumb${side}`);
+    hand.add(fingers, thumb);
+    fingers.position.set(0, joints.knuckle * HAND_BOOST, 0);
+    thumb.position.set(
+      joints.thumb[0] * HAND_BOOST,
+      joints.thumb[1] * HAND_BOOST,
+      joints.thumb[2] * HAND_BOOST,
+    );
 
     const thigh = by(`thigh${side}`);
     const shin = by(`shin${side}`);
@@ -113,6 +133,10 @@ export function createRig(d: Dims): Rig {
   const shinB = by('shinB');
   const footF = by('footF');
   const footB = by('footB');
+  const fingersF = by('fingersF');
+  const fingersB = by('fingersB');
+  const thumbF = by('thumbF');
+  const thumbB = by('thumbB');
 
   return {
     root,
@@ -135,6 +159,13 @@ export function createRig(d: Dims): Rig {
       shinB.rotation.z = p.shinB;
       footF.rotation.z = -(p.legF + p.shinF) * FOOT_LEVEL;
       footB.rotation.z = -(p.legB + p.shinB) * FOOT_LEVEL;
+    },
+    setHands(front, back) {
+      // Les doigts se replient vers la paume, tournée vers le corps : sens opposés des deux côtés.
+      fingersF.rotation.x = front * FINGER_CURL;
+      fingersB.rotation.x = -back * FINGER_CURL;
+      thumbF.rotation.x = front * THUMB_CURL;
+      thumbB.rotation.x = -back * THUMB_CURL;
     },
   };
 }

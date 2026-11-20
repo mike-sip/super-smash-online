@@ -5,6 +5,13 @@
 import {
   SND_DOUBLE_JUMP,
   SND_ENTITY_BREAK,
+  SND_FINALE,
+  SND_STAR,
+  SND_THEME_EMBER,
+  SND_THEME_FEATHER,
+  SND_THEME_PEARL,
+  SND_THEME_WIND,
+  SND_WHOOSH,
   SND_ENTITY_SPAWN,
   SND_GRAB,
   SND_HIT_MEDIUM,
@@ -61,6 +68,13 @@ export const SOUND_LEVELS: readonly number[] = table([
   [SND_LAND, 0.3],
   [SND_ENTITY_SPAWN, 0.25],
   [SND_ENTITY_BREAK, 0.35],
+  [SND_WHOOSH, 0.45],
+  [SND_THEME_WIND, 0.4],
+  [SND_THEME_FEATHER, 0.4],
+  [SND_THEME_EMBER, 0.45],
+  [SND_THEME_PEARL, 0.4],
+  [SND_FINALE, 1],
+  [SND_STAR, 0.7],
 ]);
 
 /** Priorité de chaque son quand toutes les voix sont prises : le plus grand l'emporte. */
@@ -79,6 +93,13 @@ export const SOUND_PRIORITIES: readonly number[] = table([
   [SND_DOUBLE_JUMP, 0],
   [SND_LAND, 0],
   [SND_ENTITY_SPAWN, 0],
+  [SND_FINALE, 6],
+  [SND_STAR, 5],
+  [SND_WHOOSH, 2],
+  [SND_THEME_WIND, 1],
+  [SND_THEME_FEATHER, 1],
+  [SND_THEME_EMBER, 1],
+  [SND_THEME_PEARL, 1],
 ]);
 
 /** Voix d'effets : ce qui joue sur chacune, et jusqu'à quand (en secondes du contexte audio). */

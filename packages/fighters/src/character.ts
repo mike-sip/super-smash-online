@@ -70,6 +70,13 @@ export interface FighterLook {
   readonly iridescent?: LookZone;
   /** Thème des effets du personnage. */
   readonly vfx?: 'wind' | 'feather' | 'ember' | 'pearl';
+  /**
+   * Matière de chaque zone quand elle diffère de celle par défaut (tissu ; peau ; cheveux ; métal
+   * pour `accent` ; cuir pour `dark`).
+   */
+  readonly materials?: Partial<
+    Record<LookZone, 'fabric' | 'silk' | 'leather' | 'metal' | 'skin' | 'hair' | 'plain'>
+  >;
 }
 
 /** Os de la figurine qui porte un volume ; « F » : du côté de la caméra quand il regarde à droite. */

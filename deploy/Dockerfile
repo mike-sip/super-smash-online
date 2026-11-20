@@ -14,6 +14,8 @@ RUN corepack enable && corepack prepare pnpm@12.18.0 --activate
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages ./packages
 COPY apps ./apps
+# Textures, HDRI et polices (assets/SOURCES.md), servis à la racine du client.
+COPY assets ./assets
 COPY deploy ./deploy
 COPY tsconfig.base.json ./
 RUN pnpm install --frozen-lockfile

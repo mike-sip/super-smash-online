@@ -41,6 +41,10 @@ export const MELODIC: readonly number[] = [INS_BASS, INS_PAD, INS_LEAD, INS_ARP]
 
 export const NATURAL_MINOR: readonly number[] = [0, 2, 3, 5, 7, 8, 10];
 export const DORIAN: readonly number[] = [0, 2, 3, 5, 7, 9, 10];
+export const MAJOR: readonly number[] = [0, 2, 4, 5, 7, 9, 11];
+export const MIXOLYDIAN: readonly number[] = [0, 2, 4, 5, 7, 9, 10];
+export const LYDIAN: readonly number[] = [0, 2, 4, 6, 7, 9, 11];
+export const PHRYGIAN: readonly number[] = [0, 1, 3, 5, 7, 8, 10];
 
 export const BARS = 16;
 export const BEATS_PER_BAR = 4;
@@ -59,6 +63,15 @@ export interface TrackStyle {
   readonly scale: readonly number[];
   /** Degré fondamental de l'accord de chaque mesure, repris en boucle. */
   readonly progression: readonly number[];
+  /**
+   * Batterie (SPEC-finition.md, phase 5) : `drive` (grosse caisse à chaque temps, par défaut),
+   * `half` (demi-temps, plus posé), `sparse` (quelques frappes, pour les ambiances).
+   */
+  readonly drums?: 'drive' | 'half' | 'sparse';
+  /** Arpège : à partir du deuxième tiers (par défaut), tout le long, ou jamais. */
+  readonly arp?: 'late' | 'always' | 'never';
+  /** Forme d'onde de la mélodie (`WAVE_*`) ; carrée par défaut. */
+  readonly leadWave?: number;
 }
 
 /** Musique du stage de test : électro arcade, 150 bpm, la mineur, i – VI – III – VII. */
@@ -90,6 +103,8 @@ export interface Composition {
   /** Degré fondamental de l'accord de chaque mesure. */
   readonly chords: readonly number[];
   readonly notes: readonly Note[];
+  /** Faux pour un jingle joué une fois : pas de repli de la fin sur le début. */
+  readonly loop?: boolean;
 }
 
 /** Durée de la boucle, en secondes. */
@@ -194,11 +209,24 @@ export function compose(style: TrackStyle): Composition {
     const last = bar === BARS - 1;
 
     // Batterie.
+    const feel = style.drums ?? 'drive';
     for (let s = 0; s < STEPS_PER_BAR; s++) {
       const beat = s % STEPS_PER_BEAT === 0;
-      const kick = section === 3 ? (bar === 14 ? s % 8 === 0 : bar === 15 ? beat : false) : beat;
-      if (kick) add(INS_KICK, at + s, 2, 0, 1);
-      if (section < 3 && (s === 4 || s === 12)) add(INS_SNARE, at + s, 2, 0, 0.9);
+      const pulse =
+        feel === 'half'
+          ? s === 0 || s === 10
+          : feel === 'sparse'
+            ? s === 0 || (s === 11 && bar % 2 === 1)
+            : beat;
+      const kick = section === 3 ? (bar === 14 ? s % 8 === 0 : bar === 15 ? beat : false) : pulse;
+      if (kick) add(INS_KICK, at + s, 2, 0, feel === 'sparse' ? 0.75 : 1);
+      const backbeat =
+        feel === 'half'
+          ? s === 8
+          : feel === 'sparse'
+            ? s === 8 && bar % 2 === 1
+            : s === 4 || s === 12;
+      if (section < 3 && backbeat) add(INS_SNARE, at + s, 2, 0, feel === 'sparse' ? 0.5 : 0.9);
       if (section === 2 && s === 14 && bar % 2 === 1) add(INS_SNARE, at + s, 1, 0, 0.35);
       if (last && s >= 8) add(INS_SNARE, at + s, 1, 0, 0.3 + (0.6 * (s - 8)) / 7);
       const offbeat = s % 4 === 2;
@@ -231,7 +259,8 @@ export function compose(style: TrackStyle): Composition {
     }
 
     // Arpège : doubles croches sur les notes de l'accord, montant puis descendant.
-    if (section >= 2) {
+    const arp = style.arp ?? 'late';
+    if (arp === 'always' || (arp === 'late' && section >= 2)) {
       const shape = [0, 2, 4, 7, 9, 7, 4, 2];
       for (let s = 0; s < STEPS_PER_BAR; s++) {
         const pitch = degreeToPitch(style, chord + shape[s % shape.length]!, 2);
@@ -289,8 +318,11 @@ const LEVELS: readonly number[] = [0.95, 0.5, 0.16, 0.5, 0.11, 0.24, 0.14];
 /** Prépare le rendu de `composition` ; rien n'est calculé avant les appels à `step`. */
 export function createMusicRender(composition: Composition, sampleRate = SAMPLE_RATE): MusicRender {
   const stepSeconds = 60 / composition.style.bpm / STEPS_PER_BEAT;
-  const length = Math.round(loopSeconds(composition) * sampleRate);
-  const padded = length + Math.ceil(TAIL_SECONDS * sampleRate);
+  const loop = composition.loop !== false;
+  const loopLength = Math.round(loopSeconds(composition) * sampleRate);
+  const padded = loopLength + Math.ceil(TAIL_SECONDS * sampleRate);
+  // Un jingle garde sa queue (pas de repli sur le début) : il dure toute la longueur rembourrée.
+  const length = loop ? loopLength : padded;
   // Un tampon par instrument (deux pour ceux qui sont en stéréo), filtré une seule fois.
   const left: Float32Array[] = [];
   const right: Float32Array[] = [];
@@ -307,6 +339,7 @@ export function createMusicRender(composition: Composition, sampleRate = SAMPLE_
   }
   for (let i = 0; i < INSTRUMENTS; i++) {
     jobs.push(() => {
+      if (!loop) return;
       fold(left[i]!, length);
       fold(right[i]!, length);
     });
@@ -463,7 +496,7 @@ export function createMusicRender(composition: Composition, sampleRate = SAMPLE_
         addTone(
           l,
           {
-            wave: WAVE_SQUARE,
+            wave: composition.style.leadWave ?? WAVE_SQUARE,
             freq,
             start,
             attack: 0.008,
@@ -607,4 +640,145 @@ export function renderMusic(composition: Composition, sampleRate = SAMPLE_RATE):
   const render = createMusicRender(composition, sampleRate);
   while (!render.done) render.step();
   return render.result();
+}
+
+// --- Thèmes et jingles (SPEC-finition.md, phase 5) -------------------------------------------
+
+/** Menus : posé, ré dorien, demi-temps, arpège tout du long, mélodie douce. */
+export const MENU_STYLE: TrackStyle = {
+  name: 'menu',
+  seed: 20261120,
+  bpm: 100,
+  root: 50,
+  scale: DORIAN,
+  progression: [0, 3, 5, 4],
+  drums: 'half',
+  arp: 'always',
+  leadWave: WAVE_TRIANGLE,
+};
+
+/** Belvédère des Brumes : aventure lumineuse, do majeur, I – V – vi – IV. */
+export const BELVEDERE_STYLE: TrackStyle = {
+  name: 'belvedere',
+  seed: 20261121,
+  bpm: 138,
+  root: 48,
+  scale: MAJOR,
+  progression: [0, 4, 5, 3],
+};
+
+/** Récif Nocturne : nuit et lagon, la dorien, peu de batterie, arpège qui ruisselle. */
+export const RECIF_STYLE: TrackStyle = {
+  name: 'recif',
+  seed: 20261122,
+  bpm: 108,
+  root: 45,
+  scale: DORIAN,
+  progression: [0, 6, 5, 6],
+  drums: 'sparse',
+  arp: 'always',
+  leadWave: WAVE_TRIANGLE,
+};
+
+/** Canal des Lanternes : crépuscule, sol mixolydien, demi-temps chaloupé. */
+export const CANAL_STYLE: TrackStyle = {
+  name: 'canal',
+  seed: 20261123,
+  bpm: 122,
+  root: 43,
+  scale: MIXOLYDIAN,
+  progression: [0, 6, 3, 0],
+  drums: 'half',
+};
+
+/** Bassin des Geysers : volcanique, mi phrygien, rapide et appuyé. */
+export const GEYSERS_STYLE: TrackStyle = {
+  name: 'geysers',
+  seed: 20261124,
+  bpm: 158,
+  root: 40,
+  scale: PHRYGIAN,
+  progression: [0, 1, 0, 6],
+  leadWave: WAVE_SAW,
+};
+
+/** Toutes les musiques en boucle : les menus, l'arène d'essai, un thème par stage. */
+export const TRACK_STYLES: readonly TrackStyle[] = [
+  MENU_STYLE,
+  ARENA_STYLE,
+  BELVEDERE_STYLE,
+  RECIF_STYLE,
+  CANAL_STYLE,
+  GEYSERS_STYLE,
+];
+
+/** Jingle de victoire de chaque thème d'effets (donc de chaque personnage). */
+export const JINGLE_STYLES: readonly TrackStyle[] = [
+  { name: 'victory-wind', seed: 31, bpm: 140, root: 60, scale: MAJOR, progression: [0, 4] },
+  {
+    name: 'victory-feather',
+    seed: 32,
+    bpm: 160,
+    root: 62,
+    scale: LYDIAN,
+    progression: [0, 1],
+    leadWave: WAVE_TRIANGLE,
+  },
+  {
+    name: 'victory-ember',
+    seed: 33,
+    bpm: 118,
+    root: 52,
+    scale: NATURAL_MINOR,
+    progression: [0, 5],
+    leadWave: WAVE_SAW,
+  },
+  {
+    name: 'victory-pearl',
+    seed: 34,
+    bpm: 110,
+    root: 57,
+    scale: DORIAN,
+    progression: [0, 3],
+    leadWave: WAVE_TRIANGLE,
+  },
+];
+
+/**
+ * Jingle de victoire : deux mesures jouées une fois. Une frappe de batterie, l'accord tenu, et la
+ * mélodie qui monte l'accord jusqu'à la tonique aiguë, tenue jusqu'au bout.
+ */
+export function composeJingle(style: TrackStyle): Composition {
+  const notes: Note[] = [];
+  const add = (
+    instrument: number,
+    start: number,
+    length: number,
+    pitch: number,
+    velocity: number,
+    pan = 0,
+  ): void => {
+    notes.push({ instrument, start, length, pitch, velocity, pan });
+  };
+  const first = style.progression[0] ?? 0;
+  const second = style.progression[1] ?? 4;
+  add(INS_KICK, 0, 2, 0, 1);
+  add(INS_SNARE, 0, 2, 0, 0.8);
+  add(INS_KICK, STEPS_PER_BAR, 2, 0, 1);
+  add(INS_SNARE, STEPS_PER_BAR, 4, 0, 1);
+  for (const tone of [0, 2, 4]) {
+    const pan = -0.4 + tone * 0.2;
+    add(INS_PAD, 0, STEPS_PER_BAR, degreeToPitch(style, second + tone, 1), 0.6, pan);
+    add(INS_PAD, STEPS_PER_BAR, STEPS_PER_BAR * 2, degreeToPitch(style, first + tone, 1), 0.7, pan);
+  }
+  add(INS_BASS, 0, STEPS_PER_BAR, degreeToPitch(style, second, -1), 0.8);
+  add(INS_BASS, STEPS_PER_BAR, STEPS_PER_BAR * 2, degreeToPitch(style, first, -1), 0.9);
+  // Montée de croches sur l'accord, puis la tonique aiguë tenue.
+  [0, 2, 4, 7, 9, 11].forEach((degree, n) => {
+    add(INS_LEAD, n * 2, 2, degreeToPitch(style, second + degree, 1), 0.8 + n * 0.03, 0.1);
+  });
+  add(INS_LEAD, STEPS_PER_BAR, STEPS_PER_BAR + 8, degreeToPitch(style, first + 7, 1), 1, 0.1);
+  add(INS_HAT, STEPS_PER_BAR, 2, 0, 0.9, 0.3);
+  notes.sort((a, b) => a.start - b.start || a.instrument - b.instrument);
+  return { style, bars: 2, chords: [second, first], notes, loop: false };
 }

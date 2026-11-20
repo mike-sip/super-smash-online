@@ -487,6 +487,8 @@ export const FERROC: Character = defineCharacter({
     palette: { skin: 0xc98b62, hair: 0x2a1c14, accent: 0xff7a1a, light: 0x8d939c, dark: 0x4a2f20 },
     emissive: 'accent',
     vfx: 'ember',
+    // Épaulières et bracelets de fer.
+    materials: { player: 'metal', light: 'metal' },
     palettes: [
       {},
       { primary: 0x3d4a5c, secondary: 0x8aa4c2, accent: 0x4ac7ff, hair: 0x14161a },

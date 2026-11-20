@@ -122,8 +122,9 @@ describe('figurines dans le renderer', () => {
     const triangles = body.geometry.index!.count / 3;
     console.log(`Figurine : ${triangles} triangles`);
     expect(triangles).toBeGreaterThan(3000);
-    expect(triangles).toBeLessThan(14000);
-    expect(body.skeleton.bones.length).toBe(21);
+    // Corps, tête plus fine, mains à doigts (SPEC-finition.md, phase 2) : ~20 000 visés.
+    expect(triangles).toBeLessThan(24000);
+    expect(body.skeleton.bones.length).toBe(25);
     const outline = visuals.root.getObjectByName('outline-0')!;
     visuals.setQuality!(presetOf('low'));
     expect(outline.visible).toBe(false);

@@ -3,6 +3,7 @@ import type { App, Screen } from '../app.ts';
 import { UNEXPECTED } from '../errors.ts';
 import { GAME_NAME, PRESS_TO_START, TAGLINE } from '../strings.ts';
 import { STANDARD_HINTS, button, hints, menu } from './components.ts';
+import { MENU_MUSIC } from '../music.ts';
 import { el } from './dom.ts';
 
 /** Entrées du menu principal, ajoutées par les autres écrans (combat local, en ligne…). */
@@ -26,16 +27,18 @@ export function titleScreen(
   });
   const go = (): void => {
     app.audio.unlock();
-    app.audio.playMusic('arena');
+    app.audio.playMusic(MENU_MUSIC);
     app.replace(mainMenu(app, entries));
     afterStart?.();
   };
   start.addEventListener('click', go);
   const root = el(
     'section',
-    { className: 'screen center', attrs: { 'aria-labelledby': 'title-logo' } },
+    { className: 'screen center title', attrs: { 'aria-labelledby': 'title-logo' } },
     [
-      el('h1', { className: 'logo', id: 'title-logo', text: GAME_NAME }),
+      el('h1', { className: 'logo-frame', id: 'title-logo' }, [
+        el('span', { className: 'logo', text: GAME_NAME, attrs: { 'data-text': GAME_NAME } }),
+      ]),
       el('p', { className: 'tagline', text: TAGLINE }),
       start,
     ],
@@ -79,6 +82,13 @@ export function mainMenu(app: App, entries: readonly MainMenuEntry[]): Screen {
   ]);
   return {
     id: 'main-menu',
+    // Retour au menu : la scène de fond par défaut.
+    shown: () => {
+      app.showBackground(null);
+      // Retour au menu : son thème, sans réverbération de stage.
+      app.audio.playMusic(MENU_MUSIC);
+      app.audio.setRoom(null);
+    },
     back: 'pop',
     root,
     onBack: () => app.reset(titleScreen(app, entries)),

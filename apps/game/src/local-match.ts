@@ -11,6 +11,7 @@ import {
   createRenderer,
   createFigurines,
   distinctPalettes,
+  SND_FINALE,
   type MatchHud,
   type Renderer,
 } from '@game/render';
@@ -36,8 +37,11 @@ import {
 import type { ItemFrequency } from '@game/stages-items';
 import type { App, Screen } from './app.ts';
 import { portraitUrl } from './portraits.ts';
+import { isFinalKo, musicTension } from './finale.ts';
+import { stageMusic } from './music.ts';
 import { buildFreeConfig, buildSimConfig, fighterName, lookOf } from './content.ts';
 import { createDummyInputs, type DummyMode } from './dummies.ts';
+import { createBot, type Bot } from '@game/cpu';
 import { createMenuPad, readGamepads } from './menu-pad.ts';
 import { button, menu } from './ui/components.ts';
 import { el } from './ui/dom.ts';
@@ -61,6 +65,11 @@ export interface LocalMatchOptions {
   /** Pour chaque joueur de la simulation, l'emplacement `input` qui le pilote, ou -1 (mannequin). */
   readonly controllers: readonly number[];
   readonly dummyMode?: DummyMode;
+  /**
+   * Adversaires ordinateur (SPEC-finition.md, phase 6) : niveau de 1 à 9 pour chaque joueur
+   * piloté par l'ordinateur, `null` sinon. Prioritaire sur les mannequins.
+   */
+  readonly cpu?: readonly (number | null)[];
   /** Objets à l'entraînement. */
   readonly trainingItems?: ItemFrequency;
   readonly seed?: number;
@@ -89,8 +98,11 @@ export function localMatch(app: App, options: LocalMatchOptions): LocalMatch {
   let renderer: Renderer;
   let hud: MatchHud | null = null;
   let dummy = createDummyInputs(options.dummyMode ?? 'idle', options.seed ?? 1);
+  let bots: (Bot | null)[] = [];
   let paused = false;
   let endedAt: number | null = null;
+  /** Le grondement du coup final a déjà été joué pour ce ralenti. */
+  let finaleHeard = false;
   let finished = false;
   let last = performance.now();
   let accumulator = 0;
@@ -126,6 +138,11 @@ export function localMatch(app: App, options: LocalMatchOptions): LocalMatch {
         : buildSimConfig(options.match, choice),
     );
     dummy = createDummyInputs(options.dummyMode ?? 'idle', seed);
+    // Un bot par joueur ordinateur, recréé à chaque nouvelle simulation (revanche comprise).
+    bots = options.fighters.map((id, p) => {
+      const level = options.cpu?.[p] ?? null;
+      return level === null ? null : createBot(sim, p, { level, fighter: id, seed: seed * 97 + p });
+    });
     renderer = createRenderer({
       canvas,
       overlay,
@@ -135,6 +152,15 @@ export function localMatch(app: App, options: LocalMatchOptions): LocalMatch {
         (p) => palettes[p] ?? 0,
       ),
       ...app.qualityOptions(),
+      // Coup final : gros plan et ralenti d'affichage (match avec règles seulement).
+      ...(options.match === null
+        ? {}
+        : {
+            isFinal: (p: number) => {
+              readMatch(sim, matchView);
+              return isFinalKo(matchView, p);
+            },
+          }),
     });
     if (options.match !== null) {
       const icons = options.fighters.map((id, p) => portraitUrl(id, palettes[p] ?? 0, 'stock', 72));
@@ -142,7 +168,12 @@ export function localMatch(app: App, options: LocalMatchOptions): LocalMatch {
     }
     resize();
     renderer.capture(sim);
+    // Son du stage : son thème, sa réverbération, et les touches propres à chaque personnage.
+    app.audio.playMusic(stageMusic(options.stage));
+    app.audio.setRoom(options.stage);
+    app.audio.setThemes(options.fighters.map((id) => lookOf(id)?.vfx));
     app.audio.capture(sim);
+    finaleHeard = false;
     deadFrames.fill(0);
     endedAt = null;
     finished = false;
@@ -160,7 +191,8 @@ export function localMatch(app: App, options: LocalMatchOptions): LocalMatch {
     const f = frame(sim);
     for (let p = 0; p < players; p++) {
       const c = options.controllers[p] ?? -1;
-      inputs[p] = c >= 0 ? local[c]! : dummy(f, p);
+      const bot = bots[p];
+      inputs[p] = c >= 0 ? local[c]! : bot != null ? bot.next(sim) : dummy(f, p);
     }
     step(sim, inputs);
     if (options.match === null) {
@@ -269,7 +301,15 @@ export function localMatch(app: App, options: LocalMatchOptions): LocalMatch {
       last = now;
       let alpha = 1;
       if (!paused && endedAt === null) {
-        accumulator = Math.min(accumulator + elapsed, MAX_STEPS_PER_DRAW * STEP_MS);
+        // Ralenti du coup final : le temps simulé avance moins vite que le temps réel.
+        const scale = renderer.timeScale();
+        // Coup final : le grondement part avec le ralenti.
+        if (scale < 1 && !finaleHeard) {
+          finaleHeard = true;
+          app.audio.play(SND_FINALE);
+        }
+        if (scale >= 1) finaleHeard = false;
+        accumulator = Math.min(accumulator + elapsed * scale, MAX_STEPS_PER_DRAW * STEP_MS);
         while (accumulator >= STEP_MS) {
           simulate();
           accumulator -= STEP_MS;
@@ -279,6 +319,7 @@ export function localMatch(app: App, options: LocalMatchOptions): LocalMatch {
       if (hud !== null) {
         readMatch(sim, matchView);
         hud.update(matchView);
+        app.audio.setIntensity(musicTension(matchView));
         if (matchView.phase === 'over' && endedAt === null) {
           endedAt = now;
           app.announce('Fin du match !');

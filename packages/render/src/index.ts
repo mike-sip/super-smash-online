@@ -41,10 +41,22 @@ export {
   SND_PARRY,
   SND_SHIELD,
   SND_SHIELD_BREAK,
+  SND_FINALE,
+  SND_STAR,
+  SND_WHOOSH,
   SOUND_COUNT,
   SOUND_NAMES,
+  THEME_SOUNDS,
 } from './audio/cues.ts';
-export { ARENA_STYLE, DORIAN, NATURAL_MINOR, type TrackStyle } from './audio/music.ts';
+export {
+  ARENA_STYLE,
+  DORIAN,
+  JINGLE_STYLES,
+  NATURAL_MINOR,
+  TRACK_STYLES,
+  type TrackStyle,
+} from './audio/music.ts';
+export { ROOMS } from './audio/reverb.ts';
 export {
   TEAM_COLORS,
   createMatchDomSink,
@@ -63,3 +75,4 @@ export {
   type MannequinStyle,
 } from './fighters/mannequin.ts';
 export { createPortraitStudio, type PortraitKind, type PortraitStudio } from './portraits.ts';
+export { configureAssets } from './assets/loader.ts';

@@ -9,6 +9,7 @@
  *   musique (source en boucle → gain A ou B) → pause → bus musique ─┴→ général → sortie
  */
 import { fxToFloat, type Sim } from '@game/sim-core';
+import { ROOMS, impulseResponse } from './reverb.ts';
 import { createSynthBank, type SoundBank, type SoundData } from './bank.ts';
 import { SOUND_COUNT, collectCues, createCueTracker } from './cues.ts';
 import {
@@ -62,6 +63,17 @@ export interface GameAudio {
   playMusic(track: string | null): void;
   /** Efface la musique en pause, la rétablit ensuite. */
   setPaused(paused: boolean): void;
+  /**
+   * Tension de la musique (SPEC-finition.md, phase 5), de 0 à 1 : à 1, elle monte d'un demi-ton et
+   * s'éclaircit (dernière vie, dernière minute).
+   */
+  setIntensity(level: number): void;
+  /** Réverbération du lieu (`ROOMS` : un stage), ou `null` pour aucune. */
+  setRoom(room: string | null): void;
+  /** Joue une fois le jingle `name` (victoire), par-dessus la musique. */
+  playJingle(name: string): void;
+  /** Thème des effets de chaque joueur, pour les sons des coups spéciaux. */
+  setThemes(themes: readonly (string | undefined)[]): void;
   /** Joue le son `sound` (`SND_*`) au centre : planche d'écoute, menus. */
   play(sound: number): void;
   readonly settings: AudioSettings;
@@ -76,6 +88,7 @@ export interface GameAudio {
 export type AudioContextLike = Pick<
   AudioContext,
   | 'currentTime'
+  | 'sampleRate'
   | 'state'
   | 'destination'
   | 'createGain'
@@ -84,7 +97,8 @@ export type AudioContextLike = Pick<
   | 'createBuffer'
   | 'resume'
   | 'close'
->;
+> &
+  Partial<Pick<AudioContext, 'createBiquadFilter' | 'createConvolver'>>;
 
 export const VOICES = 24;
 /** Durée des fondus de musique, en secondes. */
@@ -92,6 +106,13 @@ const MUSIC_FADE = 0.5;
 /** Constante de temps des changements de volume, en secondes : rapides mais sans clic. */
 const VOLUME_SMOOTHING = 0.02;
 const PAUSE_SMOOTHING = 0.08;
+/** Demi-ton, en rapport de vitesse de lecture : la montée de tension. */
+const SEMITONE = 1.0595;
+/** Coupure de la musique au repos et en pleine tension, en hertz. */
+const MUSIC_TONE = 12000;
+const MUSIC_TONE_TENSE = 20000;
+/** Constante de temps des changements de tension, en secondes : une montée sensible. */
+const INTENSITY_SMOOTHING = 0.6;
 
 export function createGameAudio(options: GameAudioOptions = {}): GameAudio {
   return createGameAudioWith(() => new AudioContext({ latencyHint: 'interactive' }), options);
@@ -135,6 +156,13 @@ export function createGameAudioWith(
   let playingTrack: string | null = null;
   let halfWidth = 100;
   let trackedSim: Sim | null = null;
+  let intensity = 0;
+  let musicFilter: BiquadFilterNode | undefined;
+  let reverb: ConvolverNode | undefined;
+  let reverbWet: GainNode | undefined;
+  let jingleGain: GainNode | undefined;
+  let wantedRoom: string | null = null;
+  const rooms = new Map<string, AudioBuffer>();
 
   const loading = bank.load().then(
     () => {
@@ -177,8 +205,17 @@ export function createGameAudioWith(
     musicBus = ctx.createGain();
     musicBus.connect(master);
     pauseGain = ctx.createGain();
-    pauseGain.connect(musicBus);
     pauseGain.gain.value = paused ? 0 : 1;
+    // Tension de la musique : un filtre entre la pause et le bus (s'il existe dans ce navigateur).
+    if (typeof ctx.createBiquadFilter === 'function') {
+      musicFilter = ctx.createBiquadFilter();
+      musicFilter.type = 'lowpass';
+      musicFilter.frequency.value = MUSIC_TONE;
+      pauseGain.connect(musicFilter);
+      musicFilter.connect(musicBus);
+    } else {
+      pauseGain.connect(musicBus);
+    }
     for (let v = 0; v < VOICES; v++) {
       const gain = ctx.createGain();
       const pan = ctx.createStereoPanner();
@@ -193,7 +230,20 @@ export function createGameAudioWith(
       gain.connect(pauseGain);
       musicGains.push(gain);
     }
+    // Jingles : directement sur le bus de musique, ni filtrés ni coupés par la pause.
+    jingleGain = ctx.createGain();
+    jingleGain.connect(musicBus);
+    // Réverbération : un départ des effets vers une salle, puis vers la sortie.
+    if (typeof ctx.createConvolver === 'function') {
+      reverb = ctx.createConvolver();
+      reverbWet = ctx.createGain();
+      reverbWet.gain.value = 0;
+      effectsBus.connect(reverb);
+      reverb.connect(reverbWet);
+      reverbWet.connect(master);
+    }
     applySettings(true);
+    applyRoom();
   }
 
   function applySettings(immediate: boolean): void {
@@ -236,8 +286,58 @@ export function createGameAudioWith(
     played++;
   }
 
+  /** Salle de réverbération voulue, calculée une fois par lieu. */
+  function applyRoom(): void {
+    if (context === undefined || reverb === undefined || reverbWet === undefined) return;
+    const room = wantedRoom === null ? undefined : ROOMS[wantedRoom];
+    const now = context.currentTime;
+    if (room === undefined) {
+      reverbWet.gain.setTargetAtTime(0, now, VOLUME_SMOOTHING);
+      return;
+    }
+    try {
+      let buffer = rooms.get(wantedRoom!);
+      if (buffer === undefined) {
+        // La réponse doit avoir la fréquence du contexte (exigence du ConvolverNode).
+        const rate = context.sampleRate ?? 22050;
+        const [left, right] = impulseResponse(room, rate);
+        buffer = context.createBuffer(2, left.length, rate);
+        buffer.copyToChannel(left as Float32Array<ArrayBuffer>, 0);
+        buffer.copyToChannel(right as Float32Array<ArrayBuffer>, 1);
+        rooms.set(wantedRoom!, buffer);
+      }
+      if (reverb.buffer !== buffer) reverb.buffer = buffer;
+      reverbWet.gain.setTargetAtTime(room.wet, now, VOLUME_SMOOTHING);
+    } catch (error) {
+      // Une réverbération impossible laisse le son sec, sans arrêter le jeu.
+      console.warn('Réverbération indisponible :', error);
+      reverbWet.gain.setTargetAtTime(0, now, VOLUME_SMOOTHING);
+    }
+  }
+
+  /** Tension : vitesse de lecture (demi-ton) et éclat de la musique en cours. */
+  function applyIntensity(): void {
+    if (context === undefined) return;
+    const now = context.currentTime;
+    const source = musicSources[musicSlot];
+    source?.playbackRate.setTargetAtTime(1 + (SEMITONE - 1) * intensity, now, INTENSITY_SMOOTHING);
+    musicFilter?.frequency.setTargetAtTime(
+      MUSIC_TONE + (MUSIC_TONE_TENSE - MUSIC_TONE) * intensity,
+      now,
+      INTENSITY_SMOOTHING,
+    );
+  }
+
   function startMusic(): void {
     if (!running() || wantedTrack === playingTrack) return;
+    // Morceau pas encore rendu : on le demande, l'ancien continue jusqu'à ce qu'il soit prêt.
+    if (wantedTrack !== null && bank.music(wantedTrack) === null && bank.ensure !== undefined) {
+      const track = wantedTrack;
+      void bank.ensure(track).then(() => {
+        if (wantedTrack === track) startMusic();
+      });
+      return;
+    }
     const ctx = context!;
     const now = ctx.currentTime;
     // Le morceau en cours s'efface pendant que le suivant arrive.
@@ -270,8 +370,27 @@ export function createGameAudioWith(
     gain.setValueAtTime(0, now);
     gain.linearRampToValueAtTime(1, now + MUSIC_FADE);
     source.connect(musicGains[musicSlot]!);
+    source.playbackRate.value = 1 + (SEMITONE - 1) * intensity;
     source.start(now);
     musicSources[musicSlot] = source;
+  }
+
+  function startJingle(name: string): void {
+    if (!running() || jingleGain === undefined) return;
+    const data = bank.music(name);
+    if (data === null) {
+      if (bank.ensure !== undefined) void bank.ensure(name).then(() => startJingle(name));
+      return;
+    }
+    let buffer = musicBuffers.get(name);
+    if (buffer === undefined) {
+      buffer = toBuffer(data);
+      musicBuffers.set(name, buffer);
+    }
+    const source = context!.createBufferSource();
+    source.buffer = buffer;
+    source.connect(jingleGain);
+    source.start(context!.currentTime);
   }
 
   const audio: GameAudio = {
@@ -321,7 +440,31 @@ export function createGameAudioWith(
 
     playMusic(track) {
       wantedTrack = track;
+      // Un nouveau morceau repart sans tension.
+      intensity = 0;
+      applyIntensity();
       startMusic();
+    },
+
+    setIntensity(level) {
+      const next = Math.max(0, Math.min(1, level));
+      if (next === intensity) return;
+      intensity = next;
+      applyIntensity();
+    },
+
+    setRoom(room) {
+      if (room === wantedRoom) return;
+      wantedRoom = room;
+      applyRoom();
+    },
+
+    playJingle(name) {
+      startJingle(name);
+    },
+
+    setThemes(themes) {
+      tracker.themes = [...themes];
     },
 
     setPaused(value) {

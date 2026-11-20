@@ -61,13 +61,47 @@ const cssColor = (hex: number): string => `#${hex.toString(16).padStart(6, '0')}
 /** Dégâts à partir desquels le pourcentage est affiché en rouge franc. */
 const DAMAGE_RED = 150;
 
+/**
+ * Couleur du pourcentage (SPEC-finition.md, phase 4) : blanc, puis jaune, orange, rouge, et rouge
+ * sombre au-delà de 150 %. Logique pure.
+ */
+export function heatColor(percent: number): string {
+  const stops: readonly (readonly [number, number, number, number])[] = [
+    [0, 255, 255, 255],
+    [40, 255, 236, 120],
+    [80, 255, 160, 60],
+    [120, 255, 72, 48],
+    [DAMAGE_RED, 200, 24, 36],
+  ];
+  const p = Math.max(0, percent);
+  for (let i = 1; i < stops.length; i++) {
+    const [b, r1, g1, b1] = stops[i]!;
+    if (p <= b) {
+      const [a, r0, g0, b0] = stops[i - 1]!;
+      const t = (p - a) / (b - a);
+      const mix = (x: number, y: number): number => Math.round(x + (y - x) * t);
+      return `rgb(${mix(r0, r1)},${mix(g0, g1)},${mix(b0, b1)})`;
+    }
+  }
+  const last = stops[stops.length - 1]!;
+  return `rgb(${last[1]},${last[2]},${last[3]})`;
+}
+
+/** Mouvements réduits (réglage du jeu ou préférence du système) : pas de secousse du HUD. */
+function calm(doc: Document): boolean {
+  return (
+    doc.documentElement.dataset.motion === 'reduced' ||
+    (doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
+  );
+}
+
 /** Construit le HUD dans `overlay` et renvoie la sortie qui l'alimente. */
 export function createDomSink(overlay: HTMLElement, players: number): HudSink {
   const doc = overlay.ownerDocument;
   const root = doc.createElement('div');
   root.style.cssText =
     'position:absolute;inset:0;overflow:hidden;pointer-events:none;' +
-    'font-family:system-ui,sans-serif;font-weight:700;font-variant-numeric:tabular-nums;';
+    "font-family:'Lilita One','Arial Black',system-ui,sans-serif;font-variant-numeric:tabular-nums;";
 
   const bar = doc.createElement('div');
   bar.style.cssText =
@@ -81,15 +115,20 @@ export function createDomSink(overlay: HTMLElement, players: number): HudSink {
     const name = `J${i + 1}`;
 
     const panel = doc.createElement('div');
+    // Carte du joueur : bandeau à sa couleur, grand pourcentage cerné de sombre.
     panel.style.cssText =
-      `min-width:64px;padding:4px 10px;border-radius:6px;border-bottom:4px solid ${color};` +
-      'background:rgba(15,23,42,0.72);text-align:center;';
+      'width:104px;box-sizing:border-box;padding:2px 8px 4px;border-radius:10px 10px 4px 4px;' +
+      `background:linear-gradient(180deg,rgba(15,23,42,0.55),rgba(15,23,42,0.85));` +
+      `border-bottom:5px solid ${color};box-shadow:0 6px 16px rgba(0,0,0,0.45),inset 0 -14px 18px -12px ${color};` +
+      'text-align:center;';
     const label = doc.createElement('div');
     label.textContent = name;
-    label.style.cssText = `font-size:12px;color:${color};`;
+    label.style.cssText = `font-size:13px;letter-spacing:1px;color:${color};text-shadow:0 1px 0 #000;`;
     const value = doc.createElement('div');
     value.dataset.hud = `damage-${i}`;
-    value.style.cssText = 'font-size:24px;line-height:1.1;color:#fff;';
+    value.style.cssText =
+      'font-size:38px;line-height:1;color:#fff;-webkit-text-stroke:2px #0b0e18;paint-order:stroke fill;' +
+      'text-shadow:0 3px 0 #0b0e18,0 6px 12px rgba(0,0,0,0.5);display:inline-block;';
     panel.append(label, value);
     bar.append(panel);
     values.push(value);
@@ -98,21 +137,38 @@ export function createDomSink(overlay: HTMLElement, players: number): HudSink {
     tag.dataset.hud = `tag-${i}`;
     tag.textContent = name;
     tag.style.cssText =
-      'position:absolute;left:0;top:0;display:none;padding:0 5px;border-radius:4px;' +
-      `font-size:12px;line-height:16px;color:#0f172a;background:${color};will-change:transform;`;
+      'position:absolute;left:0;top:0;display:none;padding:0 6px;border-radius:5px;' +
+      `font-size:13px;line-height:17px;color:#0f172a;background:${color};will-change:transform;` +
+      'box-shadow:0 2px 0 rgba(0,0,0,0.4);';
     root.append(tag);
     tags.push(tag);
   }
   overlay.append(root);
 
+  const shown = new Int32Array(players);
   return {
     setDamage(player, percent) {
       const value = values[player]!;
       value.textContent = `${percent}%`;
-      // Du blanc au rouge à mesure que les dégâts montent.
-      const heat = Math.min(1, percent / DAMAGE_RED);
-      const fade = Math.round(255 * (1 - heat * 0.75));
-      value.style.color = `rgb(255,${fade},${fade})`;
+      // Du blanc au rouge sombre à mesure que les dégâts montent.
+      value.style.color = heatColor(percent);
+      // Touché : le chiffre grossit et tremble, d'autant plus que le coup est fort.
+      const gain = percent - shown[player]!;
+      shown[player] = percent;
+      if (gain > 0 && typeof value.animate === 'function' && !calm(doc)) {
+        const k = Math.min(1, gain / 20);
+        const s = 1 + 0.25 + 0.35 * k;
+        const d = 3 + 6 * k;
+        value.animate(
+          [
+            { transform: `scale(${s}) translate(${d}px,0)` },
+            { transform: `scale(${(s + 1) / 2}) translate(${-d}px,0)` },
+            { transform: `scale(1.05) translate(${d / 2}px,0)` },
+            { transform: 'scale(1) translate(0,0)' },
+          ],
+          { duration: 260 + 120 * k, easing: 'ease-out' },
+        );
+      }
     },
     setTag(player, x, y) {
       // Le point donné est le bas de l'étiquette, centré.

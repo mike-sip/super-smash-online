@@ -485,6 +485,8 @@ export const ZEPHINE: Character = defineCharacter({
     // relevées, écharpe, sacoche en bandoulière, bottes à plumes. Tête de rayon 0,095.
     palette: { skin: 0xf2c09a, hair: 0xd9663a, accent: 0xf2b33d, light: 0xfdf6e3, dark: 0x2b2f36 },
     vfx: 'feather',
+    // Verres des lunettes : lisses, pas métalliques.
+    materials: { accent: 'plain' },
     palettes: [
       {},
       { primary: 0xf2884a, secondary: 0x2b2f36, hair: 0x2a1e1a, accent: 0x5ee6b5 },

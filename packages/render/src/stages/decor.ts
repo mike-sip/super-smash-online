@@ -29,8 +29,13 @@ import { CANAL_THEME } from './canal.ts';
 import { GEYSERS_THEME } from './geysers.ts';
 import { facets, merge, seeded } from './lowpoly.ts';
 import { RECIF_THEME } from './recif.ts';
+import { createCloudSea } from './cloudsea.ts';
+import { createRays } from './rays.ts';
 import { createSky } from './sky.ts';
 import { addSurfaceDetail } from './surface.ts';
+import { createTriplanarMaterial } from './triplanar.ts';
+import { releaseMaterials, setAnisotropy } from '../assets/loader.ts';
+import type { QualityPreset } from '../quality.ts';
 import { createMotes, createWater, type Animated } from './water.ts';
 import { NEUTRAL_THEME, SOLID_DEPTH, slab, type DecorContext, type Theme } from './theme.ts';
 
@@ -64,6 +69,10 @@ export interface StageVisuals {
   capture(sim: Sim, sequential: boolean): void;
   /** Place les plateformes mobiles entre les deux dernières captures, et anime le décor. */
   update(frame: number, alpha: number): void;
+  /** Matières texturées ou couleurs simples, selon le préréglage. */
+  setQuality(preset: QualityPreset): void;
+  /** Libère les matières de rechange (celles que la scène ne porte pas en ce moment). */
+  dispose(): void;
 }
 
 export function createStageVisuals(stage: StageDef): StageVisuals {
@@ -72,11 +81,19 @@ export function createStageVisuals(stage: StageDef): StageVisuals {
   root.name = 'stage';
   const random = seeded(theme.seed);
   const animations: ((frame: number) => void)[] = [];
+  const buckets = new Map<string, BufferGeometry[]>();
+  const surfaceOf = (name: string): BufferGeometry[] => {
+    let parts = buckets.get(name);
+    if (parts === undefined) buckets.set(name, (parts = []));
+    return parts;
+  };
+  const surfaces = theme.surfaces ?? {};
   const ctx: DecorContext = {
     stage,
     random,
     lit: [],
     glow: [],
+    surface: surfaceOf,
     root,
     animate: (update) => animations.push(update),
   };
@@ -91,23 +108,30 @@ export function createStageVisuals(stage: StageDef): StageVisuals {
     } else {
       const box = new BoxGeometry(x2 - x1, y2 - y1, SOLID_DEPTH);
       box.translate((x1 + x2) / 2, (y1 + y2) / 2, 0);
-      ctx.lit.push(facets(box, theme.solid, 0.05, random));
+      (surfaces.solid !== undefined ? surfaceOf('solid') : ctx.lit).push(
+        facets(box, theme.solid, 0.05, random),
+      );
     }
   }
 
   const movers: MoverVisual[] = [];
-  const moverMaterial = new MeshStandardMaterial({ vertexColors: true, flatShading: true });
+  const moverMaterial = new MeshStandardMaterial({ vertexColors: true });
   stage.platforms.forEach((platform, index) => {
     const x1 = fxToFloat(platform.x1);
     const x2 = fxToFloat(platform.x2);
     const y = fxToFloat(platform.y);
+    if (platform.motion === undefined && theme.platformShape !== undefined) {
+      theme.platformShape(x1, x2, y, ctx);
+      return;
+    }
     if (platform.motion === undefined) {
       const geometry = slab(x2 - x1, theme.platform, random);
       geometry.translate((x1 + x2) / 2, y, 0);
-      ctx.lit.push(geometry);
+      (surfaces.platform !== undefined ? surfaceOf('platform') : ctx.lit).push(geometry);
       return;
     }
-    const mesh = new Mesh(slab(x2 - x1, theme.mover, random), moverMaterial);
+    const shape = theme.moverShape?.(x2 - x1, index, ctx) ?? slab(x2 - x1, theme.mover, random);
+    const mesh = new Mesh(shape, moverMaterial);
     mesh.name = `mover-${index}`;
     mesh.position.set((x1 + x2) / 2, y, 0);
     root.add(mesh);
@@ -119,16 +143,42 @@ export function createStageVisuals(stage: StageDef): StageVisuals {
   const living: Animated[] = [];
   if (theme.skyLook !== undefined) living.push(createSky(theme.skyLook));
   if (theme.water !== undefined) living.push(createWater(theme.water));
+  if (theme.cloudSea !== undefined) living.push(createCloudSea(theme.cloudSea));
   for (const motes of theme.motes ?? []) living.push(createMotes(motes));
+  const rays = theme.rays === undefined ? null : createRays(theme.rays);
+  if (rays !== null) living.push(rays);
   for (const thing of living) {
     root.add(thing.mesh);
     animations.push((frame) => thing.update(frame));
   }
   // Grain des matières : pierre, bois et roche ne sont plus des aplats.
-  const litMaterial = new MeshStandardMaterial({ vertexColors: true, flatShading: true });
+  const litMaterial = new MeshStandardMaterial({ vertexColors: true });
   addSurfaceDetail(litMaterial, theme.surface);
   addSurfaceDetail(moverMaterial, theme.surface);
+  // Surfaces texturées : une géométrie et deux matières (texturée, ou couleurs et grain en Bas).
+  const swaps: { mesh: Mesh; plain: MeshStandardMaterial; textured: MeshStandardMaterial }[] = [];
+  for (const [name, parts] of buckets) {
+    const look = surfaces[name];
+    // Une surface sans matière déclarée rejoint le décor éclairé.
+    if (look === undefined) {
+      ctx.lit.push(...parts);
+      continue;
+    }
+    if (parts.length === 0) continue;
+    const plain = new MeshStandardMaterial({ vertexColors: true });
+    addSurfaceDetail(plain, theme.surface);
+    const mesh = new Mesh(merge(parts), plain);
+    mesh.name = `surface-${name}`;
+    mesh.matrixAutoUpdate = false;
+    root.add(mesh);
+    swaps.push({ mesh, plain, textured: createTriplanarMaterial(look) });
+  }
+  if (surfaces.mover !== undefined && movers.length > 0) {
+    const textured = createTriplanarMaterial(surfaces.mover);
+    for (const m of movers) swaps.push({ mesh: m.mesh, plain: moverMaterial, textured });
+  }
   addMerged(root, ctx.lit, litMaterial);
+  const textureNames = new Set(Object.values(surfaces).map((l) => l.texture));
   // Au-delà de 1, les lueurs rayonnent (bloom) ; sans bloom, le mappage de tons les adoucit.
   const glow = theme.glow ?? GLOW;
   addMerged(
@@ -165,6 +215,22 @@ export function createStageVisuals(stage: StageDef): StageVisuals {
         );
       }
       for (let a = 0; a < animations.length; a++) animations[a]!(frame + alpha);
+    },
+    setQuality(preset) {
+      if (preset.textures) {
+        // Seules les matières de ce stage restent en mémoire graphique.
+        releaseMaterials(textureNames);
+        setAnisotropy(preset.anisotropy);
+      }
+      for (const s of swaps) s.mesh.material = preset.textures ? s.textured : s.plain;
+      // Rayons de lumière : réservés aux préréglages avec étalonnage (Haut, Ultra).
+      if (rays !== null) rays.mesh.visible = preset.grading;
+    },
+    dispose() {
+      for (const s of swaps) {
+        s.plain.dispose();
+        s.textured.dispose();
+      }
     },
   };
 }

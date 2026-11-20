@@ -17,10 +17,13 @@ import {
   stageName,
 } from '../content.ts';
 import { portraitUrl } from '../portraits.ts';
-import { DUMMY_MODES, type DummyMode } from '../dummies.ts';
+import { DUMMY_MODES, dummyCpuLevel, type DummyMode } from '../dummies.ts';
 import {
+  CPU_DEVICE,
+  DEFAULT_CPU_LEVEL,
   PRESETS,
   canContinue,
+  cpuCount,
   createLocalSetup,
   cycleFighter,
   cyclePalette,
@@ -31,7 +34,10 @@ import {
   matchFromRules,
   resolveFighters,
   saveLocalPrefs,
+  setCpuCount,
+  setCpuLevel,
   slotOf,
+  isCpu,
   toggleReady,
   type LocalRules,
   type LocalSetup,
@@ -57,6 +63,7 @@ const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
 function deviceName(app: App, id: string): string {
   if (id === KEYBOARD_ID) return 'Clavier';
+  if (id === CPU_DEVICE) return 'Ordinateur';
   const d = app.input.devices().find((x) => x.id === id);
   return d === undefined ? 'Manette' : d.label;
 }
@@ -124,15 +131,27 @@ function localSetupScreen(app: App, plan: LocalPlan): Screen {
   const cont = button('Choisir le stage', () => proceed(), { primary: true, id: 'local-continue' });
   const help = el('p', { className: 'muted', attrs: { 'aria-live': 'polite' } });
 
+  /** Fond des menus : les personnages choisis, dans leurs couleurs, sur le stage prévu. */
+  function showChosen(): void {
+    const chosen = setup.slots.filter((s) => s.device !== null && s.fighter !== RANDOM);
+    app.showBackground({
+      stage: STAGES.includes(plan.stage) ? plan.stage : 'belvedere',
+      fighters: chosen.map((s) => s.fighter),
+      palettes: chosen.map((s) => s.palette),
+    });
+  }
+
   function render(): void {
+    showChosen();
     setup.slots.forEach((s, slot) => {
       const c = cards[slot]!;
       const present = s.device !== null;
       c.card.classList.toggle('selected', present && s.ready);
       c.name.textContent = present ? fighterName(s.fighter) : 'Libre';
       const info = FIGHTER_INFO[s.fighter];
+      const who = isCpu(s) ? `Ordinateur, niveau ${s.level}` : deviceName(app, s.device ?? '');
       c.meta.textContent = present
-        ? `${deviceName(app, s.device!)} · ${info === undefined ? 'Tiré au lancement' : `${info.archetype} — ${info.summary} · couleur ${s.palette + 1}/8`}`
+        ? `${who} · ${info === undefined ? 'Tiré au lancement' : `${info.archetype} — ${info.summary} · couleur ${s.palette + 1}/8`}`
         : 'Appuyez sur un bouton d’une manette (ou une touche du jeu) pour rejoindre.';
       c.swatch.style.background = present
         ? (paletteColor(s.fighter, s.palette) ?? info?.color ?? '#888888')
@@ -140,11 +159,22 @@ function localSetupScreen(app: App, plan: LocalPlan): Screen {
       // Portrait de la figurine dans sa couleur ; rien pour « Au hasard » ou sans WebGL.
       const url = present ? portraitUrl(s.fighter, s.palette, 'portrait', 192) : undefined;
       c.art.hidden = url === undefined;
-      if (url !== undefined && c.art.src !== url) c.art.src = url;
+      // Prêt : le portrait passe en pose de victoire, avec un petit rebond.
+      const victory =
+        present && s.ready && !isCpu(s)
+          ? portraitUrl(s.fighter, s.palette, 'victory', 260, slot % 3)
+          : undefined;
+      const shown = victory ?? url;
+      if (shown !== undefined && c.art.src !== shown) {
+        c.art.src = shown;
+        c.art.classList.toggle('ready', victory !== undefined);
+      }
       c.status.textContent = present ? (s.ready ? 'Prêt' : 'Choisit…') : '';
       c.status.className = `badge ${s.ready ? 'ok' : ''}`;
       for (const b of [c.prev, c.next, c.ready]) b.disabled = !present;
       c.ready.querySelector('.label')!.textContent = s.ready ? 'Annuler' : 'Prêt';
+      // L'ordinateur est toujours prêt : pas de bouton « Prêt » sur sa carte.
+      c.ready.hidden = isCpu(s);
     });
     const n = joined(setup);
     cont.disabled = !canContinue(setup, 2);
@@ -209,6 +239,31 @@ function localSetupScreen(app: App, plan: LocalPlan): Screen {
     render();
   }
 
+  // Adversaires ordinateur (SPEC-finition.md, phase 6) : ils prennent les places libres.
+  let level = plan.setup.slots.find(isCpu)?.level ?? DEFAULT_CPU_LEVEL;
+  const cpus = choice(
+    'Ordinateurs',
+    [0, 1, 2, 3].map((n) => ({ value: n, label: n === 0 ? 'Aucun' : String(n) })),
+    cpuCount(plan.setup),
+    (n) => {
+      const got = setCpuCount(plan.setup, n, level);
+      if (got !== n) cpus.set(got);
+      render();
+    },
+    'local-cpus',
+  );
+  const cpuLevel = choice(
+    'Niveau des ordinateurs',
+    [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({ value: n, label: String(n) })),
+    level,
+    (n) => {
+      level = n;
+      setCpuLevel(plan.setup, n);
+      render();
+    },
+    'local-cpu-level',
+  );
+
   const root = el('section', { className: 'screen', attrs: { 'aria-labelledby': 'local-title' } }, [
     el('header', {}, [
       el('h1', { id: 'local-title', text: 'Combat local' }),
@@ -220,6 +275,7 @@ function localSetupScreen(app: App, plan: LocalPlan): Screen {
       cards.map((c) => c.card),
     ),
     help,
+    menu('Ordinateurs', [cpus.element, cpuLevel.element]),
     menu('Suite', [cont]),
     hints([
       ['← →', 'personnage'],
@@ -320,6 +376,15 @@ function stageScreen(app: App, plan: LocalPlan): Screen {
       ],
     );
     card.addEventListener('click', () => pick(id));
+    // Aperçu vivant : la scène de fond passe sur le stage survolé, avec les personnages choisis.
+    card.addEventListener('focus', () => {
+      const chosen = plan.setup.slots.filter((s) => s.device !== null && s.fighter !== RANDOM);
+      app.showBackground({
+        stage: STAGES.includes(id) ? id : 'belvedere',
+        fighters: chosen.map((s) => s.fighter),
+        palettes: chosen.map((s) => s.palette),
+      });
+    });
     if (plan.stage === id) card.dataset.autofocus = '';
     return card;
   });
@@ -504,8 +569,9 @@ function rulesScreen(app: App, plan: LocalPlan): Screen {
       stage,
       plan.hazards,
       picks.map((p) => p.fighter),
-      picks.map((p) => p.slot),
+      picks.map((p) => (p.cpu === null ? p.slot : -1)),
       picks.map((p) => p.palette),
+      picks.map((p) => p.cpu),
     );
   }
 
@@ -538,8 +604,11 @@ function startLocalMatch(
   fighters: readonly string[],
   controllers: readonly number[],
   palettes: readonly number[] = [],
+  cpu: readonly (number | null)[] = [],
 ): void {
-  const names = fighters.map((_, i) => `J${controllers[i]! + 1}`);
+  const names = fighters.map((_, i) =>
+    cpu[i] != null ? `Ordi ${i + 1} (niv. ${cpu[i]})` : `J${controllers[i]! + 1}`,
+  );
   const screen = localMatch(app, {
     match,
     stage,
@@ -547,6 +616,7 @@ function startLocalMatch(
     fighters,
     palettes,
     controllers,
+    cpu,
     onQuit: () => app.popTo('local-setup'),
     onEnd: (result) =>
       app.replace(
@@ -563,7 +633,7 @@ function startLocalMatch(
               primary: true,
               action: () => {
                 app.pop();
-                startLocalMatch(app, match, stage, hazards, fighters, controllers, palettes);
+                startLocalMatch(app, match, stage, hazards, fighters, controllers, palettes, cpu);
               },
             },
             {
@@ -658,6 +728,7 @@ export function openTraining(app: App): void {
           fighters,
           controllers: [0, ...Array.from({ length: count }, () => -1)],
           dummyMode: mode,
+          cpu: [null, ...Array.from({ length: count }, () => dummyCpuLevel(mode))],
           trainingItems: items,
           onEnd: () => {},
           onQuit: () => app.pop(),

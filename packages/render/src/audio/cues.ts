@@ -28,6 +28,7 @@ import {
   createFighterView,
   events,
   frame,
+  fxToFloat,
   readEntity,
   readFighter,
   type FighterView,
@@ -35,6 +36,7 @@ import {
 } from '@game/sim-core';
 import { isNewEntity } from '../entities.ts';
 import { createEventFilter, isNewFrame, type EventFilter } from '../events.ts';
+import { isSpecialMove } from '../vfx/library.ts';
 
 export const SND_HIT_WEAK = 0;
 export const SND_HIT_MEDIUM = 1;
@@ -50,8 +52,27 @@ export const SND_DOUBLE_JUMP = 10;
 export const SND_LAND = 11;
 export const SND_ENTITY_SPAWN = 12;
 export const SND_ENTITY_BREAK = 13;
+/** Souffle d'un coup fort, superposé à l'impact (SPEC-finition.md, phase 5). */
+export const SND_WHOOSH = 14;
+/** Touches propres aux thèmes, sur les coups spéciaux : rafale, plume, braise, perle. */
+export const SND_THEME_WIND = 15;
+export const SND_THEME_FEATHER = 16;
+export const SND_THEME_EMBER = 17;
+export const SND_THEME_PEARL = 18;
+/** Coup final : grondement et éclat (joué par le match local au début du ralenti). */
+export const SND_FINALE = 19;
+/** KO par le haut : l'étoile qui scintille au loin. */
+export const SND_STAR = 20;
 /** Nombre de sons ; les identifiants vont de 0 à `SOUND_COUNT - 1`. */
-export const SOUND_COUNT = 14;
+export const SOUND_COUNT = 21;
+
+/** Son de chaque thème d'effets. */
+export const THEME_SOUNDS: Readonly<Record<string, number>> = {
+  wind: SND_THEME_WIND,
+  feather: SND_THEME_FEATHER,
+  ember: SND_THEME_EMBER,
+  pearl: SND_THEME_PEARL,
+};
 
 /** Nom de chaque son, dans l'ordre des identifiants : planche d'écoute, messages. */
 export const SOUND_NAMES: readonly string[] = [
@@ -69,6 +90,13 @@ export const SOUND_NAMES: readonly string[] = [
   'Atterrissage',
   'Apparition d’entité',
   'Destruction d’entité',
+  'Souffle',
+  'Touche du vent',
+  'Touche de plume',
+  'Touche de braise',
+  'Touche de perle',
+  'Coup final',
+  'Étoile',
 ];
 
 /**
@@ -118,6 +146,8 @@ export function pushEventCue(
   b: number,
   views: readonly FighterView[],
   players: number,
+  themes: readonly (string | undefined)[] = [],
+  top = Number.POSITIVE_INFINITY,
 ): void {
   // Pour ces événements, `b` est la victime ou le défenseur ; pour les autres, `a` est le joueur.
   const target = type === EV_HIT || type === EV_SHIELD || type === EV_PARRY || type === EV_GRAB;
@@ -125,9 +155,18 @@ export function pushEventCue(
   if (who < 0 || who >= players) return;
   const view = views[who]!;
   switch (type) {
-    case EV_HIT:
-      push(queue, hitSound(view.hitlag), view.x);
+    case EV_HIT: {
+      const sound = hitSound(view.hitlag);
+      push(queue, sound, view.x);
+      // Coup fort : un souffle par-dessus l'impact. Coup spécial : la touche du thème du lanceur.
+      if (sound === SND_HIT_STRONG) push(queue, SND_WHOOSH, view.x);
+      const attacker = a >= 0 && a < players ? views[a] : undefined;
+      const theme = THEME_SOUNDS[themes[a] ?? ''];
+      if (attacker !== undefined && theme !== undefined && isSpecialMove(attacker.move)) {
+        push(queue, theme, view.x);
+      }
       return;
+    }
     case EV_SHIELD:
       push(queue, SND_SHIELD, view.x);
       return;
@@ -138,7 +177,8 @@ export function pushEventCue(
       push(queue, SND_SHIELD_BREAK, view.x);
       return;
     case EV_KO:
-      push(queue, SND_KO, view.x);
+      // Par le haut : une étoile au loin plutôt qu'une explosion.
+      push(queue, view.y >= top ? SND_STAR : SND_KO, view.x);
       return;
     case EV_GRAB:
       push(queue, SND_GRAB, view.x);
@@ -196,6 +236,8 @@ export interface CueTracker {
   readonly entityKind: Int32Array;
   readonly entityLife: Int32Array;
   readonly entityX: Float32Array;
+  /** Thème des effets de chaque joueur (sons des coups spéciaux). */
+  themes: readonly (string | undefined)[];
 }
 
 export function createCueTracker(): CueTracker {
@@ -210,6 +252,7 @@ export function createCueTracker(): CueTracker {
     entityKind: new Int32Array(MAX_ENTITIES),
     entityLife: new Int32Array(MAX_ENTITIES),
     entityX: new Float32Array(MAX_ENTITIES),
+    themes: [],
   };
 }
 
@@ -251,8 +294,19 @@ export function collectCues(tracker: CueTracker, sim: Sim): number {
   }
 
   const queued = events(sim);
+  // Un KO à 90 % de la hauteur de la zone limite haute compte comme un KO par le haut.
+  const top = fxToFloat(sim.config.stage.blast.top) * 0.9;
   for (let e = 0; e < queued.count; e++) {
-    pushEventCue(queue, queued.type[e]!, queued.a[e]!, queued.b[e]!, views, players);
+    pushEventCue(
+      queue,
+      queued.type[e]!,
+      queued.a[e]!,
+      queued.b[e]!,
+      views,
+      players,
+      tracker.themes,
+      top,
+    );
   }
 
   for (let slot = 0; slot < MAX_ENTITIES; slot++) {

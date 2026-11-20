@@ -11,7 +11,10 @@ describe('banque synthétisée', () => {
     const bank = createSynthBank({ sampleRate: SR });
     expect(bank.sound(0)).toBeNull();
     expect(bank.music('arena')).toBeNull();
-    expect(bank.tracks).toEqual(['arena']);
+    // Par défaut : les menus, l'arène, un thème par stage, puis les jingles de victoire.
+    expect(bank.tracks).toEqual(
+      expect.arrayContaining(['menu', 'arena', 'belvedere', 'victory-wind']),
+    );
   });
 
   it('rend tous les sons et la musique une fois chargée', async () => {
@@ -27,6 +30,10 @@ describe('banque synthétisée', () => {
     expect(bank.sound(SOUND_COUNT)).toBeNull();
     expect(bank.sound(-1)).toBeNull();
     expect(bank.music('inconnue')).toBeNull();
+    // Seul le thème des menus est rendu au chargement ; les autres le sont à la demande.
+    expect(bank.music('menu')).not.toBeNull();
+    expect(bank.music('arena')).toBeNull();
+    await bank.ensure!('arena');
 
     const music = bank.music('arena')!;
     expect(music.channels).toHaveLength(2);

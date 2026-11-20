@@ -230,6 +230,9 @@ importers:
       '@game/accounts-client':
         specifier: workspace:*
         version: link:../../packages/accounts-client
+      '@game/cpu':
+        specifier: workspace:*
+        version: link:../../packages/cpu
       '@game/fighters':
         specifier: workspace:*
         version: link:../../packages/fighters
@@ -338,6 +341,31 @@ importers:
         specifier: workspace:*
         version: link:../accounts
     devDependencies:
+      '@types/node':
+        specifier: ^26.6.6
+        version: 26.6.6
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^5.1.0
+        version: 5.1.0(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(vite@8.3.7(@types/node@26.6.6))
+
+  packages/cpu:
+    dependencies:
+      '@game/sim-core':
+        specifier: workspace:*
+        version: link:../sim-core
+    devDependencies:
+      '@game/fighters':
+        specifier: workspace:*
+        version: link:../fighters
+      '@game/match-rules':
+        specifier: workspace:*
+        version: link:../match-rules
+      '@game/stages-items':
+        specifier: workspace:*
+        version: link:../stages-items
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6

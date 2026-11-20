@@ -148,7 +148,8 @@ describe('effets', () => {
     for (let n = 0; n < 100; n++) t.audio.play(SND_KO);
     const playing = t.fake.effects().filter((s) => !s.stopped);
     expect(playing.length).toBeLessThanOrEqual(VOICES);
-    expect(t.fake.gains.length).toBe(4 + VOICES + 2);
+    // Bus, voix, deux pistes de musique, jingles, retour de réverbération (SPEC-finition.md, phase 5).
+    expect(t.fake.gains.length).toBe(4 + VOICES + 2 + 2);
     expect(t.fake.panners).toHaveLength(VOICES);
   });
 

@@ -137,7 +137,7 @@ export function createMatchDomSink(
   root.dataset.hud = 'match';
   root.style.cssText =
     'position:absolute;inset:0;overflow:hidden;pointer-events:none;color:#fff;' +
-    'font-family:system-ui,sans-serif;font-weight:700;font-variant-numeric:tabular-nums;';
+    "font-family:'Lilita One','Arial Black',system-ui,sans-serif;font-variant-numeric:tabular-nums;";
 
   const clock = doc.createElement('div');
   clock.dataset.hud = 'clock';
@@ -150,7 +150,7 @@ export function createMatchDomSink(
   bar.style.cssText =
     // Sous les pourcentages du HUD de combat, mêmes largeurs et même écart : chaque carte se
     // range sous le pourcentage de son joueur.
-    'position:absolute;left:0;right:0;top:66px;display:flex;justify-content:center;gap:12px;';
+    'position:absolute;left:0;right:0;top:80px;display:flex;justify-content:center;gap:12px;';
   root.append(bar);
 
   interface Card {
@@ -166,8 +166,8 @@ export function createMatchDomSink(
     const panel = doc.createElement('div');
     panel.dataset.hud = `match-${i}`;
     panel.style.cssText =
-      'width:84px;box-sizing:border-box;padding:3px 8px;border-radius:6px;' +
-      'background:rgba(15,23,42,0.72);border-top:4px solid transparent;text-align:center;' +
+      'width:104px;box-sizing:border-box;padding:3px 8px;border-radius:4px 4px 10px 10px;' +
+      'background:linear-gradient(180deg,rgba(15,23,42,0.85),rgba(15,23,42,0.6));border-top:4px solid transparent;text-align:center;box-shadow:0 6px 16px rgba(0,0,0,0.4);' +
       'font-size:12px;';
     const stocks = doc.createElement('div');
     stocks.dataset.hud = `stocks-${i}`;
@@ -189,7 +189,8 @@ export function createMatchDomSink(
       img.src = icon;
       img.alt = '';
       img.dataset.hud = `icon-${i}`;
-      img.style.cssText = 'display:block;width:34px;height:34px;margin:-18px auto 0;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.5));';
+      img.style.cssText =
+        'display:block;width:42px;height:42px;margin:-6px auto -2px;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.5));';
       panel.append(img);
     }
     panel.append(stocks, hp, score, meter);

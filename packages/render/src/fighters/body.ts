@@ -5,8 +5,9 @@
  */
 import { PLAYER_COLORS } from './visual.ts';
 import type { Dims, MannequinColor, MannequinPart, MannequinStyle } from './mannequin.ts';
-import type { Sculpt, SculptPart, ZoneName } from './sdf.ts';
+import type { BoneName, Sculpt, SculptPart, ZoneName } from './sdf.ts';
 import { ZONES } from './sdf.ts';
+import type { MaterialKind } from './materials.ts';
 
 /** Ce qu'une figurine lit d'un personnage : le style du mannequin, plus ses volumes et teintes. */
 export interface FigurineStyle extends MannequinStyle {
@@ -25,6 +26,8 @@ export interface FigurineStyle extends MannequinStyle {
   readonly iridescent?: ZoneName;
   /** Thème des effets du personnage : rafales, plumes, braises, perles. */
   readonly vfx?: VfxTheme;
+  /** Matière de chaque zone (tissu, cuir, métal…) quand elle diffère de celle par défaut. */
+  readonly materials?: Partial<Record<ZoneName, MaterialKind>>;
 }
 
 export type VfxTheme = 'wind' | 'feather' | 'ember' | 'pearl';
@@ -98,6 +101,123 @@ export function paletteOf(style: FigurineStyle | undefined, player: number, vari
   const colors = { ...base, ...style?.palette, ...alternative };
   return ZONES.map((z) => colors[z]);
 }
+
+/**
+ * Proportions héroïques (SPEC-finition.md, phase 2) : tête, mains et pieds plus grands que ceux du
+ * mannequin, pour des silhouettes lisibles à distance de jeu. Seule l'apparence change : les
+ * hitbox viennent de la simulation, jamais des os.
+ */
+export const HEAD_BOOST = 1.16;
+export const HAND_BOOST = 1.35;
+export const FOOT_BOOST = 1.12;
+
+/** Dimensions de la figurine : celles du mannequin, tête agrandie (visage, cheveux, coiffe). */
+export function figurineDims(d: Dims): Dims {
+  return { ...d, headRadius: d.headRadius * HEAD_BOOST };
+}
+
+/** Repère de la main (poignet à l'origine, doigts vers −y) : articulations des doigts et du pouce. */
+export function handJoints(d: Dims): { knuckle: number; thumb: [number, number, number] } {
+  const a = d.armThickness;
+  return { knuckle: -a * 0.62, thumb: [a * 0.3, -a * 0.18, 0] };
+}
+
+/**
+ * Main : paume, quatre doigts sur l'os des doigts (qui se replient pour le poing), pouce sur le
+ * sien. Décrite à la taille du mannequin ; `HAND_BOOST` l'agrandit ensuite autour du poignet.
+ */
+function handParts(d: Dims): SculptPart[] {
+  const a = d.armThickness;
+  const fingerR = a * 0.085;
+  const parts: SculptPart[] = [
+    {
+      bone: 'handF',
+      shape: 'box',
+      zone: 'skin',
+      center: [0, -a * 0.33, 0],
+      size: [a * 0.38, a * 0.33, a * 0.2],
+      round: a * 0.16,
+      blend: 0.012,
+      mirror: true,
+    },
+  ];
+  for (const k of [-1.5, -0.5, 0.5, 1.5]) {
+    const x = k * fingerR * 2.1;
+    const len = a * (0.4 - Math.abs(k) * 0.05);
+    parts.push({
+      bone: 'fingersF',
+      shape: 'capsule',
+      zone: 'skin',
+      from: [x, fingerR * 0.5, 0],
+      to: [x * 1.05, -len, 0],
+      radius: fingerR,
+      radiusTo: fingerR * 0.85,
+      blend: 0.004,
+      mirror: true,
+    });
+  }
+  parts.push({
+    bone: 'thumbF',
+    shape: 'capsule',
+    zone: 'skin',
+    from: [0, 0, 0],
+    to: [a * 0.14, -a * 0.3, 0],
+    radius: a * 0.1,
+    radiusTo: a * 0.085,
+    blend: 0.008,
+    mirror: true,
+  });
+  return parts;
+}
+
+/** Os dont les volumes grandissent avec la tête, la main ou le pied, et le facteur. */
+const BOOSTS: Readonly<Partial<Record<BoneName, number>>> = {
+  head: HEAD_BOOST,
+  tail1: HEAD_BOOST,
+  tail2: HEAD_BOOST,
+  handF: HAND_BOOST,
+  handB: HAND_BOOST,
+  fingersF: HAND_BOOST,
+  fingersB: HAND_BOOST,
+  thumbF: HAND_BOOST,
+  thumbB: HAND_BOOST,
+  footF: FOOT_BOOST,
+  footB: FOOT_BOOST,
+};
+
+/** Agrandit une pièce autour de l'origine du repère où elle est décrite (cou, poignet, cheville). */
+function boosted(part: SculptPart): SculptPart {
+  const k = BOOSTS[part.frame ?? part.bone];
+  if (k === undefined) return part;
+  const v = (p: readonly [number, number, number] | undefined) =>
+    p === undefined ? undefined : ([p[0] * k, p[1] * k, p[2] * k] as const);
+  const n = (x: number | undefined) => (x === undefined ? undefined : x * k);
+  return {
+    ...part,
+    ...(part.from !== undefined ? { from: v(part.from) } : {}),
+    ...(part.to !== undefined ? { to: v(part.to) } : {}),
+    ...(part.center !== undefined ? { center: v(part.center) } : {}),
+    ...(part.size !== undefined ? { size: v(part.size) } : {}),
+    ...(part.radius !== undefined ? { radius: n(part.radius) } : {}),
+    ...(part.radiusTo !== undefined ? { radiusTo: n(part.radiusTo) } : {}),
+    ...(part.round !== undefined ? { round: n(part.round) } : {}),
+  } as SculptPart;
+}
+
+/**
+ * Régions maillées à part, chacune à sa finesse : la tête (visage, cheveux) et surtout les mains
+ * (doigts) demandent des cellules plus petites que le reste du corps.
+ */
+export const MESH_REGIONS: readonly {
+  readonly bones: readonly BoneName[];
+  readonly cell: number;
+}[] = [
+  { bones: ['head', 'tail1', 'tail2'], cell: 1 / 100 },
+  {
+    bones: ['handF', 'handB', 'fingersF', 'fingersB', 'thumbF', 'thumbB'],
+    cell: 1 / 170,
+  },
+];
 
 /** Volumes du corps commun, d'après les dimensions du personnage. */
 export function humanoid(d: Dims): SculptPart[] {
@@ -207,15 +327,7 @@ export function humanoid(d: Dims): SculptPart[] {
       blend: 0.02,
       mirror: true,
     },
-    {
-      bone: 'handF',
-      shape: 'ellipsoid',
-      zone: 'skin',
-      center: [0.004, -0.032, 0],
-      size: [arm * 0.5, arm * 0.62, arm * 0.4],
-      blend: 0.018,
-      mirror: true,
-    },
+    ...handParts(d),
     // Jambes : cuisse, mollet, pied.
     {
       bone: 'thighF',
@@ -284,5 +396,7 @@ export function partsAsSculpt(d: Dims, parts: readonly MannequinPart[]): SculptP
  */
 export function figurineSculpt(d: Dims, style: FigurineStyle | undefined): Sculpt {
   const own = style?.sculpt;
-  return [...humanoid(d), ...(own ?? partsAsSculpt(d, style?.parts ?? []))];
+  // `d` : dimensions du mannequin ; tête, mains et pieds sont agrandis ensuite (proportions
+  // héroïques), les pièces du personnage avec eux.
+  return [...humanoid(d), ...(own ?? partsAsSculpt(d, style?.parts ?? []))].map(boosted);
 }

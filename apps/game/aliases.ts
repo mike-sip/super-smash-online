@@ -28,6 +28,7 @@ export const aliases = [
   { find: /^@game\/lobby\/client$/, replacement: source('../../packages/lobby/src/client.ts') },
   { find: /^@game\/lobby\/protocol$/, replacement: source('../../packages/lobby/src/protocol.ts') },
   { find: /^@game\/match-rules$/, replacement: source('../../packages/match-rules/src/index.ts') },
+  { find: /^@game\/cpu$/, replacement: source('../../packages/cpu/src/index.ts') },
   {
     find: /^@game\/stages-items$/,
     replacement: source('../../packages/stages-items/src/index.ts'),

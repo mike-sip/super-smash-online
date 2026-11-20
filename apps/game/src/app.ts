@@ -6,6 +6,7 @@
  * l'élément qui avait le focus, et reviennent tels quels au retour.
  */
 import { KEYBOARD_ID, createInput, type Input } from '@game/input';
+import type { BackgroundScene } from './background.ts';
 import {
   SND_JUMP,
   SND_LEDGE,
@@ -86,6 +87,11 @@ export class App {
   readonly test: Record<string, unknown> = {};
   /** Rend le canvas à un combat (la scène de fond s'y branche). */
   releaseCanvas: () => void = () => {};
+  /**
+   * Ce que montre la scène de fond des menus (SPEC-finition.md, phase 4) : un stage et des
+   * personnages, ou `null` pour la scène par défaut. Branchée par `main.ts`.
+   */
+  showBackground: (scene: BackgroundScene | null) => void = () => {};
 
   private readonly stack: ScreenStack<Screen>;
   private readonly focusMemory = new WeakMap<Screen, HTMLElement>();

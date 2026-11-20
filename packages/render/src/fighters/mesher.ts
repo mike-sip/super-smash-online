@@ -58,8 +58,15 @@ const EDGES = [
   [3, 7],
 ] as const;
 
-/** Maille les volumes avec des cellules de côté `cell`. */
-export function meshSculpt(prims: readonly Primitive[], cell: number): MeshData {
+/**
+ * Maille les volumes avec des cellules de côté `cell`. `falloff` : distance sur laquelle
+ * l'influence d'un os s'estompe (plus courte pour les doigts, qui plient net).
+ */
+export function meshSculpt(
+  prims: readonly Primitive[],
+  cell: number,
+  falloff = SKIN_FALLOFF,
+): MeshData {
   const { min, max } = sculptBounds(prims, cell * 2);
   const nx = Math.ceil((max[0] - min[0]) / cell);
   const ny = Math.ceil((max[1] - min[1]) / cell);
@@ -169,7 +176,7 @@ export function meshSculpt(prims: readonly Primitive[], cell: number): MeshData 
       }
     }
     for (let q = 0; q < prims.length; q++) {
-      const w = 1 - (dist[q]! - best) / SKIN_FALLOFF;
+      const w = 1 - (dist[q]! - best) / falloff;
       if (w > 0) boneWeight[prims[q]!.bone] = Math.max(boneWeight[prims[q]!.bone]!, w * w);
     }
     zones[v] = zone;
@@ -270,4 +277,64 @@ export function meshSculpt(prims: readonly Primitive[], cell: number): MeshData 
     skinWeight,
     index: Uint32Array.from(index),
   };
+}
+
+/** Région maillée à part : ses os (indices dans `BONES`), sa finesse, son estompe de peau. */
+export interface MeshRegion {
+  readonly bones: readonly number[];
+  readonly cell: number;
+  readonly falloff?: number;
+}
+
+/**
+ * Maille le corps par régions (SPEC-finition.md, phase 2) : les volumes des os d'une région sont
+ * maillés ensemble, à sa finesse ; tous les autres forment le corps, maillé à `cell`. Les
+ * régions se recouvrent un peu aux jointures (cou, poignets), sans couture visible.
+ */
+export function meshRegions(
+  prims: readonly Primitive[],
+  regions: readonly MeshRegion[],
+  cell: number,
+): MeshData {
+  const owner = (p: Primitive): number => regions.findIndex((r) => r.bones.includes(p.bone));
+  const parts: MeshData[] = [];
+  const body = prims.filter((p) => owner(p) < 0);
+  if (body.length > 0) parts.push(meshSculpt(body, cell));
+  regions.forEach((region, r) => {
+    const own = prims.filter((p) => owner(p) === r);
+    if (own.length > 0) parts.push(meshSculpt(own, region.cell, region.falloff));
+  });
+  return mergeMeshes(parts);
+}
+
+/** Met bout à bout plusieurs maillages (indices décalés). */
+export function mergeMeshes(parts: readonly MeshData[]): MeshData {
+  if (parts.length === 1) return parts[0]!;
+  const vertices = parts.reduce((n, p) => n + p.zones.length, 0);
+  const indices = parts.reduce((n, p) => n + p.index.length, 0);
+  const out = {
+    positions: new Float32Array(vertices * 3),
+    normals: new Float32Array(vertices * 3),
+    zones: new Float32Array(vertices),
+    zones2: new Float32Array(vertices),
+    zoneMix: new Float32Array(vertices),
+    skinIndex: new Uint16Array(vertices * 4),
+    skinWeight: new Float32Array(vertices * 4),
+    index: new Uint32Array(indices),
+  };
+  let v = 0;
+  let i = 0;
+  for (const p of parts) {
+    out.positions.set(p.positions, v * 3);
+    out.normals.set(p.normals, v * 3);
+    out.zones.set(p.zones, v);
+    out.zones2.set(p.zones2, v);
+    out.zoneMix.set(p.zoneMix, v);
+    out.skinIndex.set(p.skinIndex, v * 4);
+    out.skinWeight.set(p.skinWeight, v * 4);
+    for (let k = 0; k < p.index.length; k++) out.index[i + k] = p.index[k]! + v;
+    v += p.zones.length;
+    i += p.index.length;
+  }
+  return out;
 }

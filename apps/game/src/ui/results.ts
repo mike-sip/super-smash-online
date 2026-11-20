@@ -3,6 +3,7 @@ import type { MatchResult } from '@game/match-rules';
 import type { App, Screen } from '../app.ts';
 import { fighterName } from '../content.ts';
 import { portraitUrl } from '../portraits.ts';
+import { victoryJingle } from '../music.ts';
 import { button, menu } from './components.ts';
 import { el } from './dom.ts';
 
@@ -110,7 +111,15 @@ export function resultsScreen(app: App, options: ResultsOptions): Screen {
     // « Retour » : l'action de l'appelant (sélection des personnages, salon…).
     back: 'confirm',
     root,
-    shown: () => app.announce(title),
+    shown: () => {
+      app.announce(title);
+      // La musique du combat s'arrête ; le jingle du vainqueur (s'il y en a un seul) retentit.
+      app.audio.setIntensity(0);
+      app.audio.playMusic(null);
+      const jingle =
+        champion === undefined ? null : victoryJingle(options.fighters[champion] ?? '');
+      if (jingle !== null && result.winners.length === 1) app.audio.playJingle(jingle);
+    },
     onBack: options.back,
   };
 }

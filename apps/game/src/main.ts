@@ -1,6 +1,7 @@
 /** Point d'entrée de Fracas : assemble l'application et ses écrans. */
 import './style.css';
 import { App, type AppElements } from './app.ts';
+import { configureAssets } from '@game/render';
 import { createBackground } from './background.ts';
 import { GAME_NAME } from './strings.ts';
 import { openLocal, openTraining, perfTraining } from './ui/local.ts';
@@ -64,6 +65,9 @@ const entries: MainMenuEntry[] = [
   { id: 'options', label: 'Options', detail: 'Commandes, son, affichage', open: openOptions },
 ];
 
+// Textures, éclairages et polices libres (assets/), servis à la racine du jeu.
+configureAssets('/');
+
 const app = new App(elements, (a) =>
   titleScreen(
     a,
@@ -80,6 +84,7 @@ if (invite === undefined && shouldResumeOnline()) {
 const MATCH_SCREENS = new Set(['match-local', 'training', 'match-online']);
 const background = createBackground(app, () => MATCH_SCREENS.has(app.top().id));
 app.releaseCanvas = () => background.release();
+app.showBackground = (scene) => background.show(scene);
 app.onFatal = () => app.reset(errorScreen());
 window.addEventListener('error', (event) => app.fail(event.error));
 window.addEventListener('unhandledrejection', (event) => app.fail(event.reason));

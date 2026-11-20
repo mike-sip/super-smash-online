@@ -27,6 +27,7 @@ import { STICK_MAX, checksum, createSim, encodeInput, type Sim } from '@game/sim
 import type { App, Screen } from './app.ts';
 import { buildSimConfig, lookOf } from './content.ts';
 import { portraitUrl } from './portraits.ts';
+import { stageMusic } from './music.ts';
 import { el } from './ui/dom.ts';
 
 export interface OnlineMatch extends Screen {
@@ -126,6 +127,10 @@ export function onlineMatch(
       );
       resize();
       renderer.capture(sim);
+      // Son du stage : thème, réverbération, touches des personnages (pas de ralenti en ligne).
+      app.audio.playMusic(stageMusic(info.stage));
+      app.audio.setRoom(info.stage);
+      app.audio.setThemes(ids.map((id) => lookOf(id)?.vfx));
       app.audio.capture(sim);
       net.begin(simGame(sim));
       app.announce('La partie commence');

@@ -29,6 +29,15 @@ export const P_RING = 2;
 export const P_FLARE = 3;
 /** Bouffée douce (fumée, poussière) : couche opaque. */
 export const P_PUFF = 4;
+/**
+ * Formes d'impact stylisées (SPEC-finition.md, phase 3), dessinées par le shader et tournées au
+ * hasard : éclat de bande dessinée à pointes, anneau brisé en éclats, éclaboussure d'encre, et
+ * scintillement d'étoile (KO vers le haut).
+ */
+export const P_BURST = 5;
+export const P_SHARD = 6;
+export const P_SPLAT = 7;
+export const P_TWINKLE = 8;
 
 /** Paramètres d'une particule. Les couleurs peuvent dépasser 1 : la particule rayonne. */
 export interface ParticleSpec {
@@ -185,6 +194,8 @@ varying vec2 vUv;
 varying vec4 vColor;
 varying float vShape;
 varying float vT;
+varying float vSeed;
+float pHash( vec3 p ) { return fract( sin( dot( p, vec3( 12.9898, 78.233, 37.719 ) ) ) * 43758.5453 ); }
 void main() {
   float life = aLook.z;
   float age = uTime - aStart.w;
@@ -210,6 +221,13 @@ void main() {
   }
   gl_Position = projectionMatrix * modelViewMatrix * vec4( p + vec3( offset, 0.0 ), 1.0 );
   vUv = corner;
+  // Formes d'impact : tournées au hasard (graine tirée de la naissance), les éclats en rotation.
+  vSeed = pHash( aStart.xyz + aStart.w );
+  if ( aLook.w > 4.5 ) {
+    float spin = aLook.w > 5.5 && aLook.w < 6.5 ? ( vSeed - 0.5 ) * 0.12 * age : 0.0;
+    float a = vSeed * 6.2832 + spin;
+    vUv = mat2( cos( a ), sin( a ), -sin( a ), cos( a ) ) * corner;
+  }
   vColor = aColor;
   vShape = aLook.w;
   vT = t;
@@ -220,11 +238,39 @@ varying vec2 vUv;
 varying vec4 vColor;
 varying float vShape;
 varying float vT;
+varying float vSeed;
 void main() {
   float r = length( vUv );
   float shape;
   int kind = int( vShape + 0.5 );
-  if ( kind == 1 ) {
+  float ang = atan( vUv.y, vUv.x );
+  if ( kind == 5 ) {
+    // Éclat à pointes irrégulières, cœur plus clair.
+    float spikes = 9.0 + floor( vSeed * 4.0 );
+    float k = fract( ang / 6.2832 * spikes + vSeed * 3.0 );
+    float tip = 0.5 + 0.12 * sin( floor( ang / 6.2832 * spikes + vSeed * 3.0 ) * 7.3 + vSeed * 20.0 );
+    float edge = mix( 0.42, 0.62 + tip * 0.5, 1.0 - abs( k * 2.0 - 1.0 ) );
+    shape = ( 1.0 - smoothstep( edge - 0.06, edge, r ) ) * ( 0.55 + 0.45 * ( 1.0 - r ) );
+  } else if ( kind == 6 ) {
+    // Anneau brisé : arcs séparés par des cassures.
+    float arc = fract( ang / 6.2832 * 5.0 + vSeed );
+    float gap = smoothstep( 0.0, 0.08, arc ) * ( 1.0 - smoothstep( 0.62, 0.7, arc ) );
+    float band = 1.0 - smoothstep( 0.0, 0.09 + 0.05 * arc, abs( r - 0.78 ) );
+    shape = band * gap;
+  } else if ( kind == 7 ) {
+    // Éclaboussure d'encre : bord ondulé et gouttes détachées.
+    float wob = 0.55 + 0.16 * sin( ang * 7.0 + vSeed * 30.0 ) * sin( ang * 3.0 + vSeed * 11.0 );
+    float blob = 1.0 - smoothstep( wob - 0.05, wob, r );
+    vec2 drop = vec2( cos( floor( ang / 0.9 ) * 0.9 + 0.45 ), sin( floor( ang / 0.9 ) * 0.9 + 0.45 ) ) * ( 0.8 + 0.1 * vSeed );
+    float drops = 1.0 - smoothstep( 0.06, 0.1, length( vUv - drop ) );
+    shape = max( blob, drops );
+  } else if ( kind == 8 ) {
+    // Scintillement : quatre rayons fins et longs, cœur, pulsation.
+    vec2 a = abs( vUv );
+    float rays = max( 1.0 - a.x * 22.0, 0.0 ) * ( 1.0 - a.y ) + max( 1.0 - a.y * 22.0, 0.0 ) * ( 1.0 - a.x );
+    float core = pow( max( 1.0 - r * 2.2, 0.0 ), 2.0 ) * 2.0;
+    shape = ( rays + core ) * ( 0.65 + 0.35 * sin( vT * 40.0 ) );
+  } else if ( kind == 1 ) {
     shape = ( 1.0 - smoothstep( 0.0, 1.0, abs( vUv.y ) ) ) * ( 1.0 - smoothstep( 0.6, 1.0, abs( vUv.x ) ) );
   } else if ( kind == 2 ) {
     shape = 1.0 - smoothstep( 0.0, 0.14, abs( r - 0.86 ) );

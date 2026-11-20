@@ -32,6 +32,11 @@ export const BONES = [
   'cloth1',
   'cloth2',
   'skirt',
+  // Doigts et pouces (SPEC-finition.md, phase 2) : poing, main ouverte, prise d'un objet.
+  'fingersF',
+  'thumbF',
+  'fingersB',
+  'thumbB',
 ] as const;
 export type BoneName = (typeof BONES)[number];
 

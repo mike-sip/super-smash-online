@@ -13,6 +13,9 @@ import {
   matchFromRules,
   resolveFighters,
   saveLocalPrefs,
+  setCpuCount,
+  setCpuLevel,
+  cpuCount,
   slotOf,
   toggleReady,
 } from '../src/local-setup.ts';
@@ -91,9 +94,27 @@ describe('sélection locale', () => {
     expect(s.slots[1]!.fighter).toBe('random');
     const picks = resolveFighters(s, ROSTER, () => 0.99);
     expect(picks).toEqual([
-      { slot: 0, device: 'keyboard', fighter: 'sorel', palette: 0 },
-      { slot: 1, device: 'gamepad-0', fighter: 'nacre', palette: 0 },
+      { slot: 0, device: 'keyboard', fighter: 'sorel', palette: 0, cpu: null },
+      { slot: 1, device: 'gamepad-0', fighter: 'nacre', palette: 0, cpu: null },
     ]);
+  });
+
+  it('ordinateurs : places libres, toujours prêts, cédés à un joueur qui rejoint', () => {
+    const s = createLocalSetup(ROSTER);
+    join(s, 'keyboard');
+    expect(setCpuCount(s, 3, 7)).toBe(3);
+    expect(cpuCount(s)).toBe(3);
+    expect(s.slots.slice(1).every((slot) => slot.ready && slot.level === 7)).toBe(true);
+    toggleReady(s, 0);
+    expect(canContinue(s, 2)).toBe(true);
+    // Un joueur humain qui rejoint prend la place du dernier ordinateur.
+    expect(join(s, 'gamepad-0')).toBe(3);
+    expect(cpuCount(s)).toBe(2);
+    setCpuLevel(s, 2);
+    const picks = resolveFighters(s, ROSTER, () => 0);
+    expect(picks.map((x) => x.cpu)).toEqual([null, 2, 2, null]);
+    expect(setCpuCount(s, 0, 2)).toBe(0);
+    expect(joined(s)).toBe(2);
   });
 
   it('préréglages valides et conversion en MatchConfig', () => {

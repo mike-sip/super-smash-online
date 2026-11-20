@@ -3,8 +3,11 @@ import type { StageDef } from '@game/sim-core';
 import type { StageId } from '@game/stages-items';
 import { BoxGeometry, type BufferGeometry, type Group } from 'three';
 import type { PostLook } from '../post/grading.ts';
+import type { CloudSeaLook } from './cloudsea.ts';
+import type { RaysLook } from './rays.ts';
 import type { SkyLook } from './sky.ts';
 import type { SurfaceLook } from './surface.ts';
+import type { SurfaceMaterialLook } from './triplanar.ts';
 import type { MotesLook, WaterLook } from './water.ts';
 import { createGrid } from './grid.ts';
 import { facets } from './lowpoly.ts';
@@ -23,6 +26,11 @@ export interface DecorContext {
   readonly lit: BufferGeometry[];
   /** Géométries lumineuses (fenêtres, lanternes, coraux), non éclairées, fusionnées aussi. */
   readonly glow: BufferGeometry[];
+  /**
+   * Géométries d'une surface texturée du thème (`Theme.surfaces`), fusionnées à part : une
+   * matière, un appel de dessin. Sans textures (qualité Bas), elles gardent leurs couleurs.
+   */
+  surface(name: string): BufferGeometry[];
   /** Pour les éléments à part : fond, eau, pièces animées. */
   readonly root: Group;
   /** Enregistre une animation, appelée à chaque image avec la frame de simulation affichée. */
@@ -57,8 +65,26 @@ export interface Theme {
   readonly motes?: readonly MotesLook[];
   /** Grain des matières du décor ; un grain par défaut sinon. */
   readonly surface?: SurfaceLook;
+  /**
+   * Surfaces texturées (SPEC-finition.md) : pierre, bois, roche… Les noms `solid` et
+   * `platform` reçoivent les blocs pleins et les plateformes fixes par défaut.
+   */
+  readonly surfaces?: Readonly<Record<string, SurfaceMaterialLook>>;
+  /** Image d'éclairage d'ambiance (`assets/hdri/`), son intensité et sa rotation (radians). */
+  readonly hdri?: { readonly file: string; readonly intensity: number; readonly rotation: number };
   /** Ajoute le décor propre au thème. */
   decorate?(ctx: DecorContext): void;
+  /** Mer de nuages en nappes, dessinée par shader. */
+  readonly cloudSea?: CloudSeaLook;
+  /** Rayons de lumière depuis le soleil (Haut et Ultra). */
+  readonly rays?: RaysLook;
+  /**
+   * Forme d'une plateforme mobile (index dans `StageDef.platforms`), centrée en x, dessus à y = 0,
+   * coloriée et prête à fusionner ; par défaut, une dalle.
+   */
+  moverShape?(width: number, index: number, ctx: DecorContext): BufferGeometry;
+  /** Remplace la dalle des plateformes fixes (dessus à `y`) par une forme à soi. */
+  platformShape?(x1: number, x2: number, y: number, ctx: DecorContext): void;
   /** Remplace le bloc plein par défaut (une boîte) par une forme à soi. */
   solidShape?(x1: number, y1: number, x2: number, y2: number, ctx: DecorContext): void;
 }
@@ -76,6 +102,12 @@ export const NEUTRAL_THEME: Theme = {
   platform: 0x9ca3af,
   mover: 0xa8b0bd,
   seed: 1,
+  // Carrelage net : les blocs et les plateformes gardent leur forme simple, lisible.
+  surfaces: {
+    solid: { texture: 'large_floor_tiles_02', tile: 16, base: 0x6b7280, tint: 0xd8dde4 },
+    platform: { texture: 'large_floor_tiles_02', tile: 16, base: 0x9ca3af, tint: 0xeef1f5 },
+  },
+  hdri: { file: 'kloofendal_48d_partly_cloudy_puresky', intensity: 0.6, rotation: 0 },
   // Salle d'entraînement : ciel clair et quadrillage au fond, pour juger distances et hauteurs.
   skyLook: {
     zenith: 0x7fa9de,

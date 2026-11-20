@@ -4,6 +4,8 @@ import { defineConfig } from 'vite';
 const source = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
 
 export default defineConfig({
+  // Assets libres du dépôt (assets/SOURCES.md), servis à la racine : /textures, /hdri, /fonts.
+  publicDir: source('../../assets'),
   resolve: {
     // La démo lit `sim-core`, `render`, `input`, `fighters` et les autres modules dans leurs sources, par
     // leurs points d'entrée publics : une valeur modifiée est visible au rechargement, sans recompiler.

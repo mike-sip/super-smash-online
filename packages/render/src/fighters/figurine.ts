@@ -9,41 +9,126 @@
  * Appels de dessin par joueur : le corps, son ombre, et son contour en qualité haute ; les yeux et
  * les bouches de tous les joueurs tiennent en deux appels.
  */
-import { A_ATTACK, A_DEAD, A_HITSTUN, A_ITEM_SWING, fxToFloat } from '@game/sim-core';
+import {
+  A_ATTACK,
+  A_CROUCH,
+  A_DEAD,
+  A_GRAB,
+  A_GRABBING,
+  A_HELPLESS,
+  A_HITSTUN,
+  A_IDLE,
+  A_ITEM_SWING,
+  A_ITEM_THROW,
+  A_LEDGE,
+  A_SHIELD,
+  A_TUMBLE,
+  fxToFloat,
+} from '@game/sim-core';
 import {
   BackSide,
   BufferAttribute,
   BufferGeometry,
   Color,
   Group,
-  InstancedMesh,
-  Mesh,
   Matrix4,
   MeshBasicMaterial,
   MeshStandardMaterial,
-  Quaternion,
   SkinnedMesh,
-  SphereGeometry,
   Vector3,
+  Vector4,
   type WebGLProgramParametersWithUniforms,
 } from 'three';
 import type { QualityPreset } from '../quality.ts';
-import { figurineSculpt, paletteOf, type FigurineStyle, type VfxTheme } from './body.ts';
+import {
+  MESH_REGIONS,
+  figurineDims,
+  figurineSculpt,
+  paletteOf,
+  type FigurineStyle,
+  type VfxTheme,
+} from './body.ts';
 import { createPoseDriver, type PoseDriver } from './driver.ts';
 import { createChain, resetChain, stepChain, type Chain } from './dynamics.ts';
 import { squashOf, type Squash } from './squash.ts';
 import { createTrails } from './trails.ts';
 import { isTeleport } from '../interpolation.ts';
-import { createExpression, expressionOf } from './face.ts';
+import { DETAIL_GLSL, zoneMaterials, type ZoneMaterials } from './materials.ts';
+import { createExpression, createFace, expressionOf, faceLayout } from './face.ts';
+import { createFaceMeshes, irisColor } from './face-meshes.ts';
 import { dimsOf, type Dims } from './mannequin.ts';
-import { meshSculpt, type MeshData } from './mesher.ts';
+import { meshRegions, type MeshData } from './mesher.ts';
 import { SPIN_PIVOT_Y, type Pose } from './poses.ts';
-import { ZONES, compileSculpt, type ZoneName } from './sdf.ts';
+import { BONES, ZONES, compileSculpt, type ZoneName } from './sdf.ts';
 import { createRig, type Rig } from './skeleton.ts';
 import { PLAYER_COLORS, type FighterVisuals, type FighterVisualsFactory } from './visual.ts';
 
-/** Côté d'une cellule du maillage, en hauteurs de combattant. */
-const CELL = 1 / 60;
+/** Côté d'une cellule du maillage du corps, en hauteurs de combattant (tête et mains : plus fin). */
+const CELL = 1 / 70;
+/** Estompe de peau des doigts : ils plient net aux jointures. */
+const HAND_FALLOFF = 0.006;
+const REGIONS = MESH_REGIONS.map((r) => ({
+  bones: r.bones.map((b) => BONES.indexOf(b)),
+  cell: r.cell,
+  ...(r.bones.includes('fingersF') ? { falloff: HAND_FALLOFF } : {}),
+}));
+
+/**
+ * Fermeture de la main selon l'action : poing pendant un coup, prise (saisie, rebord, objet),
+ * ouverte quand on est touché ou éjecté, à demi fermée au repos. De 0 (ouverte) à 1 (poing).
+ */
+export function handCurl(action: number): number {
+  if (action === A_ATTACK) return 1;
+  if (
+    action === A_GRAB ||
+    action === A_GRABBING ||
+    action === A_LEDGE ||
+    action === A_ITEM_SWING ||
+    action === A_ITEM_THROW
+  ) {
+    return 0.8;
+  }
+  if (action === A_HITSTUN || action === A_TUMBLE || action === A_HELPLESS) return 0.05;
+  return 0.45;
+}
+/** Vitesse de la respiration au repos, en radians par frame (~3,5 s par cycle). */
+const BREATH_RATE = 0.03;
+
+/**
+ * Regard vers l'adversaire le plus proche (positions vues à la dernière image), en rayons de tête :
+ * vers le haut ou le bas s'il est devant, vers la caméra s'il est derrière.
+ */
+export function gazeOf(
+  player: number,
+  x: number,
+  y: number,
+  facing: number,
+  seenX: ArrayLike<number>,
+  seenY: ArrayLike<number>,
+): { y: number; z: number } {
+  let best = Infinity;
+  let dx = 0;
+  let dy = 0;
+  for (let j = 0; j < seenX.length; j++) {
+    if (j === player || Number.isNaN(seenX[j]!)) continue;
+    const ex = seenX[j]! - x;
+    const ey = seenY[j]! - y;
+    const d = ex * ex + ey * ey;
+    if (d < best) {
+      best = d;
+      dx = ex;
+      dy = ey;
+    }
+  }
+  if (best === Infinity) return { y: 0, z: 0 };
+  const ahead = dx * facing > 0;
+  return {
+    y: Math.max(-1, Math.min(1, dy / 50)) * (ahead ? 0.06 : 0.03),
+    z: ahead ? 0 : facing * 0.05,
+  };
+}
+/** Part du chemin vers la fermeture voulue parcourue à chaque frame. */
+const HAND_RATE = 0.35;
 /** Rotation du corps vers la caméra : on voit les visages de trois quarts, comme dans le genre. */
 const FACE_CAMERA = 0.35;
 /** La tête se tourne encore un peu plus : le visage se lit, la silhouette du corps reste fidèle. */
@@ -96,11 +181,12 @@ const PALE_MIX = 0.6;
 const meshCache = new WeakMap<object, MeshData>();
 const DEFAULT_KEY = {};
 
+/** `d` : dimensions du mannequin (le corps est sculpté à sa taille, puis agrandi aux extrémités). */
 function meshFor(style: FigurineStyle | undefined, d: Dims, rig: Rig): MeshData {
   const key = style ?? DEFAULT_KEY;
   let mesh = meshCache.get(key);
   if (mesh === undefined) {
-    mesh = meshSculpt(compileSculpt(figurineSculpt(d, style), rig.bind), CELL);
+    mesh = meshRegions(compileSculpt(figurineSculpt(d, style), rig.bind), REGIONS, CELL);
     meshCache.set(key, mesh);
   }
   return mesh;
@@ -142,7 +228,13 @@ function figurineMaterial(
   palette: readonly number[],
   emissiveZone: number,
   iridescentZone: number,
+  zones: ZoneMaterials = zoneMaterials(),
 ): { material: MeshStandardMaterial; uniforms: FigurineUniforms } {
+  const mats = {
+    uMat: { value: zones.params.map((p) => new Vector4(...p)) },
+    uPat: { value: zones.patterns.map((p) => new Vector4(...p)) },
+    uSkinZone: { value: [...zones.skin] },
+  };
   const uniforms: FigurineUniforms = {
     uPalette: { value: palette.map((c) => new Color(c)) },
     uPale: { value: 0 },
@@ -155,12 +247,19 @@ function figurineMaterial(
       : `mix( step( abs( aZone - ${target}.0 ), 0.5 ), step( abs( aZone2 - ${target}.0 ), 0.5 ), aZoneMix )`;
   const material = new MeshStandardMaterial({ roughness: 0.58, metalness: 0, vertexColors: true });
   material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
-    Object.assign(shader.uniforms, uniforms);
+    Object.assign(shader.uniforms, uniforms, mats);
     shader.vertexShader = shader.vertexShader
       .replace(
         '#include <common>',
         [
           '#include <common>',
+          `uniform vec4 uMat[ ${palette.length} ];`,
+          `uniform vec4 uPat[ ${palette.length} ];`,
+          `uniform float uSkinZone[ ${palette.length} ];`,
+          'varying vec4 vMat;',
+          'varying vec4 vPat;',
+          'varying float vSkin;',
+          'varying vec3 vBind;',
           'attribute float aZone;',
           'attribute float aZone2;',
           'attribute float aZoneMix;',
@@ -178,17 +277,43 @@ function figurineMaterial(
           'vec3 zoneColor = mix( uPalette[ int( aZone + 0.5 ) ], uPalette[ int( aZone2 + 0.5 ) ], aZoneMix );',
           'vColor.rgb = mix( zoneColor, vec3( 1.0 ), uPale );',
           'vZoneColor = zoneColor;',
+          // Matière de la zone (et de sa voisine, en douceur) ; position de référence du sommet.
+          'int zA = int( aZone + 0.5 );',
+          'int zB = int( aZone2 + 0.5 );',
+          'vMat = mix( uMat[ zA ], uMat[ zB ], aZoneMix );',
+          'vPat = mix( uPat[ zA ], uPat[ zB ], aZoneMix );',
+          'vSkin = mix( uSkinZone[ zA ], uSkinZone[ zB ], aZoneMix );',
+          'vBind = position;',
           `vGlowZone = ${zoneWeight(emissiveZone)};`,
           `vIridZone = ${zoneWeight(iridescentZone)};`,
         ].join('\n'),
       );
     shader.fragmentShader = shader.fragmentShader
       .replace(
+        '#include <roughnessmap_fragment>',
+        [
+          // Relief généré de la matière : il module aussi la rugosité.
+          'float fPx = length( fwidth( vBind ) );',
+          'float fHeight = figurineDetail( vBind, vPat, fPx );',
+          'float roughnessFactor = clamp( vMat.x * ( 0.93 + 0.12 * fHeight ), 0.05, 1.0 );',
+        ].join('\n'),
+      )
+      .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vMat.y;')
+      .replace(
+        '#include <normal_fragment_maps>',
+        '#include <normal_fragment_maps>\nnormal = figurineBump( -vViewPosition, normal, fHeight * vMat.z * 0.018 );',
+      )
+      .replace(
         '#include <common>',
         [
           '#include <common>',
           'uniform float uFlash;',
           'uniform float uGlow;',
+          'varying vec4 vMat;',
+          'varying vec4 vPat;',
+          'varying float vSkin;',
+          'varying vec3 vBind;',
+          DETAIL_GLSL,
           'varying vec3 vZoneColor;',
           'varying float vGlowZone;',
           'varying float vIridZone;',
@@ -199,6 +324,10 @@ function figurineMaterial(
         [
           '#include <emissivemap_fragment>',
           'totalEmissiveRadiance += vec3( uFlash ) + vZoneColor * vGlowZone * uGlow;',
+          // Lustre des tissus et des cheveux sur les bords ; lumière qui diffuse sous la peau.
+          'float fFacing = saturate( dot( normal, normalize( vViewPosition ) ) );',
+          'totalEmissiveRadiance += vZoneColor * vMat.w * pow( 1.0 - fFacing, 3.0 ) * 0.35;',
+          'totalEmissiveRadiance += vZoneColor * vSkin * vec3( 0.1, 0.04, 0.03 );',
           // Irisation : un arc-en-ciel discret qui glisse avec l'angle de vue.
           'float iridFacing = 1.0 - saturate( dot( normal, normalize( vViewPosition ) ) );',
           'vec3 rainbow = 0.5 + 0.5 * cos( 6.2832 * ( iridFacing * 1.3 + vec3( 0.0, 0.33, 0.67 ) ) );',
@@ -249,6 +378,8 @@ interface Body {
   striker: number;
   readonly tips: Float64Array;
   pale: boolean;
+  /** Fermeture actuelle de la main (lissée d'une frame à l'autre). */
+  hand: number;
 }
 
 /** Une figurine seule, hors combat : pour les portraits et l'écran de victoire (phase 7). */
@@ -256,7 +387,14 @@ export interface FigurineModel {
   /** Repère du corps, à l'échelle d'un combattant d'une hauteur 1 (pieds à l'origine). */
   readonly root: Group;
   /** Oriente le squelette selon `pose`, tête tournée de `headTurn`, visage selon `face`. */
-  apply(pose: Pose, headTurn: number, eyes: number, mouth: number): void;
+  apply(
+    pose: Pose,
+    headTurn: number,
+    eyes: number,
+    mouth: number,
+    brow?: number,
+    hands?: number,
+  ): void;
   setQuality(outline: boolean): void;
   dispose(): void;
 }
@@ -266,15 +404,17 @@ export function createFigurineModel(
   variant: number,
   player = 0,
 ): FigurineModel {
-  const d = dimsOf(style);
+  const base = dimsOf(style);
+  const d = figurineDims(base);
   const rig = createRig(d);
-  const geometry = geometryOf(meshFor(style, d, rig));
+  const geometry = geometryOf(meshFor(style, base, rig));
   const zone = (name: ZoneName | undefined): number =>
     name === undefined ? -1 : ZONES.indexOf(name);
   const { material } = figurineMaterial(
     paletteOf(style, player, variant),
     zone(style?.emissive),
     zone(style?.iridescent),
+    zoneMaterials(style?.materials),
   );
   const mesh = new SkinnedMesh(geometry, material);
   const outline = outlineMaterial();
@@ -285,38 +425,33 @@ export function createFigurineModel(
   mesh.frustumCulled = false;
   line.frustumCulled = false;
 
-  // Visage : pièces portées par l'os de la tête (mêmes places que dans le combat).
-  const ball = new SphereGeometry(1, 16, 12);
-  const white = new MeshStandardMaterial({ color: 0xfbfaf7, roughness: 0.35 });
-  const dark = new MeshStandardMaterial({ color: 0x15131a, roughness: 0.25 });
+  // Visage : mêmes pièces et mêmes places que dans le combat, dans le repère du squelette.
+  const palette = paletteOf(style, player, variant);
+  const hair = palette[ZONES.indexOf('hair')]!;
+  const face = createFaceMeshes(1, rig.root);
+  face.setColors(0, irisColor(hair), hair);
+  const features = createFace();
+  const expression = createExpression();
   const head = rig.bone('head');
+  const toRig = new Matrix4();
+  const headInRig = new Matrix4();
   const r = d.headRadius;
-  const eyes: Mesh[] = [];
-  const pupils: Mesh[] = [];
-  for (const z of [0.36, -0.36]) {
-    const e = new Mesh(ball, white);
-    e.position.set(0.8 * r, 1.06 * r, z * r);
-    const p = new Mesh(ball, dark);
-    p.position.set(0.93 * r, 1.05 * r, z * 1.04 * r);
-    head.add(e, p);
-    eyes.push(e);
-    pupils.push(p);
-  }
-  const mouth = new Mesh(ball, dark);
-  mouth.position.set(0.9 * r, 0.62 * r, 0);
-  head.add(mouth);
 
   const root = new Group();
   root.scale.setScalar(d.normalize);
   root.add(rig.root);
   return {
     root,
-    apply(pose, headTurn, open, talk) {
+    apply(pose, headTurn, open, talk, brow = 0, hands = 0.45) {
       rig.apply(pose, headTurn);
-      for (const e of eyes) e.scale.set(0.2 * r, 0.27 * r * open, 0.15 * r);
-      for (const p of pupils) p.scale.set(0.11 * r, 0.16 * r * open, 0.09 * r);
-      mouth.scale.set(0.05 * r, (0.03 + 0.09 * talk) * r, (0.12 + 0.03 * talk) * r);
+      rig.setHands(hands, hands);
       root.updateMatrixWorld(true);
+      expression.eyes = open;
+      expression.mouth = talk;
+      expression.brow = brow;
+      faceLayout(expression, 0, 0, features);
+      headInRig.multiplyMatrices(toRig.copy(rig.root.matrixWorld).invert(), head.matrixWorld);
+      face.place(0, headInRig, r, features);
     },
     setQuality(lines) {
       line.visible = lines;
@@ -325,9 +460,7 @@ export function createFigurineModel(
       geometry.dispose();
       material.dispose();
       outline.dispose();
-      ball.dispose();
-      white.dispose();
-      dark.dispose();
+      face.dispose();
       rig.skeleton.dispose();
     },
   };
@@ -350,25 +483,21 @@ export function createFigurines(
     const geometries = new Map<MeshData, BufferGeometry>();
     const outline = outlineMaterial();
 
-    // Yeux (blancs) et pupilles et bouches (sombres) de tous les joueurs : deux appels de dessin.
-    const ball = new SphereGeometry(1, 14, 10);
-    const whiteMaterial = new MeshStandardMaterial({ color: 0xfbfaf7, roughness: 0.35 });
-    const darkMaterial = new MeshStandardMaterial({ color: 0x15131a, roughness: 0.25 });
-    const whites = new InstancedMesh(ball, whiteMaterial, players * 2);
-    const darks = new InstancedMesh(ball, darkMaterial, players * 3);
-    for (const m of [whites, darks]) {
-      m.frustumCulled = false;
-      m.userData.noShadow = true;
-      root.add(m);
-    }
+    // Visages de tous les joueurs : quatre appels de dessin.
+    const faces = createFaceMeshes(players, root);
+    const features = createFace();
+    // Dernière position de chaque joueur, pour que le regard suive l'adversaire le plus proche.
+    const seenX = new Float64Array(players).fill(Number.NaN);
+    const seenY = new Float64Array(players);
 
     const bodies: Body[] = [];
     for (let i = 0; i < players; i++) {
       const def = config.fighters[i]!;
       const style = styleOf(i);
-      const d = dimsOf(style);
+      const base = dimsOf(style);
+      const d = figurineDims(base);
       const rig = createRig(d);
-      const data = meshFor(style, d, rig);
+      const data = meshFor(style, base, rig);
       let geometry = geometries.get(data);
       if (geometry === undefined) {
         geometry = geometryOf(data);
@@ -376,10 +505,14 @@ export function createFigurines(
       }
       const zone = (name: ZoneName | undefined): number =>
         name === undefined ? -1 : ZONES.indexOf(name);
+      const palette = paletteOf(style, i, variantOf(i));
+      const hair = palette[ZONES.indexOf('hair')]!;
+      faces.setColors(i, irisColor(hair), hair);
       const { material, uniforms } = figurineMaterial(
-        paletteOf(style, i, variantOf(i)),
+        palette,
         zone(style?.emissive),
         zone(style?.iridescent),
+        zoneMaterials(style?.materials),
       );
       const mesh = new SkinnedMesh(geometry, material);
       mesh.name = `figurine-${i}`;
@@ -422,44 +555,15 @@ export function createFigurines(
         striker: -1,
         tips: new Float64Array(STRIKERS.length * 3),
         pale: false,
+        hand: 0.45,
       });
     }
 
     const scale = new Matrix4();
     const yaw = new Matrix4();
     const spin = new Matrix4();
-    const local = new Matrix4();
-    const world = new Matrix4();
-    const hidden = new Matrix4().makeScale(0, 0, 0);
-    const at = new Vector3();
-    const size = new Vector3();
-    const noRotation = new Quaternion();
     const face = createExpression();
     const squash: Squash = { y: 1 };
-
-    function hideFace(player: number): void {
-      for (let k = 0; k < 2; k++) whites.setMatrixAt(player * 2 + k, hidden);
-      for (let k = 0; k < 3; k++) darks.setMatrixAt(player * 3 + k, hidden);
-    }
-
-    /** Pièce du visage, en repère de la tête (unités : rayon de la tête). */
-    function feature(
-      mesh: InstancedMesh,
-      index: number,
-      head: Matrix4,
-      r: number,
-      x: number,
-      y: number,
-      z: number,
-      sx: number,
-      sy: number,
-      sz: number,
-    ): void {
-      local.compose(at.set(x * r, y * r, z * r), noRotation, size.set(sx * r, sy * r, sz * r));
-      mesh.setMatrixAt(index, world.multiplyMatrices(head, local));
-    }
-
-    for (let i = 0; i < players; i++) hideFace(i);
 
     // Traînées des coups : à la couleur du thème du personnage, sinon à celle du joueur.
     const trails = createTrails(players);
@@ -486,11 +590,10 @@ export function createFigurines(
       update(player, x, y, view, alpha) {
         const body = bodies[player]!;
         const anchor = body.anchor;
-        whites.instanceMatrix.needsUpdate = true;
-        darks.instanceMatrix.needsUpdate = true;
         anchor.visible = view.action !== A_DEAD;
         if (!anchor.visible) {
-          hideFace(player);
+          faces.hide(player);
+          seenX[player] = Number.NaN;
           resetChain(body.hair);
           resetChain(body.cloth);
           resetChain(body.skirt);
@@ -502,10 +605,21 @@ export function createFigurines(
         const pose = body.driver.update(view, alpha);
         // Repère du corps : z vers la caméra quand il regarde à droite, à l'opposé sinon.
         body.rig.apply(pose, view.facing === 1 ? -HEAD_TURN : HEAD_TURN);
+        body.hand += (handCurl(view.action) - body.hand) * HAND_RATE;
+        body.rig.setHands(body.hand, body.hand);
 
         // Mouvements secondaires : les ressorts avancent du temps de simulation écoulé depuis la
         // dernière image ; un saut dans le temps (rollback, réapparition) les remet au repos.
         const time = body.clock + alpha;
+        // Au repos, la figurine respire : le buste se soulève, la tête suit, les épaules aussi.
+        if (view.action === A_IDLE || view.action === A_CROUCH || view.action === A_SHIELD) {
+          const breath = Math.sin((time + player * 37) * BREATH_RATE);
+          body.rig.bone('spine').rotation.z += breath * 0.025;
+          body.rig.bone('neck').rotation.z -= breath * 0.018;
+          body.rig.bone('upperArmF').rotation.z += breath * 0.03;
+          body.rig.bone('upperArmB').rotation.z += breath * 0.03;
+          body.rig.bone('hips').position.y += breath * 0.0025;
+        }
         const dt = time - body.lastTime;
         body.lastTime = time;
         if (dt < 0 || dt > MAX_SPRING_STEP || isTeleport(body.lastAction, view.action)) {
@@ -584,7 +698,10 @@ export function createFigurines(
         body.uniforms.uFlash.value =
           view.action === A_HITSTUN && view.hitlag > 0 ? (view.hitlag % 4 < 2 ? 0.9 : 0.35) : 0;
         if (time < ENTRANCE_FRAMES) {
-          body.uniforms.uFlash.value = Math.max(body.uniforms.uFlash.value, 1 - time / ENTRANCE_FRAMES);
+          body.uniforms.uFlash.value = Math.max(
+            body.uniforms.uFlash.value,
+            1 - time / ENTRANCE_FRAMES,
+          );
         }
         // La zone incandescente s'embrase pendant la charge d'un smash.
         if (body.glows) {
@@ -592,29 +709,13 @@ export function createFigurines(
           body.uniforms.uGlow.value = GLOW_IDLE + (GLOW_CHARGED - GLOW_IDLE) * heat;
         }
 
-        // Visage : yeux de part et d'autre du nez, bouche dessous.
+        // Visage : expression, et regard tourné vers l'adversaire le plus proche.
         expressionOf(view.action, view.hitlag, view.charge, body.clock, player, face);
-        const head = body.rig.bone('head').matrixWorld;
-        const r = body.headRadius;
-        const open = face.eyes;
-        for (let k = 0; k < 2; k++) {
-          const z = k === 0 ? 0.36 : -0.36;
-          feature(whites, player * 2 + k, head, r, 0.8, 1.06, z, 0.2, 0.27 * open, 0.15);
-          feature(darks, player * 3 + k, head, r, 0.93, 1.05, z * 1.04, 0.11, 0.16 * open, 0.09);
-        }
-        const mouth = face.mouth;
-        feature(
-          darks,
-          player * 3 + 2,
-          head,
-          r,
-          0.9,
-          0.62,
-          0,
-          0.05,
-          0.03 + 0.09 * mouth,
-          0.12 + 0.03 * mouth,
-        );
+        seenX[player] = x;
+        seenY[player] = y;
+        const gaze = gazeOf(player, x, y, view.facing, seenX, seenY);
+        faceLayout(face, gaze.y, gaze.z, features);
+        faces.place(player, body.rig.bone('head').matrixWorld, body.headRadius, features);
       },
 
       theme(player: number) {
@@ -633,12 +734,8 @@ export function createFigurines(
           body.rig.skeleton.dispose();
         }
         outline.dispose();
-        ball.dispose();
-        whiteMaterial.dispose();
-        darkMaterial.dispose();
+        faces.dispose();
         trails.dispose();
-        whites.dispose();
-        darks.dispose();
       },
     } satisfies FighterVisuals;
   };
