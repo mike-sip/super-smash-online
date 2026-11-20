@@ -60,4 +60,4 @@ Format et conventions : [`fighters/README.md`](fighters/README.md).
 
 | Fichier | Origine | Taille |
 |---|---|---|
-| `fighters/sorel/model.glb` | Généré dans le dépôt : figurine procédurale de Sorel exportée par `packages/render/tools/bake-figurine.ts` (aucune source externe) | 2558 Ko |
+| `fighters/sorel/model.glb` | Créé dans le dépôt : sculpt et animations écrits à la main (`packages/render/tools/characters/sorel.ts`), exportés par `packages/render/tools/bake-character.ts` (aucune source externe) | 3876 Ko |

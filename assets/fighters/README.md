@@ -103,15 +103,57 @@ match, le fait clignoter en blanc pendant le gel d'un coup, le pâlit quand il e
 dessine un contour en qualité haute. Tout se règle sur l'état de la simulation : l'image reste
 juste en pause, au ralenti et après un rollback en ligne.
 
+## Matières nommées
+
+Le jeu reconnaît deux conventions de nom de matière :
+
+- **`player`** : teinte à la couleur du joueur (rouge, bleu, jaune…), comme le bandeau de Sorel.
+  C'est ce qui distingue deux joueurs sur le même personnage.
+- **Le nom d'une zone** (`primary`, `secondary`, `accent`, `hair`, `skin`…) : les couleurs
+  alternatives (`variants`) remplacent la couleur de base de ces matières.
+
+## Animer à la main sans logiciel 3D
+
+Les modèles des personnages du roster peuvent aussi s'écrire en code : sculpt par volumes, une
+matière par zone, clés d'animation posées à la main. C'est ainsi qu'est fait Sorel.
+
+| Fichier | Rôle |
+|---|---|
+| `assets/fighters/<id>/DESIGN.md` | Bible du personnage : intention, silhouette, palette, style d'animation, intention de chaque coup |
+| `packages/render/tools/characters/<id>.ts` | Garde, mèches et détails du modèle, clés de chaque clip |
+| `packages/render/tools/anim/keys.ts` | Format des clés : canaux, courbes, instants relatifs à la frame data |
+| `packages/render/tools/bake-character.ts` | Export : maillage fin, matières par zone, clés, ressorts du bandeau et de la tunique |
+
+Une clé ne donne que les canaux qui changent ; les autres reprennent la clé précédente. Ses
+instants s'écrivent par rapport à la frame data : `'s'` (première frame active), `'e'`
+(dernière), `'t'` (fin), `'c'` (charge), avec décalages ou fractions (`'s-3'`, `'t*0.5'`). Un coup
+rééquilibré garde ainsi son impact sur la bonne frame sans retoucher l'animation.
+
+Attention : les bras sont orientés par rapport au buste. Quand le buste se penche de `torso`, un
+bras horizontal vaut `1.57 + torso`, sinon il retombe.
+
+```bash
+node packages/render/tools/bake-character.ts sorel
+```
+
+### Revoir les animations
+
+La démo contient une visionneuse : `http://localhost:5173/anim.html?id=sorel` (serveur de la
+démo). Liste des clips, lecture, ralenti, image par image, angle de vue. Paramètres utiles :
+
+- `clip=fsmash&frame=14` : un clip figé sur une frame ;
+- `zoom=3&focus=0.85` : gros plan sur la tête ;
+- `sheet=jab1:3,ftilt:6,fsmash:14` : planche contact, poses côte à côte, vues comme en jeu.
+
 ## Point de départ : exporter une figurine
 
 Pour partir d'un squelette aux bonnes proportions, avec tous les clips nommés et à la bonne
 durée :
 
 ```bash
-node packages/render/tools/bake-figurine.ts sorel
+node packages/render/tools/bake-figurine.ts zephine
 ```
 
-Le fichier produit (`assets/fighters/sorel/model.glb`) est la figurine de Sorel, animée par les
+Le fichier produit est la figurine du personnage, animée par les
 poses procédurales. Il s'importe dans Blender pour servir de référence ou de base de travail. Il
 ne remplace pas la figurine en jeu tant qu'il n'est pas déclaré (essai : `?modeles`).

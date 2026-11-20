@@ -472,6 +472,8 @@ export const SOREL: Character = defineCharacter({
     // descend sur les cuisses, bandes aux avant-bras, lanières de sandales. Tête de rayon 0,1.
     palette: { skin: 0xe6b38c, hair: 0x1e2433, accent: 0xe8b44a, light: 0xf3e7d3 },
     vfx: 'wind',
+    // Modèle animé à la main (packages/render/tools/characters/sorel.ts, bible : assets/fighters/sorel/DESIGN.md).
+    model: 'fighters/sorel/model.glb',
     palettes: [
       {},
       { primary: 0xc8423b, secondary: 0xf5ede0, accent: 0xe8c35a },

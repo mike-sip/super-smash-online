@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Visionneuse d'animations</title>
+    <link rel="icon" href="data:," />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #161b27;
+        --panel: #1f2636;
+        --line: #2e3850;
+        --text: #e6ebf5;
+        --muted: #8d98b3;
+        --accent: #f5b43c;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          14px/1.4 system-ui,
+          sans-serif;
+      }
+      body {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        grid-template-rows: 1fr auto;
+        height: 100vh;
+      }
+      #clips {
+        grid-row: 1 / 3;
+        overflow-y: auto;
+        background: var(--panel);
+        border-right: 1px solid var(--line);
+        padding: 8px 0;
+      }
+      #clips h1 {
+        font-size: 15px;
+        margin: 4px 12px 8px;
+      }
+      #clips button {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        border: 0;
+        background: none;
+        color: var(--text);
+        padding: 4px 12px;
+        text-align: left;
+        font: inherit;
+        cursor: pointer;
+      }
+      #clips button span {
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      #clips button[aria-current='true'] {
+        background: var(--line);
+        color: var(--accent);
+      }
+      #view {
+        position: relative;
+        overflow: hidden;
+        min-height: 0;
+      }
+      #view canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      #info {
+        position: absolute;
+        left: 12px;
+        top: 10px;
+        font-variant-numeric: tabular-nums;
+        color: var(--muted);
+      }
+      #bar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 8px 12px;
+        background: var(--panel);
+        border-top: 1px solid var(--line);
+      }
+      #bar input[type='range'] {
+        flex: 1;
+        min-width: 160px;
+      }
+      #bar button,
+      #bar select {
+        background: var(--line);
+        color: var(--text);
+        border: 0;
+        border-radius: 4px;
+        padding: 4px 10px;
+        font: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <nav id="clips"><h1 id="title">Chargement…</h1></nav>
+    <main id="view"><div id="info"></div></main>
+    <div id="bar">
+      <button id="play" type="button">Pause</button>
+      <button id="prev" type="button" title="Frame précédente">◀</button>
+      <button id="next" type="button" title="Frame suivante">▶</button>
+      <input id="scrub" type="range" min="0" max="1" step="0.01" value="0" aria-label="Frame" />
+      <select id="speed" aria-label="Vitesse">
+        <option value="1">×1</option>
+        <option value="0.5">×0,5</option>
+        <option value="0.25">×0,25</option>
+      </select>
+      <label>Angle <input id="orbit" type="range" min="-180" max="180" value="35" /></label>
+    </div>
+    <script type="module" src="/src/anim-viewer.ts"></script>
+  </body>
+</html>

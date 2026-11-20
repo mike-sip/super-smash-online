@@ -397,7 +397,10 @@ interface Body {
  * (`tools/bake-figurine.ts`). Le maillage garde ses attributs de zone (`aZone`, `aZone2`,
  * `aZoneMix`) ; ses unités sont celles du squelette (hauteur `1 / dims.normalize`).
  */
-export function figurineBody(style: FigurineStyle | undefined): {
+export function figurineBody(
+  style: FigurineStyle | undefined,
+  detail = 1,
+): {
   rig: Rig;
   geometry: BufferGeometry;
   dims: Dims;
@@ -405,7 +408,16 @@ export function figurineBody(style: FigurineStyle | undefined): {
   const base = dimsOf(style);
   const dims = figurineDims(base);
   const rig = createRig(dims);
-  return { rig, geometry: geometryOf(meshFor(style, base, rig)), dims };
+  // `detail` divise la taille des cellules : maillage plus fin, pour un modèle exporté.
+  const mesh =
+    detail === 1
+      ? meshFor(style, base, rig)
+      : meshRegions(
+          compileSculpt(figurineSculpt(base, style), rig.bind),
+          REGIONS.map((r) => ({ ...r, cell: r.cell / detail })),
+          CELL / detail,
+        );
+  return { rig, geometry: geometryOf(mesh), dims };
 }
 
 /** Une figurine seule, hors combat : pour les portraits et l'écran de victoire (phase 7). */

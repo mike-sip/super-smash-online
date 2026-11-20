@@ -205,6 +205,9 @@ importers:
       '@game/stages-items':
         specifier: workspace:*
         version: link:../../packages/stages-items
+      three:
+        specifier: 0.187.0
+        version: 0.187.0
     devDependencies:
       '@game/accounts':
         specifier: workspace:*
@@ -212,6 +215,9 @@ importers:
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
+      '@types/three':
+        specifier: 0.187.0
+        version: 0.187.0
       playwright-core:
         specifier: ^1.65.0
         version: 1.65.0
@@ -511,6 +517,9 @@ importers:
         specifier: 0.187.0
         version: 0.187.0
     devDependencies:
+      '@types/node':
+        specifier: 26.6.6
+        version: 26.6.6
       '@types/three':
         specifier: 0.187.0
         version: 0.187.0

@@ -52,7 +52,10 @@ import { OUTLINE, entrance, outlineMaterial } from './figurine.ts';
 import { fighterModel, type FighterModel, type MaterialVariant } from './model.ts';
 import { actionTiming, createPoseInput, displayFrame, type PoseInput } from './poses.ts';
 import { squashOf, type Squash } from './squash.ts';
-import type { FighterVisuals, FighterVisualsFactory } from './visual.ts';
+import { PLAYER_COLORS, type FighterVisuals, type FighterVisualsFactory } from './visual.ts';
+
+/** Nom de la matière teinte à la couleur du joueur. */
+export const PLAYER_MATERIAL = 'player';
 
 /** Frames de la simulation par seconde : un clip non étiré se déroule à cette cadence. */
 const FPS = 60;
@@ -83,11 +86,20 @@ interface Uniforms {
 
 /**
  * Copie d'une matière pour un joueur : éclat blanc d'impact et pâleur d'intangibilité ajoutés au
- * shader, couleur alternative appliquée par nom de matière.
+ * shader, couleur alternative appliquée par nom de matière. La matière nommée `player` prend la
+ * couleur du joueur (bandeau, écharpe…), comme la zone du même nom des figurines.
  */
-function playerMaterial(source: Material, uniforms: Uniforms, variant: MaterialVariant): Material {
+function playerMaterial(
+  source: Material,
+  uniforms: Uniforms,
+  variant: MaterialVariant,
+  player: number,
+): Material {
   const material = source.clone();
-  const tint = variant[material.name];
+  const tint =
+    material.name === PLAYER_MATERIAL
+      ? PLAYER_COLORS[player % PLAYER_COLORS.length]
+      : variant[material.name];
   if (tint !== undefined && 'color' in material && material.color instanceof Color) {
     material.color.set(tint);
   }
@@ -172,7 +184,7 @@ function createInstance(
   const own = (m: Material): Material => {
     let c = copies.get(m);
     if (c === undefined) {
-      c = playerMaterial(m, uniforms, variant);
+      c = playerMaterial(m, uniforms, variant, player);
       copies.set(m, c);
       materials.push(c);
     }

@@ -228,3 +228,33 @@ describe('combattants glTF', () => {
     renderer.dispose();
   });
 });
+
+describe('matières des modèles', () => {
+  it('la matière « player » prend la couleur de chaque joueur', () => {
+    const factory = createGltfFighters(
+      () => 'test/sorel.glb',
+      createFigurines(() => undefined),
+    );
+    const visuals = factory(testConfig(2));
+    const colorOf = (player: number): string => {
+      let hex = '';
+      find(visuals.root, `model-${player}`).traverse((o) => {
+        const m = (o as { material?: unknown }).material;
+        for (const mat of Array.isArray(m) ? m : [m]) {
+          const named = mat as { name?: string; color?: { getHexString(): string } } | undefined;
+          if (named?.name === 'player' && named.color !== undefined)
+            hex = named.color.getHexString();
+        }
+      });
+      return hex;
+    };
+    expect(colorOf(0)).not.toBe('');
+    expect(colorOf(0)).not.toBe(colorOf(1));
+    visuals.dispose();
+  });
+
+  it('les couleurs alternatives du personnage sont dans le modèle', () => {
+    expect(sorel.variants.length).toBeGreaterThan(1);
+    expect(Object.keys(sorel.variants[1]!)).toContain('primary');
+  });
+});

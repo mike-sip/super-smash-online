@@ -14,15 +14,17 @@
     "@game/accounts-client": "workspace:*",
     "@game/fighters": "workspace:*",
     "@game/input": "workspace:*",
+    "@game/match-rules": "workspace:*",
+    "@game/ranking": "workspace:*",
     "@game/render": "workspace:*",
     "@game/sim-core": "workspace:*",
-    "@game/match-rules": "workspace:*",
     "@game/stages-items": "workspace:*",
-    "@game/ranking": "workspace:*"
+    "three": "0.187.0"
   },
   "devDependencies": {
     "@game/accounts": "workspace:*",
     "@types/node": "^26.6.6",
+    "@types/three": "0.187.0",
     "playwright-core": "^1.65.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.7",

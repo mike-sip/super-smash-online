@@ -10,8 +10,8 @@
  * Usage, depuis la racine du dépôt : `node packages/render/tools/bake-figurine.ts <id> [sortie]`
  * (sortie par défaut : `assets/fighters/<id>/model.glb`).
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   A_AIR,
   A_AIRDODGE,
@@ -58,10 +58,7 @@ import {
   BufferAttribute,
   Color,
   Group,
-  InstancedMesh,
-  Material,
   Matrix4,
-  Mesh,
   MeshStandardMaterial,
   Quaternion,
   QuaternionKeyframeTrack,
@@ -71,12 +68,9 @@ import {
   Vector3,
   VectorKeyframeTrack,
 } from 'three';
-import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { character, isFighterId } from '../../fighters/src/index.ts';
 import { paletteOf } from '../src/fighters/body.ts';
 import { MOVE_CLIPS, THROW_CLIPS } from '../src/fighters/clips.ts';
-import { createFaceMeshes, irisColor } from '../src/fighters/face-meshes.ts';
-import { createExpression, createFace, faceLayout } from '../src/fighters/face.ts';
 import { figurineBody, handCurl } from '../src/fighters/figurine.ts';
 import {
   RUN_CYCLE_LENGTH,
@@ -88,6 +82,7 @@ import {
   createPoseInput,
 } from '../src/fighters/poses.ts';
 import { ZONES } from '../src/fighters/sdf.ts';
+import { bakeFace, writeGlb } from './gltf-bake.ts';
 
 const FPS = 60;
 const AERIALS = new Set([M_NAIR, M_FAIR, M_BAIR, M_UAIR, M_DAIR]);
@@ -164,55 +159,19 @@ function specs(def: FighterDef): Spec[] {
   return list;
 }
 
-/** `FileReader` minimal pour `GLTFExporter` hors navigateur. */
-class NodeFileReader {
-  result: ArrayBuffer | string | null = null;
-  onloadend: (() => void) | null = null;
-  readAsArrayBuffer(blob: Blob): void {
-    void blob.arrayBuffer().then((buffer) => {
-      this.result = buffer;
-      this.onloadend?.();
-    });
-  }
-  readAsDataURL(blob: Blob): void {
-    void blob.arrayBuffer().then((buffer) => {
-      const type = blob.type === '' ? 'application/octet-stream' : blob.type;
-      this.result = `data:${type};base64,${Buffer.from(buffer).toString('base64')}`;
-      this.onloadend?.();
-    });
-  }
-}
-
-/** Remplace les pièces du visage (instanciées) par des maillages fixes, enfants de la tête. */
-function bakeFace(head: Bone, headRadius: number, hair: number): void {
-  const face = createFaceMeshes(1, head);
-  face.setColors(0, irisColor(hair), hair);
-  face.place(0, new Matrix4(), headRadius, faceLayout(createExpression(), 0, 0, createFace()));
-  const m = new Matrix4();
-  const c = new Color();
-  for (const im of face.meshes as readonly InstancedMesh[]) {
-    head.remove(im);
-    for (let i = 0; i < im.count; i++) {
-      im.getMatrixAt(i, m);
-      if (Math.abs(m.determinant()) < 1e-12) continue;
-      const material = (im.material as Material).clone() as MeshStandardMaterial;
-      if (im.instanceColor !== null) {
-        im.getColorAt(i, c);
-        material.color.multiply(c);
-      }
-      material.name = `face-${im.name || 'part'}-${i}`;
-      const part = new Mesh(im.geometry, material);
-      m.decompose(part.position, part.quaternion, part.scale);
-      part.name = material.name;
-      head.add(part);
-    }
-  }
-}
-
 async function main(): Promise<void> {
   const id = process.argv[2];
   if (id === undefined || !isFighterId(id)) {
     console.error('Usage : node packages/render/tools/bake-figurine.ts <id> [sortie.glb]');
+    process.exit(1);
+  }
+  // Un personnage animé à la main (tools/characters/<id>.ts) a déjà son modèle à cet endroit :
+  // la figurine ne l'écrase que sur une sortie donnée explicitement.
+  const authored = existsSync(new URL(`./characters/${id}.ts`, import.meta.url));
+  if (authored && process.argv[3] === undefined) {
+    console.error(
+      `${id} a un modèle animé à la main : donnez un fichier de sortie pour ne pas l'écraser.`,
+    );
     process.exit(1);
   }
   const out = resolve(process.argv[3] ?? `assets/fighters/${id}/model.glb`);
@@ -346,17 +305,10 @@ async function main(): Promise<void> {
     runCycle: RUN_CYCLE_LENGTH,
     source: `Figurine procédurale de ${c.name}, exportée par tools/bake-figurine.ts`,
   };
-  (globalThis as { FileReader?: unknown }).FileReader = NodeFileReader;
-  const glb = (await new GLTFExporter().parseAsync(scene, {
-    binary: true,
-    animations: clips,
-    onlyVisible: false,
-  })) as ArrayBuffer;
-  mkdirSync(dirname(out), { recursive: true });
-  writeFileSync(out, Buffer.from(glb));
+  const bytes = await writeGlb(scene, clips, out);
   console.log(
     `${c.name} : ${clips.length} clips, ${geometry.getAttribute('position').count} sommets, ` +
-      `${(glb.byteLength / 1024).toFixed(0)} Ko → ${out}`,
+      `${(bytes / 1024).toFixed(0)} Ko → ${out}`,
   );
 }
 
