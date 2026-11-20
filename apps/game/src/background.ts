@@ -7,10 +7,10 @@
  * choisis, dans leurs couleurs, à la sélection ; le stage survolé, à la sélection du stage. La
  * scène est reconstruite après un court délai, pour ne pas la refaire à chaque appui de touche.
  */
-import { createRenderer, createFigurines, type Renderer } from '@game/render';
+import { createRenderer, type Renderer } from '@game/render';
 import { createSim, fx, step, type Sim } from '@game/sim-core';
 import type { App } from './app.ts';
-import { buildFreeConfig, lookOf } from './content.ts';
+import { buildFreeConfig, fighterVisuals } from './content.ts';
 
 /** Ce que montre la scène de fond. */
 export interface BackgroundScene {
@@ -77,10 +77,7 @@ export function createBackground(app: App, inMatch: () => boolean): Background {
       canvas,
       overlay: app.elements.overlay,
       config: sim.config,
-      fighterVisuals: createFigurines(
-        (p) => lookOf(fighters[p] ?? ''),
-        (p) => palettes[p] ?? 0,
-      ),
+      fighterVisuals: fighterVisuals(fighters, palettes),
       ...app.qualityOptions(),
     });
     // Le HUD du renderer (pourcentages) n'a pas de sens derrière les menus.

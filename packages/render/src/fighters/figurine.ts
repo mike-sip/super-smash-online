@@ -173,7 +173,7 @@ const MAX_SPRING_STEP = 4;
 /** Part du balancement des cheveux reprise par la jupe, plus lourde. */
 const SKIRT_SWAY = 0.6;
 /** Épaisseur du contour, en hauteurs de combattant. */
-const OUTLINE = 0.007;
+export const OUTLINE = 0.007;
 /** Part de blanc mêlée à la couleur d'un combattant intangible. */
 const PALE_MIX = 0.6;
 
@@ -339,16 +339,26 @@ function figurineMaterial(
   return { material, uniforms };
 }
 
-/** Contour : la même peau, gonflée le long des normales, vue de dos, sombre. */
-function outlineMaterial(): MeshBasicMaterial {
+/**
+ * Contour : la même peau, gonflée le long des normales, vue de dos, sombre. `thickness` : épaisseur
+ * dans le repère du maillage, avant sa mise à l'échelle.
+ */
+export function outlineMaterial(thickness = OUTLINE): MeshBasicMaterial {
   const material = new MeshBasicMaterial({ color: 0x12141b, side: BackSide });
   material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
-    shader.uniforms.uOutline = { value: OUTLINE };
+    shader.uniforms.uOutline = { value: thickness };
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nuniform float uOutline;')
       .replace(
         '#include <skinning_vertex>',
-        '#include <skinning_vertex>\ntransformed += normalize( objectNormal ) * uOutline;',
+        [
+          '#include <skinning_vertex>',
+          '#ifdef USE_SKINNING',
+          'transformed += normalize( objectNormal ) * uOutline;',
+          '#else',
+          'transformed += normalize( normal ) * uOutline;',
+          '#endif',
+        ].join('\n'),
       );
   };
   material.customProgramCacheKey = () => 'figurine-outline';
@@ -380,6 +390,22 @@ interface Body {
   pale: boolean;
   /** Fermeture actuelle de la main (lissée d'une frame à l'autre). */
   hand: number;
+}
+
+/**
+ * Maillage et squelette d'une figurine, sans matière : pour l'export en glTF
+ * (`tools/bake-figurine.ts`). Le maillage garde ses attributs de zone (`aZone`, `aZone2`,
+ * `aZoneMix`) ; ses unités sont celles du squelette (hauteur `1 / dims.normalize`).
+ */
+export function figurineBody(style: FigurineStyle | undefined): {
+  rig: Rig;
+  geometry: BufferGeometry;
+  dims: Dims;
+} {
+  const base = dimsOf(style);
+  const dims = figurineDims(base);
+  const rig = createRig(dims);
+  return { rig, geometry: geometryOf(meshFor(style, base, rig)), dims };
 }
 
 /** Une figurine seule, hors combat : pour les portraits et l'écran de victoire (phase 7). */
@@ -597,6 +623,8 @@ export function createFigurines(
           resetChain(body.hair);
           resetChain(body.cloth);
           resetChain(body.skirt);
+          // Les traînées des autres joueurs continuent de s'effacer.
+          if (player === players - 1) trails.update(body.clock + alpha);
           return;
         }
         anchor.position.set(x, y, 0);

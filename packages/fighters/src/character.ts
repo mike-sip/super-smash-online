@@ -71,6 +71,12 @@ export interface FighterLook {
   /** Thème des effets du personnage. */
   readonly vfx?: 'wind' | 'feather' | 'ember' | 'pearl';
   /**
+   * Modèle glTF animé qui remplace la figurine (docs : `assets/fighters/README.md`), chemin relatif
+   * à la racine des assets, par exemple `fighters/sorel/model.glb`. Absent ou introuvable : la
+   * figurine procédurale reste.
+   */
+  readonly model?: string;
+  /**
    * Matière de chaque zone quand elle diffère de celle par défaut (tissu ; peau ; cheveux ; métal
    * pour `accent` ; cuir pour `dark`).
    */

@@ -6,6 +6,12 @@
  */
 import { ROSTER, buildMatchConfig, character, isFighterId, type Character } from '@game/fighters';
 import { createMatchSimConfig, type MatchConfig } from '@game/match-rules';
+import {
+  createFigurines,
+  createGltfFighters,
+  preloadFighterModels,
+  type FighterVisualsFactory,
+} from '@game/render';
 import type { SimConfig } from '@game/sim-core';
 import {
   STAGES,
@@ -86,6 +92,41 @@ export function paletteColor(id: string, variant: number): string | undefined {
 
 export function lookOf(id: string): Character['look'] | undefined {
   return isFighterId(id) ? character(id).look : undefined;
+}
+
+/**
+ * Rendu des combattants d'une partie : le modèle glTF du personnage s'il en a un et qu'il est
+ * chargé, sa figurine sinon. `palettes` : couleur alternative de chaque joueur.
+ */
+export function fighterVisuals(
+  fighters: readonly string[],
+  palettes: readonly number[],
+): FighterVisualsFactory {
+  const variant = (p: number): number => palettes[p] ?? 0;
+  return createGltfFighters(
+    (p) => modelOf(fighters[p] ?? ''),
+    createFigurines((p) => lookOf(fighters[p] ?? ''), variant),
+    variant,
+  );
+}
+
+/** Lance le téléchargement des modèles glTF du roster, pour qu'ils soient prêts au premier match. */
+export function preloadModels(): Promise<void> {
+  return preloadFighterModels(ROSTER.map((c) => modelOf(c.id)));
+}
+
+/**
+ * `?modeles` dans l'adresse du jeu : chaque personnage sans modèle déclaré essaie aussi
+ * `fighters/<id>/model.glb`. Sert à essayer un modèle en jeu avant de le déclarer dans ses données.
+ */
+const TRY_MODELS =
+  typeof location !== 'undefined' && new URLSearchParams(location.search).has('modeles');
+
+/** Modèle glTF du personnage (chemin relatif aux assets), ou `undefined` : figurine. */
+export function modelOf(id: string): string | undefined {
+  const look = lookOf(id);
+  if (look === undefined) return undefined;
+  return look.model ?? (TRY_MODELS ? `fighters/${id}/model.glb` : undefined);
 }
 
 export interface MatchChoice {

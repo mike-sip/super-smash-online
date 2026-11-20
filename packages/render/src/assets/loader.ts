@@ -48,6 +48,11 @@ export function assetsEnabled(): boolean {
   return base !== null;
 }
 
+/** Adresse complète de l'asset `path`, ou `null` si les téléchargements sont coupés. */
+export function assetUrl(path: string): string | null {
+  return base === null ? null : `${base}${path.replace(/^\/+/, '')}`;
+}
+
 function pixel(r: number, g: number, b: number, color: boolean): DataTexture {
   const t = new DataTexture(new Uint8Array([r, g, b, 255]), 1, 1);
   t.colorSpace = color ? SRGBColorSpace : NoColorSpace;

@@ -76,3 +76,15 @@ export {
 } from './fighters/mannequin.ts';
 export { createPortraitStudio, type PortraitKind, type PortraitStudio } from './portraits.ts';
 export { configureAssets } from './assets/loader.ts';
+export { createGltfFighters } from './fighters/gltf-fighters.ts';
+export {
+  createFighterModel,
+  fighterModel,
+  loadFighterModel,
+  parseFighterModel,
+  preloadFighterModels,
+  registerFighterModel,
+  type FighterModel,
+  type MaterialVariant,
+} from './fighters/model.ts';
+export { ALL_CLIPS, MOVE_CLIPS, THROW_CLIPS, clipCandidates } from './fighters/clips.ts';

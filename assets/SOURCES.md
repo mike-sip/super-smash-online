@@ -53,3 +53,11 @@ Textures : résolution 1K ; `color` (couleur, sRGB), `normal` (relief, conventio
 | `hdri/kloofendal_48d_partly_cloudy_puresky.hdr` | test | https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/kloofendal_48d_partly_cloudy_puresky_1k.hdr | 1401 Ko |
 | `fonts/LilitaOne-Regular.ttf` | interface | https://raw.githubusercontent.com/google/fonts/main/ofl/lilitaone/LilitaOne-Regular.ttf | 27 Ko |
 | `fonts/OFL.txt` | interface | https://raw.githubusercontent.com/google/fonts/main/ofl/lilitaone/OFL.txt | 4 Ko |
+
+## Modèles des combattants
+
+Format et conventions : [`fighters/README.md`](fighters/README.md).
+
+| Fichier | Origine | Taille |
+|---|---|---|
+| `fighters/sorel/model.glb` | Généré dans le dépôt : figurine procédurale de Sorel exportée par `packages/render/tools/bake-figurine.ts` (aucune source externe) | 2558 Ko |

@@ -2,6 +2,7 @@
 import './style.css';
 import { App, type AppElements } from './app.ts';
 import { configureAssets } from '@game/render';
+import { preloadModels } from './content.ts';
 import { createBackground } from './background.ts';
 import { GAME_NAME } from './strings.ts';
 import { openLocal, openTraining, perfTraining } from './ui/local.ts';
@@ -67,6 +68,8 @@ const entries: MainMenuEntry[] = [
 
 // Textures, éclairages et polices libres (assets/), servis à la racine du jeu.
 configureAssets('/');
+// Modèles glTF du roster : téléchargés pendant les menus, prêts pour le premier match.
+void preloadModels();
 
 const app = new App(elements, (a) =>
   titleScreen(

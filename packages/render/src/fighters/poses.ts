@@ -397,6 +397,9 @@ const stepLength = (swing: number): number => 2 * HIP_HEIGHT * Math.sin(swing);
 const WALK_STEP = stepLength(0.45);
 const DASH_STEP = stepLength(0.9);
 const RUN_STEP = stepLength(0.85);
+/** Distance d'un cycle complet (deux pas) de marche et de course, en hauteurs de combattant. */
+export const WALK_CYCLE_LENGTH = 2 * WALK_STEP;
+export const RUN_CYCLE_LENGTH = 2 * RUN_STEP;
 /** Part écoulée de l'action, de 0 à 1 ; 1 pour une action sans durée. */
 const progress = (input: PoseInput): number =>
   input.total > 0 ? clamp01(input.frame / input.total) : 1;

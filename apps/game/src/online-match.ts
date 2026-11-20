@@ -18,14 +18,13 @@ import {
   createMatchDomSink,
   createMatchHud,
   createRenderer,
-  createFigurines,
   distinctPalettes,
   type MatchHud,
   type Renderer,
 } from '@game/render';
 import { STICK_MAX, checksum, createSim, encodeInput, type Sim } from '@game/sim-core';
 import type { App, Screen } from './app.ts';
-import { buildSimConfig, lookOf } from './content.ts';
+import { buildSimConfig, fighterVisuals, lookOf } from './content.ts';
 import { portraitUrl } from './portraits.ts';
 import { stageMusic } from './music.ts';
 import { el } from './ui/dom.ts';
@@ -112,9 +111,9 @@ export function onlineMatch(
         canvas,
         overlay,
         config: sim.config,
-        fighterVisuals: createFigurines(
-          (p) => lookOf(info.players[p]?.fighter ?? ''),
-          (p) => distinctPalettes(info.players.map((q) => q.fighter))[p] ?? 0,
+        fighterVisuals: fighterVisuals(
+          info.players.map((q) => q.fighter),
+          distinctPalettes(info.players.map((q) => q.fighter)),
         ),
         ...app.qualityOptions(),
       });

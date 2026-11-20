@@ -9,7 +9,6 @@ import {
   createMatchDomSink,
   createMatchHud,
   createRenderer,
-  createFigurines,
   distinctPalettes,
   SND_FINALE,
   type MatchHud,
@@ -39,7 +38,7 @@ import type { App, Screen } from './app.ts';
 import { portraitUrl } from './portraits.ts';
 import { isFinalKo, musicTension } from './finale.ts';
 import { stageMusic } from './music.ts';
-import { buildFreeConfig, buildSimConfig, fighterName, lookOf } from './content.ts';
+import { buildFreeConfig, buildSimConfig, fighterName, fighterVisuals, lookOf } from './content.ts';
 import { createDummyInputs, type DummyMode } from './dummies.ts';
 import { createBot, type Bot } from '@game/cpu';
 import { createMenuPad, readGamepads } from './menu-pad.ts';
@@ -147,10 +146,7 @@ export function localMatch(app: App, options: LocalMatchOptions): LocalMatch {
       canvas,
       overlay,
       config: sim.config,
-      fighterVisuals: createFigurines(
-        (p) => lookOf(options.fighters[p] ?? ''),
-        (p) => palettes[p] ?? 0,
-      ),
+      fighterVisuals: fighterVisuals(options.fighters, palettes),
       ...app.qualityOptions(),
       // Coup final : gros plan et ralenti d'affichage (match avec règles seulement).
       ...(options.match === null
