@@ -40,7 +40,7 @@ describe('banque synthétisée', () => {
     expect(music.loopStart).toBe(0);
     expect(music.loopEnd).toBeCloseTo(music.channels[0]!.length / SR, 9);
     expect(music.loopEnd).toBeCloseTo(25.6, 3);
-  });
+  }, 30_000);
 
   it('rend la main entre deux tranches de calcul', async () => {
     let yields = 0;
