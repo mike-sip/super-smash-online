@@ -5,12 +5,12 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import {
+  AnimationClip,
   BufferAttribute,
   Color,
   Matrix4,
   Mesh,
   MeshStandardMaterial,
-  type AnimationClip,
   type Bone,
   type BufferGeometry,
   type InstancedMesh,
@@ -42,16 +42,109 @@ class NodeFileReader {
   }
 }
 
-/** Écrit `scene` et ses clips dans un `.glb`. Renvoie la taille en octets. */
+/** Tolérance sous laquelle une piste est considérée immobile (unités du modèle, radians). */
+const STILL = 1e-5;
+
+/**
+ * Retire des clips les pistes qui ne quittent jamais la valeur de repos de leur os, dans aucun
+ * clip : l'os n'est alors jamais animé et garde sa pose du fichier. Sans effet visible, mais
+ * chaque piste coûte une entrée JSON et deux tampons.
+ */
+export function dropStillTracks(scene: Object3D, clips: readonly AnimationClip[]): AnimationClip[] {
+  const rest = new Map<string, ArrayLike<number>>();
+  scene.traverse((o) => {
+    rest.set(`${o.name}.position`, o.position.toArray());
+    rest.set(`${o.name}.quaternion`, o.quaternion.toArray());
+    rest.set(`${o.name}.scale`, o.scale.toArray());
+  });
+  const moving = new Set<string>();
+  for (const clip of clips) {
+    for (const track of clip.tracks) {
+      const base = rest.get(track.name);
+      if (base === undefined) {
+        moving.add(track.name);
+        continue;
+      }
+      const n = base.length;
+      const values = track.values;
+      const quat = track.name.endsWith('.quaternion');
+      for (let i = 0; i < values.length; i += n) {
+        let d = 0;
+        // Un quaternion et son opposé décrivent la même rotation.
+        let dn = 0;
+        for (let c = 0; c < n; c++) {
+          d = Math.max(d, Math.abs(values[i + c]! - base[c]!));
+          dn = Math.max(dn, Math.abs(values[i + c]! + base[c]!));
+        }
+        if ((quat ? Math.min(d, dn) : d) > STILL) {
+          moving.add(track.name);
+          break;
+        }
+      }
+    }
+  }
+  return clips.map(
+    (clip) =>
+      new AnimationClip(
+        clip.name,
+        clip.duration,
+        clip.tracks.filter((t) => moving.has(t.name)),
+      ),
+  );
+}
+
+/**
+ * Attributs compacts, lus tels quels par le chargeur glTF : indices sur 16 bits quand il y a
+ * moins de 65 536 sommets, indices d'os sur 8 bits, poids normalisés sur 8 bits (somme 255).
+ */
+export function compactGeometry(geometry: BufferGeometry): void {
+  const index = geometry.getIndex();
+  const count = geometry.getAttribute('position').count;
+  if (index !== null && count < 65536 && !(index.array instanceof Uint16Array)) {
+    geometry.setIndex(new BufferAttribute(Uint16Array.from(index.array as ArrayLike<number>), 1));
+  }
+  const joints = geometry.getAttribute('skinIndex');
+  if (joints !== undefined) {
+    const src = joints.array as ArrayLike<number>;
+    let max = 0;
+    for (let i = 0; i < src.length; i++) max = Math.max(max, src[i]!);
+    if (max < 256) geometry.setAttribute('skinIndex', new BufferAttribute(Uint8Array.from(src), 4));
+  }
+  const weights = geometry.getAttribute('skinWeight');
+  if (weights !== undefined && !(weights.array instanceof Uint8Array)) {
+    const src = weights.array as ArrayLike<number>;
+    const out = new Uint8Array(src.length);
+    for (let v = 0; v < src.length; v += 4) {
+      const sum = src[v]! + src[v + 1]! + src[v + 2]! + src[v + 3]! || 1;
+      let total = 0;
+      let big = 0;
+      for (let c = 0; c < 4; c++) {
+        out[v + c] = Math.round((src[v + c]! / sum) * 255);
+        total += out[v + c]!;
+        if (out[v + c]! > out[v + big]!) big = c;
+      }
+      // Le reste de l'arrondi va au poids le plus fort : la somme fait toujours 255.
+      out[v + big] = out[v + big]! + 255 - total;
+    }
+    geometry.setAttribute('skinWeight', new BufferAttribute(out, 4, true));
+  }
+}
+
+/** Écrit `scene` et ses clips dans un `.glb` compact. Renvoie la taille en octets. */
 export async function writeGlb(
   scene: Object3D,
   clips: readonly AnimationClip[],
   path: string,
 ): Promise<number> {
   (globalThis as { FileReader?: unknown }).FileReader = NodeFileReader;
+  const geometries = new Set<BufferGeometry>();
+  scene.traverse((o) => {
+    if (o instanceof Mesh) geometries.add(o.geometry as BufferGeometry);
+  });
+  for (const g of geometries) compactGeometry(g);
   const glb = (await new GLTFExporter().parseAsync(scene, {
     binary: true,
-    animations: [...clips],
+    animations: dropStillTracks(scene, clips),
     onlyVisible: false,
   })) as ArrayBuffer;
   mkdirSync(dirname(path), { recursive: true });

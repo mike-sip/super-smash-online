@@ -92,8 +92,12 @@ Trois façons de régler le temps d'un clip :
 | `nspecial`, `sspecial`, `uspecial`, `dspecial`, `ultimate` | Spéciaux, ultime | Étiré |
 | `ledge_attack`, `extra1`, `extra2` | Attaque de rebord, suites | Étiré |
 | `attack` | Repli générique de toutes les attaques | Étiré |
+| `victory1`, `victory2`, `victory3` | Poses de victoire des portraits (écran de sélection, résultats) : la dernière image est photographiée | — |
 
 La liste exacte et l'ordre des replis sont dans `packages/render/src/fighters/clips.ts`.
+
+Les portraits des menus et du HUD photographient le modèle, une fois chargé, à la place de la
+figurine : première image de `idle`, ou dernière image d'un clip de victoire.
 
 ## Ce que le jeu ajoute lui-même
 

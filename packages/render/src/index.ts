@@ -87,4 +87,10 @@ export {
   type FighterModel,
   type MaterialVariant,
 } from './fighters/model.ts';
-export { ALL_CLIPS, MOVE_CLIPS, THROW_CLIPS, clipCandidates } from './fighters/clips.ts';
+export {
+  ALL_CLIPS,
+  MOVE_CLIPS,
+  THROW_CLIPS,
+  VICTORY_CLIPS,
+  clipCandidates,
+} from './fighters/clips.ts';

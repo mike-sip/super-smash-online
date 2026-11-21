@@ -1399,10 +1399,72 @@ function staffed(clip: Clip): Clip {
   return { ...clip, keys, ...(fromOut === undefined ? {} : { from: fromOut }) };
 }
 
+/** Poses de victoire (portraits des résultats : dernière image), comme une vague qui se pose. */
+const victory = (name: string, pose: NPosture): Clip =>
+  timed(name, A_IDLE, [k(0, { ...GUARD }), k(24, pose, 'inOut'), k(48, {}, 'settle')], {
+    frames: 48,
+  });
+
+const VICTORY: Clip[] = [
+  // Le bâton planté droit à côté d'elle, la main arrière sur la hanche.
+  victory('victory1', {
+    torso: 0.0,
+    head: -0.1,
+    tilt: 0.1,
+    turn: 0.45,
+    armF: 0.75,
+    foreF: 0.65,
+    staff: HALF,
+    armB: 0.5,
+    foreB: 2.0,
+    spreadB: 0.65,
+    handB: 0.5,
+    legF: 0.2,
+    shinF: -0.1,
+    legB: -0.05,
+    shinB: -0.3,
+  }),
+  // Le bâton levé à l'horizontale au-dessus de la tête, la main arrière ouverte au ciel.
+  victory('victory2', {
+    torso: -0.1,
+    head: -0.3,
+    turn: 0.4,
+    armF: 2.95,
+    foreF: 0.2,
+    staff: 0.0,
+    armB: 2.6,
+    foreB: 0.3,
+    spreadB: 0.4,
+    handB: 0,
+    wristB: 0.3,
+    legF: 0.15,
+    shinF: -0.1,
+    legB: -0.12,
+    shinB: -0.12,
+  }),
+  // Révérence : le bâton tendu de côté, la main arrière sur le cœur.
+  victory('victory3', {
+    torso: 0.5,
+    head: 0.3,
+    turn: 0.35,
+    armF: 0.9,
+    foreF: 0.2,
+    staff: -0.6,
+    armB: 1.0,
+    foreB: 2.2,
+    spreadB: -0.15,
+    handB: 0.2,
+    legF: 0.2,
+    shinF: -0.25,
+    legB: -0.3,
+    shinB: -0.65,
+  }),
+];
+
 const STAFFED_ATTACKS = ATTACKS.map(staffed);
 
 const CLIPS: Clip[] = [
-  ...[...LOCOMOTION, ...DEFENSE, ...GRABS].map(staffed),
+  ...[...LOCOMOTION, ...DEFENSE, ...GRABS, ...VICTORY].map(staffed),
   ...STAFFED_ATTACKS,
   // Charges : la vague retenue ondule lentement.
   charge('fsmash', M_FSMASH, windOf(STAFFED_ATTACKS, 'fsmash', GUARD_OUT), 1, 20),

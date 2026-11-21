@@ -7,7 +7,7 @@ import type { Browser, Page } from 'playwright-core';
 import type { ViteDevServer } from 'vite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { focused, hook, openTab, startGame, waitScreen } from '../helpers.ts';
-import { focusOn, goOnline, playToEnd } from './online-helpers.ts';
+import { focusOn, goOnline, playToEnd, focusConvert } from './online-helpers.ts';
 
 let server: ViteDevServer;
 let browser: Browser;
@@ -26,8 +26,7 @@ const PASSWORD = 'Un-Mot-De-Passe-Solide-2026';
 
 /** Depuis l'accueil en ligne : invité converti en compte. */
 async function convert(page: Page, pseudo: string): Promise<void> {
-  await focusOn(page, 'online-login', 'ArrowUp');
-  await focusOn(page, 'online-convert', 'ArrowLeft');
+  await focusConvert(page);
   await page.keyboard.press('Enter');
   await waitScreen(page, 'online-auth');
   expect(await focused(page)).toBe('auth-pseudo');

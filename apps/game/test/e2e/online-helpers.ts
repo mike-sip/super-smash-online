@@ -10,6 +10,19 @@ export async function focusOn(page: Page, id: string, key = 'ArrowDown'): Promis
   throw new Error(`focus jamais posé sur ${id} (sur ${await focused(page)})`);
 }
 
+/**
+ * Pose le focus sur « Créer un compte » du bandeau invité, depuis le menu en ligne : ↑ jusqu'au
+ * bandeau (on y arrive sur l'un ou l'autre bouton selon la mise en page), puis ←.
+ */
+export async function focusConvert(page: Page): Promise<void> {
+  for (let i = 0; i < 30; i++) {
+    const id = await focused(page);
+    if (id === 'online-convert') return;
+    await page.keyboard.press(id === 'online-login' ? 'ArrowLeft' : 'ArrowUp');
+  }
+  throw new Error(`focus jamais posé sur online-convert (sur ${await focused(page)})`);
+}
+
 export interface LobbySnapshot {
   status: string;
   room: {

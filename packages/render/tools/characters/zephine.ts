@@ -1599,11 +1599,76 @@ const ATTACKS: Clip[] = [
   },
 ];
 
+/** Poses de victoire (portraits des résultats : dernière image), arrivée sèche et rebond. */
+const victory = (name: string, pose: Posture): Clip =>
+  timed(name, A_IDLE, [key(0, { ...GUARD }), key(10, pose, 'snap'), key(30, {}, 'back')], {
+    frames: 30,
+  });
+
+const VICTORY: Clip[] = [
+  // Le poing levé, sur un pied, genou remonté.
+  victory('victory1', {
+    torso: -0.05,
+    head: -0.25,
+    turn: 0.45,
+    armF: 3.0,
+    foreF: 0.3,
+    handF: 1,
+    spreadF: 0.15,
+    armB: 0.6,
+    foreB: 2.0,
+    spreadB: 0.65,
+    handB: 0.4,
+    legF: 1.25,
+    shinF: -1.9,
+    legB: 0.0,
+    shinB: -0.03,
+  }),
+  // Poings sur les hanches, penchée vers l'avant, moqueuse.
+  victory('victory2', {
+    torso: 0.28,
+    head: -0.35,
+    tilt: 0.22,
+    turn: 0.5,
+    armF: 0.5,
+    foreF: 2.0,
+    spreadF: 0.75,
+    handF: 0.8,
+    armB: 0.5,
+    foreB: 2.0,
+    spreadB: 0.75,
+    handB: 0.8,
+    legF: 0.25,
+    shinF: -0.1,
+    legB: -0.18,
+    shinB: -0.2,
+  }),
+  // Salut de deux doigts depuis les lunettes.
+  victory('victory3', {
+    torso: 0.0,
+    head: -0.12,
+    tilt: 0.15,
+    turn: 0.45,
+    armF: 2.3,
+    foreF: 2.35,
+    wristF: 0.4,
+    handF: 0.35,
+    armB: 0.0,
+    foreB: 0.6,
+    handB: 0.4,
+    legF: 0.28,
+    shinF: -0.15,
+    legB: -0.2,
+    shinB: -0.15,
+  }),
+];
+
 const CLIPS: Clip[] = [
   ...LOCOMOTION,
   ...DEFENSE,
   ...GRABS,
   ...ATTACKS,
+  ...VICTORY,
   charge('fsmash', M_FSMASH, windOf(ATTACKS, 'fsmash', GUARD), 1, 8),
   charge('usmash', M_USMASH, windOf(ATTACKS, 'usmash', GUARD), 1, 8),
   charge('dsmash', M_DSMASH, windOf(ATTACKS, 'dsmash', GUARD), 1, 8),

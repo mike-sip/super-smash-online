@@ -15,7 +15,7 @@ import { chromium, type Browser, type Page } from 'playwright-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startProduction, type Production } from '../../scripts/serve-prod.ts';
 import { PAD, focused, hook, openTab, setPad, tapPad, waitScreen } from '../helpers.ts';
-import { focusOn, goOnline, playToEnd } from './online-helpers.ts';
+import { focusOn, goOnline, playToEnd, focusConvert } from './online-helpers.ts';
 
 let prod: Production;
 let browser: Browser;
@@ -47,8 +47,7 @@ afterAll(async () => {
 });
 
 async function register(page: Page, pseudo: string): Promise<void> {
-  await focusOn(page, 'online-login', 'ArrowUp');
-  await focusOn(page, 'online-convert', 'ArrowLeft');
+  await focusConvert(page);
   await page.keyboard.press('Enter');
   await waitScreen(page, 'online-auth');
   await page.keyboard.press('Control+A');

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium, type Browser, type Page } from 'playwright-core';
 import { createServer, type ViteDevServer } from 'vite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { SOUND_NAMES } from '../../../packages/render/src/audio/cues.ts';
 import type { DemoTestHook } from '../src/main.ts';
 
 declare global {
@@ -430,7 +431,8 @@ describe('démo', () => {
     await page.keyboard.press('KeyS');
     expect(await panel.isVisible()).toBe(true);
     expect(await page.locator('[data-sound="status"]').textContent()).toBe('Son actif.');
-    expect(await page.locator('[data-sound-play]').count()).toBe(14);
+    // Un bouton par son du jeu (`SOUND_NAMES`).
+    expect(await page.locator('[data-sound-play]').count()).toBe(SOUND_NAMES.length);
     const heard = await page.evaluate(() => __demo.audio().played);
     await page.locator('[data-sound-play="6"]').click();
     expect(await page.evaluate(() => __demo.audio().played)).toBe(heard + 1);

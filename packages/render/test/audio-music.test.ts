@@ -102,11 +102,14 @@ describe('rendu de la boucle', () => {
 
   it('est fini, sans saturation, et pas silencieux', () => {
     for (const channel of [left, right]) {
+      // Un seul `expect` par mesure : un par échantillon prenait plusieurs secondes.
       let max = 0;
+      let finite = true;
       for (const v of channel) {
-        expect(Number.isFinite(v)).toBe(true);
+        if (!Number.isFinite(v)) finite = false;
         max = Math.max(max, Math.abs(v));
       }
+      expect(finite).toBe(true);
       expect(max).toBeLessThan(1);
       expect(max).toBeGreaterThan(0.5);
     }

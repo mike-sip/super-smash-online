@@ -24,6 +24,9 @@ RUN pnpm --filter @game/lobby build \
   && pnpm --filter @game/ranking build \
   && pnpm --filter @game/app build \
   && rm -rf apps/game/dist-e2e apps/game/.env.e2e
+# Modèles des combattants et HDRI : binaires que Caddy ne compresse pas à la volée ; servis
+# précompressés (`file_server { precompressed gzip }`), environ deux fois plus légers.
+RUN find apps/game/dist \( -name '*.glb' -o -name '*.hdr' \) -exec gzip -9 -k {} +
 
 FROM node:24-bookworm-slim AS server
 ENV NODE_ENV=production

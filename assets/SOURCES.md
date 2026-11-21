@@ -56,11 +56,11 @@ Textures : résolution 1K ; `color` (couleur, sRGB), `normal` (relief, conventio
 
 ## Modèles des combattants
 
-Format et conventions : [`fighters/README.md`](fighters/README.md).
+Format et conventions : [`fighters/README.md`](fighters/README.md). Export compact (pistes immobiles retirées, indices sur 16 bits, poids sur 8 bits) ; en production, servis précompressés en gzip (environ 1 à 1,4 Mo chacun).
 
 | Fichier | Origine | Taille |
 |---|---|---|
-| `fighters/sorel/model.glb` | Créé dans le dépôt : sculpt et animations écrits à la main (`packages/render/tools/characters/sorel.ts`), exportés par `packages/render/tools/bake-character.ts` (aucune source externe) | 3876 Ko |
-| `fighters/zephine/model.glb` | Créé dans le dépôt, de la même façon (`packages/render/tools/characters/zephine.ts`) | 3454 Ko |
-| `fighters/ferroc/model.glb` | Créé dans le dépôt, de la même façon (`packages/render/tools/characters/ferroc.ts`) | 4641 Ko |
-| `fighters/nacre/model.glb` | Créé dans le dépôt, de la même façon (`packages/render/tools/characters/nacre.ts`) | 4545 Ko |
+| `fighters/sorel/model.glb` | Créé dans le dépôt : sculpt et animations écrits à la main (`packages/render/tools/characters/sorel.ts`), exportés par `packages/render/tools/bake-character.ts` (aucune source externe) | 2563 Ko |
+| `fighters/zephine/model.glb` | Créé dans le dépôt, de la même façon (`packages/render/tools/characters/zephine.ts`) | 2250 Ko |
+| `fighters/ferroc/model.glb` | Créé dans le dépôt, de la même façon (`packages/render/tools/characters/ferroc.ts`) | 3056 Ko |
+| `fighters/nacre/model.glb` | Créé dans le dépôt, de la même façon (`packages/render/tools/characters/nacre.ts`) | 2966 Ko |

@@ -30,6 +30,11 @@ describe('déploiement', () => {
     expect(caddy).toContain(`Cache-Control "${CACHE_ASSETS}"`);
   });
 
+  it('les modèles et HDRI sont précompressés au build et servis tels quels', () => {
+    expect(read('Dockerfile')).toMatch(/-name '\*\.glb'.*gzip -9 -k/s);
+    expect(caddy).toMatch(/file_server \{\s*precompressed gzip\s*\}/);
+  });
+
   it('le Caddyfile suit les routes : bloquées, comptes, jeu', () => {
     const blocked = /@blocked \{\s*path ([^\n]+)\n/.exec(caddy)![1]!.split(/\s+/);
     for (const r of ROUTES) {

@@ -1713,11 +1713,89 @@ const fsmash = ATTACKS.find((c) => c.name === 'fsmash')!;
 const usmash = ATTACKS.find((c) => c.name === 'usmash')!;
 const dsmash = ATTACKS.find((c) => c.name === 'dsmash')!;
 
+/** Poses de victoire (portraits des résultats : dernière image) ; même ses victoires bougent. */
+const victory = (name: string, pose: Posture, settle: Posture): Clip =>
+  timed(name, A_IDLE, [key(0, { ...GUARD }), key(18, pose, 'snap'), key(40, settle, 'settle')], {
+    frames: 40,
+  });
+
+const VICTORY: Clip[] = [
+  // Salut au vent : une paume tendue vers le ciel, l'autre main à la ceinture.
+  victory(
+    'victory1',
+    {
+      torso: -0.08,
+      head: -0.3,
+      turn: 0.4,
+      twist: 0.1,
+      armF: 2.95,
+      foreF: 0.25,
+      wristF: 0.7,
+      handF: 0,
+      spreadF: 0.2,
+      armB: 0.3,
+      foreB: 1.7,
+      spreadB: 0.45,
+      legF: 0.15,
+      shinF: -0.1,
+      legB: -0.12,
+      shinB: -0.15,
+    },
+    { armF: 2.9, head: -0.26 },
+  ),
+  // Serein : bras croisés, le poids sur une hanche.
+  victory(
+    'victory2',
+    {
+      torso: 0.0,
+      head: -0.05,
+      turn: 0.5,
+      tilt: 0.1,
+      armF: 1.25,
+      foreF: 2.2,
+      spreadF: -0.25,
+      handF: 0.6,
+      armB: 1.2,
+      foreB: 2.25,
+      spreadB: -0.2,
+      handB: 0.6,
+      legF: 0.18,
+      shinF: -0.1,
+      legB: -0.1,
+      shinB: -0.25,
+      hipTwist: 0.15,
+    },
+    { tilt: 0.14 },
+  ),
+  // Équilibre : en appui sur une jambe, l'autre tendue haut, bras en ailes.
+  victory(
+    'victory3',
+    {
+      torso: -0.35,
+      head: 0.05,
+      legF: 1.9,
+      shinF: -0.05,
+      legB: 0.0,
+      shinB: -0.05,
+      armF: 1.6,
+      foreF: 0.1,
+      spreadF: 1.0,
+      handF: 0,
+      armB: 1.7,
+      foreB: 0.1,
+      spreadB: 1.0,
+      handB: 0,
+    },
+    { legF: 1.85, torso: -0.32 },
+  ),
+];
+
 const CLIPS: Clip[] = [
   ...LOCOMOTION,
   ...DEFENSE,
   ...GRABS,
   ...ATTACKS,
+  ...VICTORY,
   charge('fsmash', M_FSMASH, SMASH_WIND(fsmash)),
   charge('usmash', M_USMASH, SMASH_WIND(usmash)),
   charge('dsmash', M_DSMASH, SMASH_WIND(dsmash)),

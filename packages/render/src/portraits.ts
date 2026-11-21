@@ -3,20 +3,35 @@
  * menus, sans aucune image stockée. Trois cadrages : buste (sélection), tête (icône de vies dans
  * le HUD), corps entier dans une pose de victoire (écran de résultats).
  *
+ * Un personnage dont le modèle glTF animé est chargé (`fighters/model.ts`) est photographié dans
+ * son modèle, comme en combat : première image de `idle`, ou dernière image d'un clip de victoire.
+ * Sinon, sa figurine.
+ *
  * Un seul contexte WebGL, créé à la première demande ; chaque image est gardée en mémoire.
  */
 import {
+  AnimationMixer,
+  Color,
+  Group,
   Mesh,
   MeshStandardMaterial,
   NeutralToneMapping,
   PerspectiveCamera,
+  Quaternion,
   Scene,
+  Vector3,
   WebGLRenderer,
+  type Material,
+  type Object3D,
   type WebGLRenderTarget,
 } from 'three';
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import type { FigurineStyle } from './fighters/body.ts';
+import { VICTORY_CLIPS } from './fighters/clips.ts';
 import { createFigurineModel } from './fighters/figurine.ts';
+import { fighterModel, type FighterModel } from './fighters/model.ts';
 import { createPose, victoryPose, computePose, createPoseInput } from './fighters/poses.ts';
+import { PLAYER_COLORS } from './fighters/visual.ts';
 import { createLighting } from './lighting.ts';
 import { skyEnvironment } from './post/pipeline.ts';
 
@@ -26,7 +41,8 @@ export interface PortraitStudio {
   /**
    * Image (URL de données PNG, fond transparent) de la figurine `style` dans sa couleur
    * `variant`. `size` : côté en pixels (hauteur pour `victory`, largeur aux 3/4). `pose` : pose de
-   * victoire (0 à 2), pour `victory`.
+   * victoire (0 à 2), pour `victory`. `model` : chemin du modèle glTF du personnage, photographié
+   * à la place de la figurine s'il est déjà chargé.
    */
   render(
     style: FigurineStyle | undefined,
@@ -34,6 +50,7 @@ export interface PortraitStudio {
     kind: PortraitKind,
     size: number,
     pose?: number,
+    model?: string,
   ): string;
   dispose(): void;
 }
@@ -49,6 +66,62 @@ const FRAMES: Readonly<
   stock: { y: 0.97, distance: 0.85, yaw: -0.9, head: -0.5 },
   victory: { y: 0.6, distance: 2.9, yaw: -0.6, head: -0.4 },
 };
+
+const UP = new Vector3(0, 1, 0);
+
+/** Clip photographié : la pose de victoire `pose` si le modèle l'a, sinon le repos. */
+export function portraitClip(model: FighterModel, kind: PortraitKind, pose: number): string {
+  const victory = VICTORY_CLIPS[pose % VICTORY_CLIPS.length]!;
+  return kind === 'victory' && model.clips.has(victory) ? victory : 'idle';
+}
+
+/**
+ * Copie posée du modèle glTF : couleur alternative `variant` (la matière `player` prend la
+ * couleur du joueur 1), figée sur la première image de `idle` ou la dernière d'un clip de
+ * victoire, tête tournée de `headTurn`, à la hauteur 1. Le modèle regarde vers +z.
+ */
+function posedModel(
+  model: FighterModel,
+  variant: number,
+  clipName: string,
+  headTurn: number,
+): { root: Group; materials: Material[] } {
+  const copy = cloneSkinned(model.scene);
+  const tints = model.variants[variant % Math.max(1, model.variants.length)] ?? {};
+  const materials: Material[] = [];
+  const copies = new Map<Material, Material>();
+  const own = (m: Material): Material => {
+    let c = copies.get(m);
+    if (c === undefined) {
+      c = m.clone();
+      const tint = c.name === 'player' ? PLAYER_COLORS[0] : tints[c.name];
+      if (tint !== undefined && 'color' in c && c.color instanceof Color) c.color.set(tint);
+      copies.set(m, c);
+      materials.push(c);
+    }
+    return c;
+  };
+  copy.traverse((o: Object3D) => {
+    if (o instanceof Mesh) {
+      o.material = Array.isArray(o.material) ? o.material.map(own) : own(o.material);
+      o.frustumCulled = false;
+    }
+  });
+  const clip = model.clips.get(clipName)?.[0];
+  if (clip !== undefined) {
+    const mixer = new AnimationMixer(copy);
+    const action = mixer.clipAction(clip);
+    action.play();
+    action.time = clipName === 'idle' ? 0 : clip.duration;
+    mixer.update(0);
+  }
+  const head = copy.getObjectByName('head');
+  if (head !== undefined) head.quaternion.multiply(new Quaternion().setFromAxisAngle(UP, headTurn));
+  const root = new Group();
+  root.add(copy);
+  root.scale.setScalar(1 / model.height);
+  return { root, materials };
+}
 
 export function createPortraitStudio(): PortraitStudio {
   let gl: WebGLRenderer | null = null;
@@ -91,9 +164,18 @@ export function createPortraitStudio(): PortraitStudio {
     return gl;
   }
 
+  /** Dessine la scène et la rend en image. */
+  function shoot(renderer: WebGLRenderer): string {
+    renderer.render(scene, camera);
+    return renderer.domElement.toDataURL('image/png');
+  }
+
   return {
-    render(style, variant, kind, size, pose = 0) {
-      const key = `${keyOf(style)}|${variant}|${kind}|${size}|${pose}`;
+    render(style, variant, kind, size, pose = 0, modelPath) {
+      const gltf = modelPath === undefined ? undefined : fighterModel(modelPath);
+      const useModel = gltf !== undefined && gltf.clips.has('idle');
+      // Le modèle, une fois chargé, remplace la figurine : il a sa propre entrée dans le cache.
+      const key = `${keyOf(style)}|${variant}|${kind}|${size}|${pose}|${useModel ? modelPath : ''}`;
       const cached = cache.get(key);
       if (cached !== undefined) return cached;
       const renderer = context();
@@ -102,32 +184,55 @@ export function createPortraitStudio(): PortraitStudio {
       renderer.setSize(width, size, false);
       camera.aspect = width / size;
       camera.updateProjectionMatrix();
-
-      const model = createFigurineModel(style, variant);
-      model.setQuality(true);
-      // Lumière de contour sur les matières du corps, comme en combat.
-      model.root.traverse((o) => {
-        if (o instanceof Mesh && o.material instanceof MeshStandardMaterial) {
-          lighting.addRim(o.material);
-        }
-      });
-      const p = createPose();
-      if (kind === 'victory') victoryPose(pose, 0, p);
-      else {
-        const input = createPoseInput();
-        computePose(input, p);
-      }
       const frame = FRAMES[kind];
-      model.root.rotation.y = frame.yaw;
-      // Victoire : bouche ouverte, poings serrés ; ailleurs, visage au repos.
-      model.apply(p, frame.head, 1, kind === 'victory' ? 0.5 : 0, 0, kind === 'victory' ? 1 : 0.45);
-      scene.add(model.root);
       camera.position.set(0, frame.y + frame.distance * 0.08, frame.distance);
       camera.lookAt(0, frame.y, 0);
-      renderer.render(scene, camera);
-      const url = renderer.domElement.toDataURL('image/png');
-      scene.remove(model.root);
-      model.dispose();
+
+      let url: string;
+      if (useModel) {
+        const { root, materials } = posedModel(
+          gltf,
+          variant,
+          portraitClip(gltf, kind, pose),
+          frame.head,
+        );
+        // Un quart de tour en plus : la figurine regarde vers +x, le modèle vers +z.
+        root.rotation.y = frame.yaw + Math.PI / 2;
+        for (const m of materials) if (m instanceof MeshStandardMaterial) lighting.addRim(m);
+        scene.add(root);
+        url = shoot(renderer);
+        scene.remove(root);
+        for (const m of materials) m.dispose();
+      } else {
+        const model = createFigurineModel(style, variant);
+        model.setQuality(true);
+        // Lumière de contour sur les matières du corps, comme en combat.
+        model.root.traverse((o) => {
+          if (o instanceof Mesh && o.material instanceof MeshStandardMaterial) {
+            lighting.addRim(o.material);
+          }
+        });
+        const p = createPose();
+        if (kind === 'victory') victoryPose(pose, 0, p);
+        else {
+          const input = createPoseInput();
+          computePose(input, p);
+        }
+        model.root.rotation.y = frame.yaw;
+        // Victoire : bouche ouverte, poings serrés ; ailleurs, visage au repos.
+        model.apply(
+          p,
+          frame.head,
+          1,
+          kind === 'victory' ? 0.5 : 0,
+          0,
+          kind === 'victory' ? 1 : 0.45,
+        );
+        scene.add(model.root);
+        url = shoot(renderer);
+        scene.remove(model.root);
+        model.dispose();
+      }
       cache.set(key, url);
       return url;
     },

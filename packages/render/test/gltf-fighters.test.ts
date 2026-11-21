@@ -38,6 +38,7 @@ import {
   type FighterModel,
 } from '../src/fighters/model.ts';
 import type { FighterVisuals } from '../src/fighters/visual.ts';
+import { portraitClip } from '../src/portraits.ts';
 import { createRendererWith } from '../src/renderer.ts';
 import { fakeBackend } from './helpers.ts';
 
@@ -322,6 +323,9 @@ describe('modèles du roster', () => {
     'dspecial',
     'ultimate',
     'ledge_attack',
+    'victory1',
+    'victory2',
+    'victory3',
   ];
 
   for (const id of ['sorel', 'zephine', 'ferroc', 'nacre']) {
@@ -350,4 +354,14 @@ describe('modèles du roster', () => {
       expect(materials).toContain('primary');
     });
   }
+});
+
+describe('portraits', () => {
+  it('photographie la pose de victoire demandée, sinon le repos', () => {
+    expect(portraitClip(sorel, 'victory', 1)).toBe('victory2');
+    expect(portraitClip(sorel, 'victory', 5)).toBe('victory3');
+    expect(portraitClip(sorel, 'portrait', 1)).toBe('idle');
+    const bare = createFighterModel(new Object3D(), [new AnimationClip('idle', 1, [])]);
+    expect(portraitClip(bare, 'victory', 0)).toBe('idle');
+  });
 });

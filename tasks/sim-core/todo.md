@@ -102,7 +102,7 @@
 
 ## Phase E — Durcissement
 
-- [ ] **T17 : Déterminisme inter-navigateurs** — fait pour Node, Chromium (Edge) et WebKit ; **Firefox reste à vérifier** (il ne démarre pas sur la machine de développement)
+- [x] **T17 : Déterminisme inter-navigateurs** — Node, Chromium (Edge), WebKit ; Firefox 160 vérifié le 2026-11-21 dans le Firefox installé (`pnpm --filter @game/sim-core test:firefox`), celui de Playwright ne démarrant pas sur la machine de développement
   - Acceptation : 5 séquences de référence de 36 000 frames à 8 joueurs, checksums versionnés ; identiques dans Node, Chromium, Firefox et WebKit.
   - Vérification : `pnpm --filter @game/sim-core test:determinism` passe sur les 4 environnements.
   - Fichiers : `test/determinism/golden.json`, `test/determinism/browser.spec.ts`, `test/determinism/replay.test.ts`

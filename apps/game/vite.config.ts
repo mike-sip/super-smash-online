@@ -13,5 +13,13 @@ export default defineConfig({
     sourcemap: false,
     target: 'es2022',
     assetsInlineLimit: 0,
+    // three.js à part (environ les deux tiers du client) : il change rarement, le navigateur le
+    // garde en cache d'une version du jeu à l'autre.
+    chunkSizeWarningLimit: 800,
+    rolldownOptions: {
+      output: {
+        codeSplitting: { groups: [{ name: 'three', test: /node_modules[\\/].*three[\\/]/ }] },
+      },
+    },
   },
 });

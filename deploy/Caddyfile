@@ -47,7 +47,10 @@
 		@pages not path /assets/*
 		header @pages Cache-Control "no-cache"
 		try_files {path} /index.html
-		file_server
+		# Modèles et HDRI : leur version .gz faite au build (Dockerfile), si le navigateur l'accepte.
+		file_server {
+			precompressed gzip
+		}
 	}
 
 	# Journal réduit : adresses IP tronquées, ni cookie ni en-tête d'autorisation.

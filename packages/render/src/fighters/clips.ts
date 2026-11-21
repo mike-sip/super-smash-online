@@ -227,6 +227,12 @@ export function clipCandidates(
   return ACTION_CLIPS.get(action) ?? IDLE_ONLY;
 }
 
+/**
+ * Poses de victoire des portraits de l'écran de résultats (`portraits.ts`) : la dernière image du
+ * clip est photographiée. Absentes, le portrait prend `idle`.
+ */
+export const VICTORY_CLIPS: readonly string[] = ['victory1', 'victory2', 'victory3'];
+
 /** Tous les noms de clips que le jeu sait jouer : la liste de travail des animateurs. */
 export const ALL_CLIPS: readonly string[] = (() => {
   const all = new Set<string>();
@@ -237,5 +243,6 @@ export const ALL_CLIPS: readonly string[] = (() => {
   for (const name of [M_FSMASH, M_USMASH, M_DSMASH].map((m) => MOVE_CLIPS[m]!)) {
     all.add(name + CHARGE_SUFFIX);
   }
+  for (const name of VICTORY_CLIPS) all.add(name);
   return [...all];
 })();

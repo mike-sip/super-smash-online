@@ -4,7 +4,7 @@
  * graphique), aucun portrait : les écrans restent lisibles sans.
  */
 import { createPortraitStudio, type PortraitKind, type PortraitStudio } from '@game/render';
-import { lookOf } from './content.ts';
+import { lookOf, modelOf } from './content.ts';
 
 let studio: PortraitStudio | null = null;
 let unavailable = false;
@@ -21,7 +21,7 @@ export function portraitUrl(
   if (look === undefined || unavailable) return undefined;
   try {
     studio ??= createPortraitStudio();
-    return studio.render(look, variant, kind, size, pose);
+    return studio.render(look, variant, kind, size, pose, modelOf(id));
   } catch {
     unavailable = true;
     return undefined;

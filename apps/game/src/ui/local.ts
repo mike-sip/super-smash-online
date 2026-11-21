@@ -305,9 +305,13 @@ function localSetupScreen(app: App, plan: LocalPlan): Screen {
     onKey(event) {
       const kb = slotOf(setup, KEYBOARD_ID);
       const target = event.target;
+      // Entrée sur un bouton d'action l'active ; sur un choix (ordinateurs, niveau), elle garde son
+      // sens pour le joueur au clavier (« prêt ») : le choix se règle à la souris ou à la manette,
+      // sinon Entrée ajouterait un ordinateur au lieu de déclarer le joueur prêt.
       if (
         (event.key === 'Enter' || event.key === ' ') &&
         target instanceof HTMLButtonElement &&
+        !target.classList.contains('choice') &&
         root.contains(target)
       ) {
         return false;

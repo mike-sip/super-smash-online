@@ -17,6 +17,7 @@
   "scripts": {
     "test": "vitest run",
     "test:determinism": "vitest run test/determinism test/rollback.test.ts",
+    "test:firefox": "node test/determinism/system-firefox.ts",
     "bench": "node --expose-gc bench/step.bench.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json",

@@ -1587,11 +1587,76 @@ const ATTACKS: Clip[] = [
   },
 ];
 
+/** Poses de victoire (portraits des résultats : dernière image), installées lentement. */
+const victory = (name: string, pose: Posture): Clip =>
+  timed(name, A_IDLE, [key(0, { ...GUARD }), key(28, pose, 'out'), key(50, {}, 'settle')], {
+    frames: 50,
+  });
+
+const VICTORY: Clip[] = [
+  // Les deux bras fléchis, il montre ses gantelets.
+  victory('victory1', {
+    torso: 0.0,
+    head: -0.25,
+    turn: 0.4,
+    armF: 1.57,
+    foreF: 2.3,
+    spreadF: 1.25,
+    handF: 1,
+    armB: 1.57,
+    foreB: 2.3,
+    spreadB: 1.25,
+    handB: 1,
+    legF: 0.35,
+    shinF: -0.4,
+    legB: -0.35,
+    shinB: -0.4,
+  }),
+  // Bras croisés, campé, sourire en coin.
+  victory('victory2', {
+    torso: -0.05,
+    head: -0.12,
+    turn: 0.45,
+    tilt: 0.06,
+    armF: 1.2,
+    foreF: 2.3,
+    spreadF: -0.1,
+    armB: 1.15,
+    foreB: 2.3,
+    spreadB: -0.1,
+    legF: 0.3,
+    shinF: -0.3,
+    legB: -0.3,
+    shinB: -0.3,
+  }),
+  // Le poing frappe la paume ouverte.
+  victory('victory3', {
+    torso: 0.22,
+    head: -0.3,
+    turn: 0.35,
+    twist: 0.1,
+    armF: 1.35,
+    foreF: 1.75,
+    handF: 1,
+    spreadF: 0.1,
+    armB: 1.3,
+    foreB: 1.9,
+    wristB: 0.8,
+    handB: 0,
+    spreadB: 0.1,
+    legF: 0.4,
+    shinF: -0.55,
+    legB: -0.38,
+    shinB: -0.45,
+  }),
+];
+
 const CLIPS: Clip[] = [
   ...LOCOMOTION,
   ...DEFENSE,
   ...GRABS,
   ...ATTACKS,
+  ...VICTORY,
   // Les charges de Ferroc tremblent plus fort et plus lentement : la masse qui retient son élan.
   charge('fsmash', M_FSMASH, windOf(ATTACKS, 'fsmash', GUARD), 1.5, 16),
   charge('usmash', M_USMASH, windOf(ATTACKS, 'usmash', GUARD), 1.5, 16),
