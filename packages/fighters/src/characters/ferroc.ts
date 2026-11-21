@@ -489,6 +489,8 @@ export const FERROC: Character = defineCharacter({
     vfx: 'ember',
     // Épaulières et bracelets de fer.
     materials: { player: 'metal', light: 'metal' },
+    // Modèle animé à la main (packages/render/tools/characters/ferroc.ts, bible : assets/fighters/ferroc/DESIGN.md).
+    model: 'fighters/ferroc/model.glb',
     palettes: [
       {},
       { primary: 0x3d4a5c, secondary: 0x8aa4c2, accent: 0x4ac7ff, hair: 0x14161a },

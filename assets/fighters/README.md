@@ -115,14 +115,27 @@ Le jeu reconnaît deux conventions de nom de matière :
 ## Animer à la main sans logiciel 3D
 
 Les modèles des personnages du roster peuvent aussi s'écrire en code : sculpt par volumes, une
-matière par zone, clés d'animation posées à la main. C'est ainsi qu'est fait Sorel.
+matière par zone, clés d'animation posées à la main. C'est ainsi que sont faits les quatre
+personnages du roster, chacun avec son style d'animation (voir sa bible) :
+
+| Personnage | Style | Bible |
+|---|---|---|
+| Sorel | « En fluide » : courbes, rotations autour de la verticale | [`sorel/DESIGN.md`](sorel/DESIGN.md) |
+| Zéphine | « En staccato » : poses sèches, lignes droites, acrobaties | [`zephine/DESIGN.md`](zephine/DESIGN.md) |
+| Ferroc | « En poids » : anticipation longue, impact tenu, retour lent | [`ferroc/DESIGN.md`](ferroc/DESIGN.md) |
+| Nacre | « En houle » : arcs amples du bâton, suivi long | [`nacre/DESIGN.md`](nacre/DESIGN.md) |
 
 | Fichier | Rôle |
 |---|---|
 | `assets/fighters/<id>/DESIGN.md` | Bible du personnage : intention, silhouette, palette, style d'animation, intention de chaque coup |
 | `packages/render/tools/characters/<id>.ts` | Garde, mèches et détails du modèle, clés de chaque clip |
+| `packages/render/tools/characters/kit.ts` | Aides communes : coup type, boucles, charges, longueur des pas selon les proportions |
 | `packages/render/tools/anim/keys.ts` | Format des clés : canaux, courbes, instants relatifs à la frame data |
 | `packages/render/tools/bake-character.ts` | Export : maillage fin, matières par zone, clés, ressorts du bandeau et de la tunique |
+
+Le bâton de Nacre est sculpté dans sa main avant. Ses clés le règlent par un canal de plus,
+`staff` (angle du bâton dans le plan du profil), converti en rotation du poignet à l'export :
+le bâton garde son cap quand le bras bouge.
 
 Une clé ne donne que les canaux qui changent ; les autres reprennent la clé précédente. Ses
 instants s'écrivent par rapport à la frame data : `'s'` (première frame active), `'e'`
@@ -135,6 +148,8 @@ bras horizontal vaut `1.57 + torso`, sinon il retombe.
 ```bash
 node packages/render/tools/bake-character.ts sorel
 ```
+
+(de même avec `zephine`, `ferroc` ou `nacre`)
 
 ### Revoir les animations
 

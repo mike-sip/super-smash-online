@@ -258,3 +258,96 @@ describe('matières des modèles', () => {
     expect(Object.keys(sorel.variants[1]!)).toContain('primary');
   });
 });
+
+describe('modèles du roster', () => {
+  /** Clips que chaque personnage anime à la main (tools/characters/<id>.ts). */
+  const COMMON = [
+    'idle',
+    'walk',
+    'run',
+    'dash',
+    'brake',
+    'turn',
+    'crouch',
+    'jumpsquat',
+    'jump',
+    'double_jump',
+    'fall',
+    'land',
+    'shield',
+    'shieldstun',
+    'shield_drop',
+    'shield_break',
+    'spotdodge',
+    'roll',
+    'airdodge',
+    'hitstun',
+    'tumble',
+    'tech',
+    'down',
+    'helpless',
+    'ledge',
+    'ledge_getup',
+    'ledge_roll',
+    'grab',
+    'grab_hold',
+    'grabbed',
+    'grab_release',
+    'throw_forward',
+    'throw_back',
+    'throw_up',
+    'throw_down',
+    'item_throw',
+    'jab1',
+    'jab2',
+    'jab3',
+    'ftilt',
+    'utilt',
+    'dtilt',
+    'dash_attack',
+    'fsmash',
+    'usmash',
+    'dsmash',
+    'fsmash_charge',
+    'usmash_charge',
+    'dsmash_charge',
+    'nair',
+    'fair',
+    'bair',
+    'uair',
+    'dair',
+    'nspecial',
+    'sspecial',
+    'uspecial',
+    'dspecial',
+    'ultimate',
+    'ledge_attack',
+  ];
+
+  for (const id of ['sorel', 'zephine', 'ferroc', 'nacre']) {
+    it(`${id} : modèle animé à la main, tous les clips, couleurs et matière du joueur`, async () => {
+      const bytes = readFileSync(
+        new URL(`../../../assets/fighters/${id}/model.glb`, import.meta.url),
+      );
+      const model = await parseFighterModel(
+        bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+      );
+      for (const name of COMMON) expect(model.clips.has(name), `${id} : ${name}`).toBe(true);
+      expect(model.height).toBeGreaterThan(0.5);
+      expect(model.walkCycle).toBeGreaterThan(0);
+      expect(model.walkCycle).toBeLessThan(model.runCycle);
+      // Huit couleurs : celle du fichier (vide) et sept variantes.
+      expect(model.variants.length).toBe(8);
+      const materials = new Set<string>();
+      model.scene.traverse((o) => {
+        const m = (o as { material?: unknown }).material;
+        for (const mat of Array.isArray(m) ? m : [m]) {
+          const name = (mat as { name?: string } | undefined)?.name;
+          if (name !== undefined) materials.add(name);
+        }
+      });
+      expect(materials).toContain('player');
+      expect(materials).toContain('primary');
+    });
+  }
+});

@@ -61,3 +61,6 @@ Format et conventions : [`fighters/README.md`](fighters/README.md).
 | Fichier | Origine | Taille |
 |---|---|---|
 | `fighters/sorel/model.glb` | Créé dans le dépôt : sculpt et animations écrits à la main (`packages/render/tools/characters/sorel.ts`), exportés par `packages/render/tools/bake-character.ts` (aucune source externe) | 3876 Ko |
+| `fighters/zephine/model.glb` | Créé dans le dépôt, de la même façon (`packages/render/tools/characters/zephine.ts`) | 3454 Ko |
+| `fighters/ferroc/model.glb` | Créé dans le dépôt, de la même façon (`packages/render/tools/characters/ferroc.ts`) | 4641 Ko |
+| `fighters/nacre/model.glb` | Créé dans le dépôt, de la même façon (`packages/render/tools/characters/nacre.ts`) | 4545 Ko |

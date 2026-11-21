@@ -487,6 +487,8 @@ export const ZEPHINE: Character = defineCharacter({
     vfx: 'feather',
     // Verres des lunettes : lisses, pas métalliques.
     materials: { accent: 'plain' },
+    // Modèle animé à la main (packages/render/tools/characters/zephine.ts, bible : assets/fighters/zephine/DESIGN.md).
+    model: 'fighters/zephine/model.glb',
     palettes: [
       {},
       { primary: 0xf2884a, secondary: 0x2b2f36, hair: 0x2a1e1a, accent: 0x5ee6b5 },
