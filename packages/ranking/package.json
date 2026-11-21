@@ -1,0 +1,42 @@
+{
+  "name": "@game/ranking",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./protocol": {
+      "types": "./dist/protocol.d.ts",
+      "default": "./dist/protocol.js"
+    },
+    "./report": {
+      "types": "./dist/report.d.ts",
+      "default": "./dist/report.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
+  },
+  "scripts": {
+    "dev": "pnpm --filter @game/accounts build && node src/dev.ts",
+    "start": "pnpm --filter @game/accounts build && node src/main.ts",
+    "seed": "node src/seed.ts",
+    "test": "vitest run",
+    "typecheck": "pnpm --filter @game/accounts build && pnpm --filter @game/match-rules build && tsc --noEmit",
+    "build": "pnpm --filter @game/accounts build && pnpm --filter @game/match-rules build && tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@game/accounts": "workspace:*",
+    "@game/match-rules": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Combat en ligne</title>
+    <!-- Pas d'icône : évite une requête en échec dans la console. -->
+    <link rel="icon" href="data:," />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #1b2233;
+        color: #e2e8f0;
+        font-family: system-ui, sans-serif;
+      }
+      #game,
+      #overlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      #game {
+        display: block;
+      }
+      #overlay {
+        pointer-events: none;
+      }
+      #lobby {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        display: grid;
+        gap: 10px;
+        width: min(560px, calc(100% - 32px));
+        max-height: calc(100% - 32px);
+        overflow: auto;
+        box-sizing: border-box;
+        padding: 20px;
+        border: 1px solid #475569;
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.94);
+      }
+      #lobby[hidden] {
+        display: none;
+      }
+      #lobby h1 {
+        margin: 0;
+        font-size: 18px;
+      }
+      #lobby h2 {
+        margin: 0;
+        font-size: 15px;
+      }
+      #lobby .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      #lobby .who {
+        font-size: 13px;
+        color: #94a3b8;
+      }
+      #lobby input,
+      #lobby select,
+      #lobby button {
+        padding: 6px 8px;
+        border: 1px solid #64748b;
+        border-radius: 4px;
+        background: #0f172a;
+        color: #e2e8f0;
+        font: inherit;
+      }
+      #lobby input[type='number'] {
+        width: 5em;
+      }
+      #lobby button {
+        border-color: #facc15;
+        color: #facc15;
+        cursor: pointer;
+      }
+      #lobby fieldset {
+        display: grid;
+        gap: 8px;
+        border: 1px solid #334155;
+        border-radius: 6px;
+      }
+      #lobby ul,
+      #lobby ol {
+        margin: 0;
+        padding-left: 18px;
+      }
+      #lobby li {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        padding: 2px 0;
+      }
+      #lobby .tags,
+      #lobby p {
+        margin: 0;
+        font-size: 13px;
+        color: #94a3b8;
+      }
+      #lobby .ready {
+        color: #86efac;
+      }
+      #lobby .error {
+        color: #fca5a5;
+      }
+      #room-code {
+        font-family: ui-monospace, monospace;
+        color: #facc15;
+        letter-spacing: 0.08em;
+      }
+      #status {
+        position: absolute;
+        left: 50%;
+        top: 74px;
+        transform: translateX(-50%);
+        padding: 4px 12px;
+        border-radius: 4px;
+        background: rgba(15, 23, 42, 0.8);
+        color: #fde68a;
+        font-size: 14px;
+        pointer-events: none;
+      }
+      #status:empty {
+        display: none;
+      }
+      #banner {
+        position: absolute;
+        left: 50%;
+        top: 110px;
+        transform: translateX(-50%);
+        padding: 6px 14px;
+        border-radius: 4px;
+        background: #7f1d1d;
+        color: #fee2e2;
+        font-size: 14px;
+      }
+      #banner:empty {
+        display: none;
+      }
+      #diagnostics {
+        position: absolute;
+        left: 12px;
+        bottom: 10px;
+        margin: 0;
+        padding: 6px 10px;
+        border-radius: 4px;
+        background: rgba(15, 23, 42, 0.8);
+        color: #94a3b8;
+        font:
+          12px ui-monospace,
+          monospace;
+        white-space: pre;
+        pointer-events: none;
+      }
+      #diagnostics[hidden] {
+        display: none;
+      }
+      #help {
+        position: absolute;
+        right: 12px;
+        bottom: 10px;
+        color: #64748b;
+        font-size: 12px;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="overlay"></div>
+    <section id="lobby" aria-label="Lobby"></section>
+    <div id="status"></div>
+    <div id="banner" role="alert"></div>
+    <pre id="diagnostics" hidden></pre>
+    <div id="help">F2 : diagnostic réseau · H : vue technique</div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

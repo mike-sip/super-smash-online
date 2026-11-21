@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "demo",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@game/demo", "dev", "--port", "5173", "--strictPort"],
+      "port": 5173
+    },
+    {
+      "name": "online",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@game/online", "exec", "vite", "--port", "5174", "--strictPort"],
+      "port": 5174
+    },
+    {
+      "name": "demo-stages",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@game/demo", "dev", "--port", "5183", "--strictPort"],
+      "port": 5183
+    },
+    {
+      "name": "game",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@game/app", "dev", "--port", "5185", "--strictPort"],
+      "port": 5185
+    }
+  ]
+}

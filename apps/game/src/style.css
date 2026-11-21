@@ -1,0 +1,826 @@
+/* Fracas : feuille de style de l'interface. Les couleurs sont celles de palette.ts (vérifié par test). */
+:root {
+  --bg: #0e1220;
+  --surface: #171d30;
+  --surface-2: #222a42;
+  --border: #3a4566;
+  --text: #eef2f8;
+  --muted: #b3bdd1;
+  --accent: #ffb547;
+  --on-accent: #1d1405;
+  --focus: #ffd84d;
+  --danger: #ff8a80;
+  --success: #7ee2a8;
+  --info: #8ec5ff;
+  --radius: 10px;
+  --gap: 0.75rem;
+  --speed: 140ms;
+  color-scheme: dark;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-size: 100%;
+  line-height: 1.4;
+}
+
+:root[data-text='large'] {
+  font-size: 125%;
+}
+
+:root[data-motion='reduced'] {
+  --speed: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --speed: 0ms;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+}
+
+#game,
+#overlay,
+#ui {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#game {
+  display: block;
+}
+
+#overlay {
+  pointer-events: none;
+}
+
+#ui {
+  pointer-events: none;
+}
+
+#ui > * {
+  pointer-events: auto;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* --- Écrans ------------------------------------------------------------------------------ */
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: clamp(1rem, 4vw, 3rem);
+  overflow: auto;
+  background: linear-gradient(
+    90deg,
+    rgb(14 18 32 / 0.94) 0%,
+    rgb(14 18 32 / 0.78) 55%,
+    rgb(14 18 32 / 0.35) 100%
+  );
+  animation: appear var(--speed) ease-out;
+}
+
+.screen.clear {
+  background: none;
+}
+
+.screen.center {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: rgb(14 18 32 / 0.82);
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.screen h1,
+.screen h2 {
+  margin: 0;
+  line-height: 1.15;
+}
+
+.screen h1 {
+  font-size: 2rem;
+}
+
+.screen h2 {
+  font-size: 1.35rem;
+}
+
+.screen > header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.screen > footer {
+  margin-top: auto;
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.screen .logo,
+.logo {
+  font-size: clamp(3rem, 12vw, 7rem);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  text-shadow:
+    0 4px 0 #8a4b00,
+    0 10px 30px rgb(0 0 0 / 0.6);
+  margin: 0;
+}
+
+.screen .logo.small {
+  font-size: clamp(2.5rem, 7vw, 4rem);
+}
+
+.tagline {
+  color: var(--muted);
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.press {
+  margin-top: 2rem;
+  font-size: 1.25rem;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+:root[data-motion='reduced'] .press {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press,
+  .screen {
+    animation: none;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* --- Contrôles ------------------------------------------------------------------------- */
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(24rem, 100%);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  gap: var(--gap);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.6rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.05rem;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--speed),
+    transform var(--speed);
+}
+
+.btn:hover {
+  background: var(--surface-2);
+}
+
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+
+.btn.danger {
+  border-color: var(--danger);
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn .detail {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.btn.primary .detail {
+  color: var(--on-accent);
+}
+
+.menu .btn {
+  width: 100%;
+}
+
+:focus {
+  outline: none;
+}
+
+:is(.btn, input, select, .card, [tabindex]):focus {
+  outline: 4px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.btn:focus {
+  transform: translateX(4px);
+}
+
+:root[data-motion='reduced'] .btn:focus {
+  transform: none;
+}
+
+label.field {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+}
+
+input[type='text'],
+input[type='password'],
+select {
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+}
+
+input[type='range'] {
+  width: 100%;
+  min-height: 2.75rem;
+  accent-color: var(--accent);
+}
+
+.setting {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) minmax(10rem, 1.4fr);
+  align-items: center;
+  gap: var(--gap);
+  padding: 0.25rem 0;
+}
+
+.setting > .label {
+  color: var(--text);
+}
+
+.setting .value {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  display: grid;
+  gap: var(--gap);
+  max-width: 48rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error-text {
+  color: var(--danger);
+}
+
+.ok-text {
+  color: var(--success);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 0.35em;
+  border: 1px solid var(--border);
+  border-bottom-width: 3px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85em;
+  text-align: center;
+}
+
+/* --- Cartes (personnages, stages, joueurs) ---------------------------------------------- */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: var(--gap);
+}
+
+.card {
+  position: relative;
+  display: grid;
+  gap: 0.35rem;
+  align-content: start;
+  padding: 0.85rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.card[aria-pressed='true'],
+.card.selected {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
+.card .swatch {
+  height: 0.5rem;
+  border-radius: 999px;
+}
+
+.card .name {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.card .meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
+.badge.ok {
+  border-color: var(--success);
+}
+
+.badge.warn {
+  border-color: var(--accent);
+}
+
+/* --- Tableaux -------------------------------------------------------------------------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 56rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+th,
+td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+td.num,
+th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+tr.me td {
+  background: var(--surface-2);
+  font-weight: 700;
+}
+
+/* --- Bandeaux, annonces, dialogues ----------------------------------------------------- */
+
+#banner {
+  position: absolute;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  max-width: calc(100% - 2rem);
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 2px solid var(--info);
+}
+
+#banner[hidden] {
+  display: none;
+}
+
+#banner.error {
+  border-color: var(--danger);
+}
+
+#toast {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+#toast:empty {
+  display: none;
+}
+
+.dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.55);
+}
+
+/* `display: grid` l'emporte sur l'attribut `hidden` : sans cette règle, le menu de pause masqué
+   assombrissait tout le combat. */
+.dialog[hidden] {
+  display: none;
+}
+
+.dialog > .panel {
+  width: min(28rem, calc(100% - 2rem));
+}
+
+#fps {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 25;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.6);
+  color: var(--text);
+  font:
+    0.8rem ui-monospace,
+    monospace;
+}
+
+#fps[hidden] {
+  display: none;
+}
+
+.code {
+  font:
+    700 2.2rem ui-monospace,
+    monospace;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .setting {
+    grid-template-columns: 1fr;
+  }
+}
+
+.banner-inline {
+  position: absolute;
+  top: 3.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.35rem 0.8rem;
+  border-radius: var(--radius);
+  background: rgb(14 18 32 / 0.8);
+}
+
+.banner-inline:empty {
+  display: none;
+}
+
+form.panel input {
+  width: 100%;
+}
+
+/* Portraits des figurines (SPEC-visuals.md, phase 7). */
+.card .portrait {
+  width: 100%;
+  max-width: 9rem;
+  aspect-ratio: 1;
+  justify-self: center;
+  object-fit: contain;
+  border-radius: var(--radius);
+  background: radial-gradient(circle at 50% 40%, rgb(255 255 255 / 0.16), transparent 70%);
+}
+
+.victory-art {
+  display: block;
+  height: min(42vh, 26rem);
+  margin: 0 auto -1rem;
+  filter: drop-shadow(0 0.6rem 1.2rem rgb(0 0 0 / 0.45));
+  animation: victory-in 0.7s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+@keyframes victory-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem) scale(0.85);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .victory-art {
+    animation: none;
+  }
+}
+
+:root[data-motion='reduced'] .victory-art {
+  animation: none;
+}
+
+/* ======================================================================================== */
+/* Finition, phase 4 (SPEC-finition.md) : typographie, logo, transitions, menus, cartes.     */
+/* ======================================================================================== */
+
+/* Police libre Lilita One (assets/fonts, licence OFL) : titres, logo, chiffres du HUD. */
+@font-face {
+  font-family: 'Lilita One';
+  src: url('/fonts/LilitaOne-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+:root {
+  --font-display: 'Lilita One', 'Arial Black', system-ui, sans-serif;
+  --glow: 0 0 0 1px rgb(255 181 71 / 0.35), 0 8px 28px rgb(255 181 71 / 0.18);
+  --enter: 280ms;
+}
+
+:root[data-motion='reduced'] {
+  --enter: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --enter: 0ms;
+  }
+}
+
+.screen h1,
+.screen h2,
+.card .name,
+.logo {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.screen h1 {
+  font-size: 2.4rem;
+  text-shadow: 0 3px 0 rgb(0 0 0 / 0.35);
+}
+
+/* Entrée des écrans : un volet qui s'ouvre depuis la gauche, et un fondu. */
+.screen {
+  animation: screen-in var(--enter) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Menus : les entrées arrivent l'une après l'autre. */
+.menu > * {
+  animation: item-in calc(var(--enter) * 1.2) cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.menu > :nth-child(2) {
+  animation-delay: calc(var(--enter) * 0.15);
+}
+
+.menu > :nth-child(3) {
+  animation-delay: calc(var(--enter) * 0.3);
+}
+
+.menu > :nth-child(4) {
+  animation-delay: calc(var(--enter) * 0.45);
+}
+
+.menu > :nth-child(5) {
+  animation-delay: calc(var(--enter) * 0.6);
+}
+
+.menu > :nth-child(n + 6) {
+  animation-delay: calc(var(--enter) * 0.75);
+}
+
+@keyframes item-in {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+
+/* Boutons : relief, reflet au survol, lueur au focus. */
+.btn {
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    0 2px 0 rgb(0 0 0 / 0.35);
+}
+
+.btn.primary {
+  background: linear-gradient(180deg, #ffc76b, var(--accent));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.45),
+    0 3px 0 #a8600a,
+    0 8px 22px rgb(255 181 71 / 0.25);
+}
+
+.btn:focus,
+.card:focus {
+  box-shadow: var(--glow);
+}
+
+/* Cartes : ombre portée, lueur quand elles sont choisies. */
+.card {
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+  transition:
+    transform var(--speed),
+    border-color var(--speed),
+    box-shadow var(--speed);
+}
+
+.card[aria-pressed='true'],
+.card.selected {
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 10px 30px rgb(255 181 71 / 0.22);
+  transform: translateY(-3px);
+}
+
+/* Portrait qui réagit quand le joueur se déclare prêt. */
+.card .portrait.ready {
+  animation: ready-pop 420ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+@keyframes ready-pop {
+  from {
+    transform: scale(0.82) rotate(-4deg);
+  }
+}
+
+/* --- Écran titre : logo en relief, reflet qui passe, entrée en rebond -------------------- */
+
+.screen.title {
+  background: radial-gradient(ellipse at center, rgb(14 18 32 / 0.25), rgb(14 18 32 / 0.8));
+}
+
+.logo {
+  position: relative;
+  font-size: clamp(4rem, 15vw, 9.5rem);
+  line-height: 1;
+  color: #ffb547;
+  background: linear-gradient(180deg, #fff3c4 0%, #ffd166 28%, #ff9f1c 62%, #e8590c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  /* Relief : un empilement d'ombres franches, puis une ombre douce au sol. */
+  filter: drop-shadow(0 1px 0 #b45309) drop-shadow(0 2px 0 #9a3412) drop-shadow(0 3px 0 #7c2d12)
+    drop-shadow(0 4px 0 #6b210e) drop-shadow(0 6px 0 #4a1608)
+    drop-shadow(0 10px 10px rgb(0 0 0 / 0.35));
+  text-shadow: none;
+}
+
+/* Le cadre porte l'entrée animée : animer le texte en dégradé lui-même le rend invisible dans
+   Chromium (texte découpé dans son fond + transformation animée). */
+.logo-frame {
+  margin: 0 0 0.6rem;
+  animation: logo-in calc(var(--enter) * 3) cubic-bezier(0.2, 1.5, 0.4, 1) backwards;
+}
+
+.logo-frame .logo {
+  display: inline-block;
+}
+
+.logo::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgb(255 255 255 / 0.9) 48%, transparent 60%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 4.5s ease-in-out 1.2s infinite;
+}
+
+@keyframes logo-in {
+  from {
+    opacity: 0;
+    transform: translateY(-40px) scale(1.25);
+  }
+}
+
+@keyframes shine {
+  0% {
+    background-position: 150% 0;
+  }
+  40%,
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+:root[data-motion='reduced'] .logo::after {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo::after {
+    animation: none;
+  }
+}
+
+.tagline {
+  font-size: 1.25rem;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 8px rgb(0 0 0 / 0.6);
+}

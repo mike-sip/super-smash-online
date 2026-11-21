@@ -1,0 +1,65 @@
+/**
+ * Événements émis pendant la dernière frame, pour le rendu, l'audio et les règles de match.
+ *
+ * La file ne fait pas partie de l'état : elle est vidée au début de chaque `step` et se
+ * reconstruit à l'identique quand une frame est re-simulée après un rollback. C'est donc au
+ * consommateur de ne pas rejouer deux fois un son ou un effet pour la même frame.
+ */
+export const MAX_EVENTS = 64;
+
+/** Un joueur a franchi une zone limite. `a` = index du joueur. */
+export const EV_KO = 1;
+/** Un coup a porté. `a` = attaquant, `b` = victime. */
+export const EV_HIT = 2;
+/** Un coup a été bloqué par un bouclier. `a` = attaquant, `b` = défenseur. */
+export const EV_SHIELD = 3;
+/** Un coup a été paré. `a` = attaquant, `b` = défenseur. */
+export const EV_PARRY = 4;
+/** Un bouclier s'est brisé. `a` = joueur. */
+export const EV_SHIELD_BREAK = 5;
+/** Une saisie a réussi. `a` = celui qui saisit, `b` = la victime. */
+export const EV_GRAB = 6;
+/** Un joueur s'est accroché à un rebord. `a` = joueur, `b` = index du rebord. */
+export const EV_LEDGE = 7;
+/** Un coup a été contré (SPEC-fighters.md, E5). `a` = attaquant (-1 : entité sans propriétaire), `b` = défenseur. */
+export const EV_COUNTER = 8;
+/** Une attaque ultime vient de partir (SPEC-fighters.md, E6). `a` = joueur. */
+export const EV_ULTIMATE = 9;
+
+// Stages et objets (module stages-items), numérotés à part pour ne pas croiser ceux d'autres modules.
+/** Un objet est apparu. `a` = emplacement d'entité, `b` = type. */
+export const EV_ITEM_SPAWN = 20;
+/** Un joueur a ramassé un objet. `a` = joueur, `b` = emplacement. */
+export const EV_ITEM_PICKUP = 21;
+/** Un joueur a lancé son objet. `a` = joueur, `b` = emplacement. */
+export const EV_ITEM_THROW = 22;
+/** Un joueur s'est soigné. `a` = joueur, `b` = soin en pourcentage entier. */
+export const EV_HEAL = 23;
+/** Un objet s'est brisé ou a explosé. `a` = emplacement (déjà libéré), `b` = type. */
+export const EV_ITEM_BREAK = 24;
+
+export interface EventQueue {
+  count: number;
+  readonly type: Int32Array;
+  readonly a: Int32Array;
+  readonly b: Int32Array;
+}
+
+export function createEventQueue(): EventQueue {
+  return {
+    count: 0,
+    type: new Int32Array(MAX_EVENTS),
+    a: new Int32Array(MAX_EVENTS),
+    b: new Int32Array(MAX_EVENTS),
+  };
+}
+
+/** Ajoute un événement. Au-delà de `MAX_EVENTS` par frame, les suivants sont ignorés. */
+export function emit(q: EventQueue, type: number, a: number, b: number): void {
+  const n = q.count;
+  if (n >= MAX_EVENTS) return;
+  q.type[n] = type;
+  q.a[n] = a;
+  q.b[n] = b;
+  q.count = n + 1;
+}

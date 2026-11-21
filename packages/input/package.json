@@ -1,0 +1,26 @@
+{
+  "name": "@game/input",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "bench": "pnpm --filter @game/sim-core build && node --expose-gc bench/sample.bench.ts",
+    "typecheck": "pnpm --filter @game/sim-core build && tsc --noEmit",
+    "build": "pnpm --filter @game/sim-core build && tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@game/sim-core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

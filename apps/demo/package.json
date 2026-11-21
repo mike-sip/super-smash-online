@@ -1,0 +1,33 @@
+{
+  "name": "@game/demo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run",
+    "typecheck": "pnpm --filter @game/render build && pnpm --filter @game/input build && pnpm --filter @game/accounts-client build && pnpm --filter @game/match-rules build && pnpm --filter @game/stages-items build && pnpm --filter @game/fighters build && pnpm --filter @game/ranking build && tsc --noEmit",
+    "perf": "vitest run --config vitest.perf.config.ts"
+  },
+  "dependencies": {
+    "@game/accounts-client": "workspace:*",
+    "@game/fighters": "workspace:*",
+    "@game/input": "workspace:*",
+    "@game/match-rules": "workspace:*",
+    "@game/ranking": "workspace:*",
+    "@game/render": "workspace:*",
+    "@game/sim-core": "workspace:*",
+    "@game/stages-items": "workspace:*",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@game/accounts": "workspace:*",
+    "@types/node": "^26.6.6",
+    "@types/three": "0.187.0",
+    "playwright-core": "^1.65.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.7",
+    "vitest": "^5.1.0"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "@game/app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "servers": "pnpm --filter @game/lobby build && pnpm --filter @game/ranking build",
+    "dev": "pnpm run servers && vite",
+    "build": "vite build",
+    "test": "vitest run",
+    "test:e2e": "pnpm run servers && vite build && vite build --mode e2e --outDir dist-e2e && vitest run --config vitest.e2e.config.ts",
+    "perf": "vite build && vite build --mode e2e --outDir dist-e2e && vitest run --config vitest.perf.config.ts",
+    "typecheck": "pnpm run servers && pnpm --filter @game/render build && pnpm --filter @game/input build && pnpm --filter @game/accounts-client build && pnpm --filter @game/stages-items build && pnpm --filter @game/fighters build && pnpm --filter @game/cpu build && tsc --noEmit",
+    "build:e2e": "vite build --mode e2e --outDir dist-e2e",
+    "serve:prod": "pnpm run servers && node scripts/serve-prod.ts"
+  },
+  "dependencies": {
+    "@game/accounts-client": "workspace:*",
+    "@game/fighters": "workspace:*",
+    "@game/input": "workspace:*",
+    "@game/lobby": "workspace:*",
+    "@game/cpu": "workspace:*",
+    "@game/match-rules": "workspace:*",
+    "@game/netcode": "workspace:*",
+    "@game/ranking": "workspace:*",
+    "@game/render": "workspace:*",
+    "@game/sim-core": "workspace:*",
+    "@game/stages-items": "workspace:*"
+  },
+  "devDependencies": {
+    "@game/accounts": "workspace:*",
+    "@types/node": "^26.6.6",
+    "playwright-core": "^1.65.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.7",
+    "vitest": "^5.1.0"
+  }
+}
