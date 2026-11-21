@@ -56,12 +56,12 @@ chmod 600 deploy/.env
 docker run --rm -v "$PWD/deploy:/d" node:24-bookworm-slim node /d/generate-secrets.ts   # ou : node deploy/generate-secrets.ts
 ```
 
-Coller les deux lignes produites dans `deploy/.env`, puis renseigner `DOMAIN` (et `ACME_EMAIL` si vous voulez être prévenu des certificats). **Ne jamais commiter `deploy/.env`** (il est dans `.gitignore`) ni le transmettre par messagerie.
+Coller les deux lignes produites dans `deploy/.env`, puis renseigner `DOMAIN` et `ACME_EMAIL`. **Ne jamais commiter `deploy/.env`** (il est dans `.gitignore`) ni le transmettre par messagerie.
 
 | Variable | Rôle |
 |---|---|
 | `DOMAIN` | Domaine du jeu ; Caddy obtient son certificat pour lui |
-| `ACME_EMAIL` | Contact Let's Encrypt (facultatif) |
+| `ACME_EMAIL` | Contact Let's Encrypt (obligatoire), prévenu avant l'expiration d'un certificat |
 | `ACCOUNTS_TICKET_SECRETS` | Clés des tickets (comptes → lobby et relais), 32 caractères au moins |
 | `RANKING_REPORT_SECRETS` | Clés des rapports de match (jeu → classement), distinctes des précédentes |
 | `RELAY_MAX_GAMES` | Parties simultanées au plus (mémoire) |

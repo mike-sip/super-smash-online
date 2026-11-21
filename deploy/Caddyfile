@@ -1,7 +1,8 @@
 # Frontal de production de Fracas (Caddy 2). Routes et en-têtes : les mêmes que deploy/routes.ts
 # (un test le vérifie). TLS automatique (Let's Encrypt) pour le domaine de DOMAIN.
 {
-	# Adresse de contact pour Let's Encrypt (facultative, mais conseillée).
+	# Adresse de contact pour Let's Encrypt. Obligatoire (docker-compose.yml) : vide, la ligne
+	# « email » resterait sans argument et Caddy refuserait de démarrer.
 	email {$ACME_EMAIL}
 }
 
