@@ -38,7 +38,7 @@ import {
   type FighterModel,
 } from '../src/fighters/model.ts';
 import type { FighterVisuals } from '../src/fighters/visual.ts';
-import { portraitClip } from '../src/portraits.ts';
+import { modelFrame, portraitClip } from '../src/portraits.ts';
 import { createRendererWith } from '../src/renderer.ts';
 import { fakeBackend } from './helpers.ts';
 
@@ -192,6 +192,34 @@ describe('combattants glTF', () => {
       return a;
     });
     expect(poses[0]!.angleTo(poses[1]!)).toBeLessThan(1e-9);
+  });
+
+  it('un modèle arrivé en cours de match remplace la figurine, sans entrée en scène', () => {
+    const factory = createGltfFighters(
+      (p) => (p === 0 ? 'test/late.glb' : undefined),
+      createFigurines(() => undefined),
+    );
+    const visuals = factory(testConfig(2));
+    visuals.capture(0, view(A_IDLE, 1));
+    visuals.update(0, 0, 0, view(A_IDLE, 1), 1);
+    expect(visuals.root.getObjectByName('model-0')).toBeUndefined();
+    // Le chargement se termine pendant le match.
+    registerFighterModel('test/late.glb', sorel);
+    visuals.capture(0, view(A_IDLE, 2));
+    visuals.update(0, 0, 0, view(A_IDLE, 2), 1);
+    const anchor = find(find(visuals.root, 'model-0').parent!.parent!, 'body').parent!;
+    expect(anchor.visible).toBe(true);
+    // Taille pleine tout de suite : pas de surgissement au milieu du combat.
+    const body = find(anchor, 'body');
+    visuals.capture(0, view(A_IDLE, 3));
+    visuals.update(0, 0, 0, view(A_IDLE, 3), 1);
+    const full = body.scale.y;
+    for (let f = 4; f < 40; f++) {
+      visuals.capture(0, view(A_IDLE, f));
+      visuals.update(0, 0, 0, view(A_IDLE, f), 1);
+    }
+    expect(body.scale.y).toBeCloseTo(full, 3);
+    visuals.dispose();
   });
 
   it('le modèle se cache quand le combattant est hors jeu', () => {
@@ -363,5 +391,15 @@ describe('portraits', () => {
     expect(portraitClip(sorel, 'portrait', 1)).toBe('idle');
     const bare = createFighterModel(new Object3D(), [new AnimationClip('idle', 1, [])]);
     expect(portraitClip(bare, 'victory', 0)).toBe('idle');
+  });
+
+  it('cadre le modèle sur sa silhouette : la tête reste dans l’image', () => {
+    // Tête à la hauteur 1 : le cadrage des figurines.
+    expect(modelFrame('portrait', 0, 1).y).toBeCloseTo(0.84);
+    // Plus haute (épaules, pose) : le cadrage suit.
+    expect(modelFrame('portrait', 0, 1.12).y).toBeCloseTo(0.96);
+    expect(modelFrame('stock', 0, 1.12).y).toBeCloseTo(1.09);
+    // Victoire : même échelle pour tous, bras levé ou non.
+    expect(modelFrame('victory', 0, 1.3)).toEqual(modelFrame('victory', 0, 1));
   });
 });

@@ -11,6 +11,7 @@
  */
 import {
   AnimationMixer,
+  Box3,
   Color,
   Group,
   Mesh,
@@ -68,6 +69,22 @@ const FRAMES: Readonly<
 };
 
 const UP = new Vector3(0, 1, 0);
+
+/**
+ * Cadrage d'un modèle posé, d'après sa silhouette réelle (`bottom`, `top` : bas et haut de sa
+ * boîte, en hauteurs). Buste et icône : la tête garde la marge des figurines (dont la tête culmine à
+ * la hauteur 1), quelles que soient les proportions. Victoire : le cadrage des figurines, le corps
+ * entier à la même échelle pour tous (un bras levé ne doit pas rapetisser le personnage).
+ */
+export function modelFrame(
+  kind: PortraitKind,
+  bottom: number,
+  top: number,
+): { y: number; distance: number } {
+  const frame = FRAMES[kind];
+  if (kind === 'victory') return { y: bottom + frame.y, distance: frame.distance };
+  return { y: top - (1 - frame.y), distance: frame.distance };
+}
 
 /** Clip photographié : la pose de victoire `pose` si le modèle l'a, sinon le repos. */
 export function portraitClip(model: FighterModel, kind: PortraitKind, pose: number): string {
@@ -198,6 +215,11 @@ export function createPortraitStudio(): PortraitStudio {
         );
         // Un quart de tour en plus : la figurine regarde vers +x, le modèle vers +z.
         root.rotation.y = frame.yaw + Math.PI / 2;
+        root.updateMatrixWorld(true);
+        const box = new Box3().setFromObject(root, true);
+        const fit = modelFrame(kind, box.min.y, box.max.y);
+        camera.position.set(0, fit.y + fit.distance * 0.08, fit.distance);
+        camera.lookAt(0, fit.y, 0);
         for (const m of materials) if (m instanceof MeshStandardMaterial) lighting.addRim(m);
         scene.add(root);
         url = shoot(renderer);
