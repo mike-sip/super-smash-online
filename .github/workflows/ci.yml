@@ -57,13 +57,22 @@ jobs:
       - name: Tests unitaires
         run: pnpm --filter "./packages/**" -r test
 
-      # Les applications ouvrent plusieurs onglets Edge avec rendu 3D, sans carte graphique : une
-      # application à la fois, un fichier de test à la fois, sinon elles s'étouffent mutuellement.
-      - name: Tests des applications dans le navigateur
-        run: pnpm --filter "./apps/**" -r --workspace-concurrency=1 run test --no-file-parallelism
+      - name: Tests du jeu
+        run: pnpm --filter @game/app test
 
       - name: Tests de bout en bout
         run: pnpm --filter @game/app test:e2e
+
+      # Démo de développement et démo en ligne : des bancs d'essai qui pilotent plusieurs onglets
+      # Edge avec rendu 3D. Sans carte graphique, leur rendu est 3 à 10 fois plus lent qu'un poste :
+      # leurs attentes courtes y échouent sans que le jeu soit en cause. Ils tournent ici à titre
+      # indicatif (un échec est signalé, il ne bloque pas) ; ils font foi sur un poste de travail.
+      # Le jeu lui-même est couvert par ses tests de bout en bout, juste au-dessus.
+      - name: Démos de développement (indicatif)
+        continue-on-error: true
+        run: >
+          pnpm --filter @game/demo --filter @game/online -r --workspace-concurrency=1
+          run test --no-file-parallelism
 
   docker:
     name: Images Docker
