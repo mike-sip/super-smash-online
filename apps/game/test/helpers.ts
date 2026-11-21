@@ -49,7 +49,12 @@ export async function openTab(
   url: string,
   viewport = { width: 1100, height: 700 },
 ): Promise<Tab> {
-  const context = await browser.newContext({ viewport });
+  // En intégration continue, sans carte graphique, le rendu 3D est fait par le processeur : un
+  // écran de densité 0,5 fait rendre le canevas à mi-résolution (4 fois moins de pixels), sans rien
+  // changer à la mise en page.
+  const context = await browser.newContext(
+    process.env.CI === undefined ? { viewport } : { viewport, deviceScaleFactor: 0.5 },
+  );
   await context.addInitScript(FAKE_PADS);
   const page = await context.newPage();
   const errors: string[] = [];
