@@ -55,7 +55,12 @@ jobs:
         run: pnpm typecheck
 
       - name: Tests unitaires
-        run: pnpm test
+        run: pnpm --filter "./packages/**" -r test
+
+      # Les applications ouvrent plusieurs onglets Edge avec rendu 3D, sans carte graphique : une
+      # application à la fois, un fichier de test à la fois, sinon elles s'étouffent mutuellement.
+      - name: Tests des applications dans le navigateur
+        run: pnpm --filter "./apps/**" -r --workspace-concurrency=1 run test --no-file-parallelism
 
       - name: Tests de bout en bout
         run: pnpm --filter @game/app test:e2e
