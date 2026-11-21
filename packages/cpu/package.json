@@ -12,7 +12,7 @@
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "pnpm --filter @game/sim-core build && tsc --noEmit",
+    "typecheck": "pnpm --filter @game/fighters build && pnpm --filter @game/stages-items build && pnpm --filter @game/match-rules build && tsc --noEmit",
     "build": "pnpm --filter @game/sim-core build && tsc -p tsconfig.build.json"
   },
   "dependencies": {
