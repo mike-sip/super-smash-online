@@ -60,14 +60,22 @@ jobs:
       - name: Tests du jeu
         run: pnpm --filter @game/app test
 
-      - name: Tests de bout en bout
+      # Contenu du build public : ni prise de test, ni clé de développement, ni carte des sources.
+      - name: Build de production
+        working-directory: apps/game
+        run: |
+          pnpm exec vite build
+          pnpm exec vitest run --config vitest.e2e.config.ts test/e2e/build.test.ts
+
+      # Les tests de bout en bout jouent de vrais matchs en 3D dans plusieurs onglets Edge, avec les
+      # serveurs de jeu et de comptes sur la même machine. Sans carte graphique, le rendu est fait
+      # par le processeur et tout est 5 à 10 fois plus lent qu'un poste : leurs attentes y expirent
+      # sans que le jeu soit en cause. Ils tournent ici à titre indicatif (un échec est signalé, il ne
+      # bloque pas) et font foi sur un poste de travail, comme les deux démos de développement.
+      - name: Tests de bout en bout (indicatif)
+        continue-on-error: true
         run: pnpm --filter @game/app test:e2e
 
-      # Démo de développement et démo en ligne : des bancs d'essai qui pilotent plusieurs onglets
-      # Edge avec rendu 3D. Sans carte graphique, leur rendu est 3 à 10 fois plus lent qu'un poste :
-      # leurs attentes courtes y échouent sans que le jeu soit en cause. Ils tournent ici à titre
-      # indicatif (un échec est signalé, il ne bloque pas) ; ils font foi sur un poste de travail.
-      # Le jeu lui-même est couvert par ses tests de bout en bout, juste au-dessus.
       - name: Démos de développement (indicatif)
         continue-on-error: true
         run: >

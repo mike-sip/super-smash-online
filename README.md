@@ -20,10 +20,11 @@ pnpm --filter @game/app perf       # mesure de performance, à lancer à la main
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml), à chaque pull request et sur `main` :
 
-- **Vérifications** : lint, formatage, typecheck, tests unitaires (déterminisme de la simulation
-  dans Edge, Firefox et WebKit compris), tests du jeu et de bout en bout ; la démo de
-  développement et la démo en ligne y tournent à titre indicatif (sans carte graphique, leur rendu
-  est trop lent pour leurs attentes courtes : elles font foi sur un poste) ;
+- **Vérifications** (bloquantes) : lint, formatage, typecheck, tests unitaires (déterminisme de
+  la simulation dans Edge, Firefox et WebKit compris), tests du jeu, contenu du build de production ;
+- **À titre indicatif** : les tests de bout en bout et les deux démos de développement. Ils jouent de
+  vrais matchs en 3D ; sans carte graphique, leur rendu est trop lent pour leurs délais. Un échec y
+  est signalé sans bloquer : ils font foi sur un poste de travail (commandes ci-dessus) ;
 - **Images Docker** : construction des deux images de production, validation de la composition et
   de Caddy, service des modèles précompressés.
 
