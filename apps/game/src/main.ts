@@ -7,9 +7,7 @@ import { createBackground } from './background.ts';
 import { GAME_NAME } from './strings.ts';
 import { openLocal, openTraining, perfTraining } from './ui/local.ts';
 import { openOptions } from './ui/options.ts';
-import { openOnline } from './ui/online.ts';
-import { openProfile } from './ui/profile.ts';
-import { Online, shouldResumeOnline } from './online.ts';
+import { shouldResumeOnline } from './resume.ts';
 import { errorScreen, mainMenu, titleScreen, type MainMenuEntry } from './ui/screens-basic.ts';
 
 function element<T extends HTMLElement>(id: string): T {
@@ -30,14 +28,13 @@ const elements: AppElements = {
   fps: element('fps'),
 };
 
-let online: Online | null = null;
-function getOnline(a: App): Online {
-  if (online === null) {
-    online = new Online(a);
-    const o = online;
-    o.openProfile = () => openProfile(a, o);
-  }
-  return online;
+/**
+ * Jeu en ligne et profil : chargés à la demande, au premier passage (`online-entry.ts`). Une
+ * erreur de chargement (réseau coupé) s'affiche comme toute autre erreur.
+ */
+type OnlineEntry = typeof import('./online-entry.ts');
+function withOnline(a: App, open: (entry: OnlineEntry) => void): void {
+  import('./online-entry.ts').then(open, (cause: unknown) => a.fail(cause));
 }
 /** Lien d'invitation `#rejoindre=CODE` : le code est lu puis retiré de l'adresse. */
 const invite = /^#rejoindre=([A-Za-z0-9-]{6,9})$/.exec(location.hash)?.[1];
@@ -48,13 +45,13 @@ const entries: MainMenuEntry[] = [
     id: 'online',
     label: 'En ligne',
     detail: 'Salons privés et partie rapide',
-    open: (a) => openOnline(a, getOnline(a)),
+    open: (a) => withOnline(a, (m) => m.openOnlineSection(a)),
   },
   {
     id: 'profile',
     label: 'Profil et classement',
     detail: 'Cote, historique, compte',
-    open: (a) => openProfile(a, getOnline(a)),
+    open: (a) => withOnline(a, (m) => m.openProfileSection(a)),
   },
   { id: 'local', label: 'Combat local', detail: '2 à 4 joueurs', open: openLocal },
   {
@@ -75,13 +72,13 @@ const app = new App(elements, (a) =>
   titleScreen(
     a,
     entries,
-    invite === undefined ? undefined : () => openOnline(a, getOnline(a), invite),
+    invite === undefined ? undefined : () => withOnline(a, (m) => m.openOnlineSection(a, invite)),
   ),
 );
 // Page rechargée dans un salon ou en pleine partie : retour direct en ligne, le lobby renvoie la partie.
 if (invite === undefined && shouldResumeOnline()) {
   app.replace(mainMenu(app, entries));
-  openOnline(app, getOnline(app));
+  withOnline(app, (m) => m.openOnlineSection(app));
 }
 /** Écrans qui ont leur propre rendu sur le canvas. */
 const MATCH_SCREENS = new Set(['match-local', 'training', 'match-online']);

@@ -169,6 +169,9 @@ interface Instance {
   pale: boolean;
 }
 
+/** Âge d'un combattant dont l'entrée en scène est déjà jouée. */
+const ENTERED = 600;
+
 function createInstance(
   model: FighterModel,
   def: FighterDef,
@@ -399,24 +402,44 @@ export function createGltfFighters(
     hidden.action = A_DEAD;
 
     const instances: (Instance | null)[] = [];
-    for (let p = 0; p < players; p++) {
-      const path = modelOf(p);
+    const paths: (string | undefined)[] = [];
+    let outlines = false;
+    /** Instance du modèle du joueur `p` s'il est chargé ; `late` : arrivé en cours de match. */
+    const instantiate = (p: number, late: boolean): Instance | null => {
+      const path = paths[p];
       const model = path === undefined ? undefined : fighterModel(path);
-      if (model === undefined || model.clips.size === 0) {
-        instances.push(null);
-        continue;
-      }
+      if (model === undefined || model.clips.size === 0) return null;
       const it = createInstance(model, config.fighters[p]!, variantOf(p), p);
+      // Arrivé en plein match : il prend la place de la figurine sans rejouer l'entrée en scène.
+      if (late) it.life = ENTERED;
+      for (const o of it.outlines) o.visible = outlines;
       root.add(it.anchor);
-      instances.push(it);
+      return it;
+    };
+    for (let p = 0; p < players; p++) {
+      paths.push(modelOf(p));
+      instances.push(instantiate(p, false));
     }
+    /**
+     * Joueur dessiné par sa figurine faute de modèle chargé au début du match : le modèle le
+     * remplace dès qu'il arrive (connexion lente), sans attendre le match suivant.
+     */
+    const upgrade = (p: number): Instance | null => {
+      if (paths[p] === undefined) return null;
+      const it = instantiate(p, true);
+      if (it !== null) {
+        instances[p] = it;
+        paths[p] = undefined;
+      }
+      return it;
+    };
     const squash: Squash = { y: 1 };
 
     return {
       root,
 
       capture(player, view) {
-        const it = instances[player];
+        const it = instances[player] ?? upgrade(player);
         if (it == null) backup.capture(player, view);
         else capture(it, view, swing);
       },
@@ -459,8 +482,9 @@ export function createGltfFighters(
 
       setQuality(preset: QualityPreset) {
         backup.setQuality?.(preset);
-        const lines = preset.quality === 'high' || preset.quality === 'ultra';
-        for (const it of instances) if (it !== null) for (const o of it.outlines) o.visible = lines;
+        outlines = preset.quality === 'high' || preset.quality === 'ultra';
+        for (const it of instances)
+          if (it !== null) for (const o of it.outlines) o.visible = outlines;
       },
 
       dispose() {

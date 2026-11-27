@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "pnpm -r test",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r --workspace-concurrency=1 typecheck"
   },
   "devDependencies": {
     "eslint": "^10.14.0",

@@ -9,6 +9,7 @@ import { Rng, createMatch, randomMatch, randomStep } from './harness.ts';
  * état de match compris, quelle que soit la phase au moment de la sauvegarde.
  */
 describe('rollback de l’état de match', () => {
+  // 500 matchs complets : quelques secondes sur un poste, plus de 10 s sur une machine de CI partagée.
   it('re-simule à l’identique sur 500 matchs tirés au hasard, dans toutes les phases', () => {
     const draw = new Rng(777);
     const snap = new Uint8Array(STATE_BYTES);
@@ -74,7 +75,7 @@ describe('rollback de l’état de match', () => {
     expect(phases.get('sudden-death') ?? 0).toBeGreaterThan(5);
     expect(phases.get('over') ?? 0).toBeGreaterThan(20);
     expect(respawning).toBeGreaterThan(20);
-  });
+  }, 60_000);
 
   it('une re-simulation avec un KO différent change l’état de match', () => {
     const sim = createMatch(randomMatch(new Rng(5)), 1);
